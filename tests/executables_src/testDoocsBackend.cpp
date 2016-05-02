@@ -11,6 +11,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <mtca4u/Device.h>
+#include <mtca4u-doocsServerTestHelper/doocsServerTestHelper.h>
 
 using namespace boost::unit_test_framework;
 using namespace mtca4u;
@@ -69,22 +70,25 @@ test_suite* myInit( int /*argc*/, char* /*argv*/ [] ) {
 
 void DoocsBackendTest::testRoutine() {     // version to run the unit and integration tests
 
-    // initialise BOOST test suite
-    extern char **svr_argv;
-    extern int svr_argc;
-    framework::init(&myInit,svr_argc,svr_argv);
-    framework::master_test_suite().p_name.value = "DoocsBackend test suite";
-    framework::master_test_suite().add( new DoocsBackendTestSuite() );
+  // initialise virtual timing system and wait until server has started
+  doocsServerTestHelper::initialise(false);
 
-    // run the tests
-    framework::run();
+  // initialise BOOST test suite
+  extern char **svr_argv;
+  extern int svr_argc;
+  framework::init(&myInit,svr_argc,svr_argv);
+  framework::master_test_suite().p_name.value = "DoocsBackend test suite";
+  framework::master_test_suite().add( new DoocsBackendTestSuite() );
 
-    // create report and exit with exit code
-    results_reporter::make_report();
-    int result = ( runtime_config::no_result_code()
-                        ? boost::exit_success
-                        : results_collector.results( framework::master_test_suite().p_id ).result_code() );
-    exit(result);
+  // run the tests
+  framework::run();
+
+  // create report and exit with exit code
+  results_reporter::make_report();
+  int result = ( runtime_config::no_result_code()
+                      ? boost::exit_success
+                      : results_collector.results( framework::master_test_suite().p_id ).result_code() );
+  exit(result);
 
 }
 
@@ -95,9 +99,9 @@ void DoocsBackendTest::testSimpleCase() {
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   mtca4u::Device device;
 
-  device.open("DoocsServer1");
+  //device.open("DoocsServer1");
 
-  device.close();
+  //device.close();
 
 }
 
