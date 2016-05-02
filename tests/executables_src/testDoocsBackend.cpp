@@ -5,6 +5,9 @@
  *      Author: Martin Hierholzer
  */
 
+#include <thread>
+
+#define BOOST_TEST_NO_MAIN      // main function is define in DOOCS
 #include <boost/test/included/unit_test.hpp>
 
 #include <mtca4u/Device.h>
@@ -12,11 +15,16 @@
 using namespace boost::unit_test_framework;
 using namespace mtca4u;
 
+/**********************************************************************************************************************/
 
 class DoocsBackendTest {
   public:
+    void testRoutine();
+
     void testSimpleCase();
 };
+
+/**********************************************************************************************************************/
 
 class DoocsBackendTestSuite : public test_suite {
   public:
@@ -27,20 +35,70 @@ class DoocsBackendTestSuite : public test_suite {
     }
 };
 
-test_suite* init_unit_test_suite(int /*argc*/, char * /*argv*/ []) {
-  framework::master_test_suite().p_name.value = "DoocsBackend class test suite";
-  framework::master_test_suite().add(new DoocsBackendTestSuite());
+/**********************************************************************************************************************/
 
-  return NULL;
+// test lanucher class, constructor will be called on start of the server
+class TestLauncher {
+  public:
+    TestLauncher() {
+
+      // start the test thread
+      DoocsBackendTest *test = new DoocsBackendTest();
+      serverTest = boost::shared_ptr<DoocsBackendTest>(test);
+      theThread = std::thread(&DoocsBackendTest::testRoutine, test);
+      theThread.detach();
+
+    }
+
+    /// server test object
+    boost::shared_ptr<DoocsBackendTest> serverTest;
+
+    /// thread running the test routine resp. controlling the timing
+    std::thread theThread;
+
+};
+static TestLauncher testLauncher;
+
+/**********************************************************************************************************************/
+
+test_suite* myInit( int /*argc*/, char* /*argv*/ [] ) {
+    return NULL;
 }
+
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testRoutine() {     // version to run the unit and integration tests
+
+    // initialise BOOST test suite
+    extern char **svr_argv;
+    extern int svr_argc;
+    framework::init(&myInit,svr_argc,svr_argv);
+    framework::master_test_suite().p_name.value = "DoocsBackend test suite";
+    framework::master_test_suite().add( new DoocsBackendTestSuite() );
+
+    // run the tests
+    framework::run();
+
+    // create report and exit with exit code
+    results_reporter::make_report();
+    int result = ( runtime_config::no_result_code()
+                        ? boost::exit_success
+                        : results_collector.results( framework::master_test_suite().p_id ).result_code() );
+    exit(result);
+
+}
+
+/**********************************************************************************************************************/
 
 void DoocsBackendTest::testSimpleCase() {
 
-  BackendFactory::getInstance().setDMapFilePath("test.dmap");
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   mtca4u::Device device;
 
-  device.open("PCIE2");
+  device.open("DoocsServer1");
 
   device.close();
 
 }
+
+/**********************************************************************************************************************/

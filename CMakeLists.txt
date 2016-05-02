@@ -21,6 +21,8 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-dynamic
 FIND_PACKAGE(mtca4u-deviceaccess 00.11 REQUIRED)
 include_directories(SYSTEM ${mtca4u-deviceaccess_INCLUDE_DIRS})
 
+FIND_PACKAGE(DOOCS 18.10 REQUIRED)
+
 FIND_PACKAGE(DOOCS 18.10 COMPONENTS server)
 include_directories(SYSTEM ${DOOCS_INCLUDE_DIRS})
 link_directories(${DOOCS_LIBRARY_DIRS})
@@ -43,31 +45,25 @@ set(${PROJECT_NAME}_INCLUDE_DIRS ${${PROJECT_NAME}_INCLUDE_DIRS} ${CMAKE_SOURCE_
 
 aux_source_directory(${CMAKE_SOURCE_DIR}/src library_sources)
 
-MACRO( COPY_MAPPING_FILES_AND_EXAMPLES )
-  foreach( FILE_TO_COPY dummies.dmap doocsDummy_rpc_server.conf )
-    configure_file( tests/${FILE_TO_COPY} ${PROJECT_BINARY_DIR}/${FILE_TO_COPY} copyonly)
-  endforeach( FILE_TO_COPY )
-ENDMACRO( COPY_MAPPING_FILES_AND_EXAMPLES )
-
-#Create the executables for automated unit testing.
-#Currently we assume that they are all tests contained in one file, so
-#each file gives a new executable. This section has to be adapted if this should change.
+# Create the executables for automated unit testing.
+# Currently we assume that they are all tests contained in one file, so
+# each file gives a new executable. This section has to be adapted if this should change.
 if(TESTING_IS_ENABLED)
+  
+  # loop over all sources files in execultables_src directory
   aux_source_directory(${CMAKE_SOURCE_DIR}/tests/executables_src testExecutables)
   foreach( testExecutableSrcFile ${testExecutables})
-    #NAME_WE means the base name without path and (longest) extension
+    # NAME_WE means the base name without path and (longest) extension
     get_filename_component(excutableName ${testExecutableSrcFile} NAME_WE)
-    add_executable(${excutableName} ${testExecutableSrcFile})
-    target_link_libraries(${excutableName} ${mtca4u-deviceaccess_LIBRARIES} ${mtca4uVirtualLab_LIBRARIES} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${PROJECT_NAME})
+    # each test includes a DOOCS server
+    add_executable(${excutableName} ${testExecutableSrcFile} ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/doocsDummy_rpc_server.cc ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/eq_dummy.cc)
+    set_target_properties(${excutableName} PROPERTIES COMPILE_FLAGS "${mtca4u-deviceaccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
+    set_target_properties(${excutableName} PROPERTIES LINK_FLAGS ${DOOCS_LINK_FLAGS})
+    target_link_libraries(${excutableName} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME})
     add_test(${excutableName} ${excutableName})
+    # copy config file
+    configure_file( ${CMAKE_SOURCE_DIR}/tests/doocsDummy_rpc_server.conf ${PROJECT_BINARY_DIR}/${excutableName}.conf copyonly)
   endforeach( testExecutableSrcFile )
-
-  # build dummy DOOCS server
-  aux_source_directory(${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer DoocsDummyServer)
-  add_executable(doocsDummy_rpc_server ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/doocsDummy_rpc_server.cc ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/eq_dummy.cc)
-  target_link_libraries(doocsDummy_rpc_server ${DOOCS_LIBRARIES})
-  set_target_properties(doocsDummy_rpc_server PROPERTIES COMPILE_FLAGS ${DOOCS_CXX_FLAGS})
-  set_target_properties(doocsDummy_rpc_server PROPERTIES LINK_FLAGS ${DOOCS_LINK_FLAGS})
 
   #The make coverage command is only available in debug mode
   IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -85,7 +81,7 @@ endif(TESTING_IS_ENABLED)
 # C++ library
 add_library(${PROJECT_NAME} SHARED ${library_sources} )
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_VERSION} SOVERSION ${${PROJECT_NAME}_SOVERSION})
-target_link_libraries(${PROJECT_NAME} ${mtca4u-deviceaccess_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES})
 
 #configure a header file which contains the version information for use in C++
 #configure_file(cmake/version.h.in "${PROJECT_BINARY_DIR}/version.h" @ONLY)
@@ -110,9 +106,6 @@ install(TARGETS ${PROJECT_NAME}
             RUNTIME DESTINATION bin
 	    LIBRARY DESTINATION lib
   )
-
-# copy mapping files and examples
-COPY_MAPPING_FILES_AND_EXAMPLES()
 
 #all include files go into include/PROJECT_NAME
 #The exclusion of ${PROJECT_NAME} prevents the recursive installation of the files just being installed.

@@ -34,5 +34,21 @@ namespace mtca4u {
     return boost::shared_ptr<DeviceBackend>(new DoocsBackend(serverAddress));
   }
 
+  /********************************************************************************************************************/
+
+  void DoocsBackend::open() {
+  }
+
+  /********************************************************************************************************************/
+
+  void DoocsBackend::close() {
+  }
+
+  /********************************************************************************************************************/
+
+  template<typename UserType>
+  boost::shared_ptr< NDRegisterAccessor<UserType> > DoocsBackend::getRegisterAccessor_impl(
+      const RegisterPath &registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, bool enforceRawAccess) {
+  }
 
 } /* namespace mtca4u */
