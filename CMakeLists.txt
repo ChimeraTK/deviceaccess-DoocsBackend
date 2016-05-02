@@ -22,10 +22,13 @@ FIND_PACKAGE(mtca4u-deviceaccess 00.11 REQUIRED)
 include_directories(SYSTEM ${mtca4u-deviceaccess_INCLUDE_DIRS})
 
 FIND_PACKAGE(DOOCS 18.10 REQUIRED)
-
 FIND_PACKAGE(DOOCS 18.10 COMPONENTS server)
 include_directories(SYSTEM ${DOOCS_INCLUDE_DIRS})
 link_directories(${DOOCS_LIBRARY_DIRS})
+
+FIND_PACKAGE(mtca4u-doocsServerTestHelper REQUIRED)
+include_directories(SYSTEM ${mtca4u-doocsServerTestHelper_INCLUDE_DIRS})
+link_directories(${mtca4u-doocsServerTestHelper_LIBRARY_DIRS})
 
 FIND_PACKAGE(Boost COMPONENTS thread REQUIRED)
 
@@ -59,7 +62,7 @@ if(TESTING_IS_ENABLED)
     add_executable(${excutableName} ${testExecutableSrcFile} ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/doocsDummy_rpc_server.cc ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/eq_dummy.cc)
     set_target_properties(${excutableName} PROPERTIES COMPILE_FLAGS "${mtca4u-deviceaccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
     set_target_properties(${excutableName} PROPERTIES LINK_FLAGS ${DOOCS_LINK_FLAGS})
-    target_link_libraries(${excutableName} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME})
+    target_link_libraries(${excutableName} ${mtca4u-doocsServerTestHelper_LIBRARIES} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME})
     add_test(${excutableName} ${excutableName})
     # copy config file
     configure_file( ${CMAKE_SOURCE_DIR}/tests/doocsDummy_rpc_server.conf ${PROJECT_BINARY_DIR}/${excutableName}.conf copyonly)
@@ -81,6 +84,7 @@ endif(TESTING_IS_ENABLED)
 # C++ library
 add_library(${PROJECT_NAME} SHARED ${library_sources} )
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_VERSION} SOVERSION ${${PROJECT_NAME}_SOVERSION})
+set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "${mtca4u-deviceaccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
 target_link_libraries(${PROJECT_NAME} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES})
 
 #configure a header file which contains the version information for use in C++
