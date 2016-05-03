@@ -99,9 +99,15 @@ void DoocsBackendTest::testSimpleCase() {
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   mtca4u::Device device;
 
-  //device.open("DoocsServer1");
+  device.open("DoocsServer1");
 
-  //device.close();
+  //while(true) doocsServerTestHelper::runUpdate();
+
+  ScalarRegisterAccessor<int32_t> acc_someInt(device.getScalarRegisterAccessor<int32_t>("MYDUMMY/SOME_INT"));
+  acc_someInt.read();
+  BOOST_CHECK( acc_someInt == 42 );
+
+  device.close();
 
 }
 

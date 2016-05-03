@@ -50,6 +50,13 @@ namespace mtca4u {
       /// DOOCS address component for the server (FACILITY/DEVICE)
       RegisterPath _serverAddress;
 
+      /* Class to register the backend type with the factory. */
+      class BackendRegisterer {
+        public:
+          BackendRegisterer();
+      };
+      static BackendRegisterer backendRegisterer;
+
   };
 
 }

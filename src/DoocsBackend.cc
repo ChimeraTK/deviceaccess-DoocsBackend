@@ -5,12 +5,25 @@
  *      Author: Martin Hierholzer
  */
 
+#include <mtca4u/BackendFactory.h>
+
 #include "DoocsBackend.h"
+#include "DoocsBackendRegisterAccessor.h"
 
 namespace mtca4u {
 
+  /********************************************************************************************************************/
+
+  DoocsBackend::BackendRegisterer DoocsBackend::backendRegisterer;
+
+  DoocsBackend::BackendRegisterer::BackendRegisterer() {
+    mtca4u::BackendFactory::getInstance().registerBackendType("doocs","",&DoocsBackend::createInstance);
+  }
+
+  /********************************************************************************************************************/
+
   DoocsBackend::DoocsBackend(const RegisterPath &serverAddress)
-  : _serverAddress(_serverAddress)
+  : _serverAddress(serverAddress)
   {
     FILL_VIRTUAL_FUNCTION_TEMPLATE_VTABLE(getRegisterAccessor_impl);
   }
@@ -25,9 +38,12 @@ namespace mtca4u {
       throw DeviceException("",DeviceException::WRONG_PARAMETER);
     }
 
+    std::cout << parameters.front() << std::endl;
+
     // form server address
     RegisterPath serverAddress = parameters.front();
     parameters.pop_front();
+    std::cout << parameters.front() << std::endl;
     serverAddress /= parameters.front();
 
     // create and return the backend
@@ -49,6 +65,8 @@ namespace mtca4u {
   template<typename UserType>
   boost::shared_ptr< NDRegisterAccessor<UserType> > DoocsBackend::getRegisterAccessor_impl(
       const RegisterPath &registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, bool enforceRawAccess) {
+    auto *p = new DoocsBackendRegisterAccessor<UserType>(_serverAddress/registerPathName);
+    return boost::shared_ptr< NDRegisterAccessor<UserType> > ( p );
   }
 
 } /* namespace mtca4u */
