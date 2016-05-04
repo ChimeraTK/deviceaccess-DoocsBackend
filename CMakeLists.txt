@@ -65,8 +65,11 @@ if(TESTING_IS_ENABLED)
     target_link_libraries(${excutableName} ${mtca4u-doocsServerTestHelper_LIBRARIES} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME})
     add_test(${excutableName} ${excutableName})
     # copy config file
-    configure_file( ${CMAKE_SOURCE_DIR}/tests/doocsDummy_rpc_server.conf ${PROJECT_BINARY_DIR}/${excutableName}.conf copyonly)
+    FILE( COPY ${CMAKE_SOURCE_DIR}/tests/doocsDummy_rpc_server.conf DESTINATION ${PROJECT_BINARY_DIR})
+    FILE( RENAME ${PROJECT_BINARY_DIR}/doocsDummy_rpc_server.conf ${PROJECT_BINARY_DIR}/${excutableName}.conf)
   endforeach( testExecutableSrcFile )
+
+  FILE( COPY ${CMAKE_SOURCE_DIR}/tests/dummies.dmap DESTINATION ${PROJECT_BINARY_DIR})
 
   #The make coverage command is only available in debug mode
   IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
