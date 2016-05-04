@@ -12,6 +12,7 @@
 
 #include <mtca4u/NDRegisterAccessor.h>
 #include <mtca4u/DeviceException.h>
+#include <mtca4u/FixedPointConverter.h>
 
 #include <eq_client.h>
 
@@ -58,8 +59,21 @@ namespace mtca4u {
       /// number of elements
       size_t nElements;
 
+      /// data type (DOOCS type constant)
+      int dataType;
+
+      /// fixed point converter for writing integers (used with default 32.0 signed settings, since DOOCS knows only "int")
+      FixedPointConverter fixedPointConverter;
+
       /// internal read into EqData dst
       void read_internal();
+
+      /// internal write from EqData src
+      void write_internal();
+
+      /// type-tagged version of write(), to realise different implementations for integral and floating-point write()
+      void write_tagged(std::true_type);
+      void write_tagged(std::false_type);
 
       /// callback function used for the monitor
       static void callback(EqData *ed, void *p);
@@ -82,8 +96,6 @@ namespace mtca4u {
     // set address
     ea.adr(std::string(path).substr(1).c_str());        // strip leading slash
 
-    std::cout << "DoocsBackendRegisterAccessor: " << path << std::endl;
-
     // try to read data, to check connectivity and to obtain size of the register
     read_internal();
 
@@ -92,11 +104,6 @@ namespace mtca4u {
     if(nElements == 0) nElements = 1;
     NDRegisterAccessor<UserType>::buffer_2D.resize(1);
     NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
-
-
-    std::cout << "nElements = " << nElements << std::endl;
-
-
   }
 
   /**********************************************************************************************************************/
@@ -112,6 +119,7 @@ namespace mtca4u {
   void DoocsBackendRegisterAccessor<UserType>::read_internal() {
     // read data
     int rc = eq.get(&ea, &src, &dst);
+    // check error
     if(rc) {
       throw DeviceException(std::string("Cannot read from DOOCS property: ")+dst.get_string(),
           DeviceException::CANNOT_OPEN_DEVICEBACKEND);
@@ -159,15 +167,14 @@ namespace mtca4u {
       NDRegisterAccessor<std::string>::buffer_2D[0][0] = dst.get_string();
     }
     else {
-      for(size_t i=0; i<nElements; i++) {
-        NDRegisterAccessor<std::string>::buffer_2D[0][i] = dst.get_string(i,NULL,0);// FIXME
-      }
+      throw(DeviceException("Reading an array of std::string is not supported by DOOCS.",
+          DeviceException::NOT_IMPLEMENTED));
     }
   }
 
   /**********************************************************************************************************************/
 
-  template<typename UserType>   // only integral types left!
+  template<typename UserType>   // only integral types left!  FIXME better add type trait
   void DoocsBackendRegisterAccessor<UserType>::read() {
     // read data
     read_internal();
@@ -180,13 +187,81 @@ namespace mtca4u {
         NDRegisterAccessor<UserType>::buffer_2D[0][i] = dst.get_int(i);
       }
     }
-    std::cout << "NDRegisterAccessor<UserType>::buffer_2D[0][0] = " << NDRegisterAccessor<UserType>::buffer_2D[0][0] << std::endl;
+  }
+
+  /**********************************************************************************************************************/
+
+  template<typename UserType>
+  void DoocsBackendRegisterAccessor<UserType>::write_internal() {
+    // write data
+    int rc = eq.set(&ea, &src, &dst);
+    // check error
+    if(rc) {
+      throw DeviceException(std::string("Cannot write to DOOCS property: ")+dst.get_string(),
+          DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+    }
+  }
+
+  /**********************************************************************************************************************/
+
+  template<>
+  void DoocsBackendRegisterAccessor<std::string>::write() {
+    // copy data into our buffer
+    if(nElements == 1) {
+      src.set(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str());
+    }
+    else {
+      for(size_t i=0; i<nElements; i++) {
+        throw(DeviceException("Writing an array of std::string is not supported by DOOCS.",
+            DeviceException::NOT_IMPLEMENTED));
+      }
+    }
+    // write data
+    write_internal();
+  }
+
+  /**********************************************************************************************************************/
+
+  template<typename UserType>
+  void DoocsBackendRegisterAccessor<UserType>::write_tagged(std::true_type) {   // integral UserType
+    // copy data into our buffer
+    if(nElements == 1) {
+      int32_t raw = fixedPointConverter.toRaw(NDRegisterAccessor<UserType>::buffer_2D[0][0]);
+      src.set(raw);
+    }
+    else {
+      for(size_t i=0; i<nElements; i++) {
+        int32_t raw = fixedPointConverter.toRaw(NDRegisterAccessor<UserType>::buffer_2D[0][i]);
+        src.set(raw,(int)i);
+      }
+    }
+    // write data
+    write_internal();
+  }
+
+  /**********************************************************************************************************************/
+
+  template<typename UserType>
+  void DoocsBackendRegisterAccessor<UserType>::write_tagged(std::false_type) {   // floating-point UserType
+    // copy data into our buffer
+    if(nElements == 1) {
+      src.set(NDRegisterAccessor<UserType>::buffer_2D[0][0]);
+    }
+    else {
+      for(size_t i=0; i<nElements; i++) {
+        src.set(NDRegisterAccessor<UserType>::buffer_2D[0][i],(int)i);
+      }
+    }
+    // write data
+    write_internal();
   }
 
   /**********************************************************************************************************************/
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::write() {
+    // dispatch to tagged version
+    write_tagged(std::is_integral<UserType>());
   }
 
   /**********************************************************************************************************************/

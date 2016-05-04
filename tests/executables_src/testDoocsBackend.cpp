@@ -22,7 +22,7 @@ class DoocsBackendTest {
   public:
     void testRoutine();
 
-    void testSimpleCase();
+    void testScalarInt();
 };
 
 /**********************************************************************************************************************/
@@ -32,7 +32,7 @@ class DoocsBackendTestSuite : public test_suite {
     DoocsBackendTestSuite() : test_suite("DoocsBackend test suite") {
       boost::shared_ptr<DoocsBackendTest> doocsBackendTest(new DoocsBackendTest);
 
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testSimpleCase, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarInt, doocsBackendTest) );
     }
 };
 
@@ -94,18 +94,86 @@ void DoocsBackendTest::testRoutine() {     // version to run the unit and integr
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testSimpleCase() {
+void DoocsBackendTest::testScalarInt() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   mtca4u::Device device;
 
   device.open("DoocsServer1");
 
-  //while(true) doocsServerTestHelper::runUpdate();
+  TwoDRegisterAccessor<int32_t> acc_someInt_as_int(device.getTwoDRegisterAccessor<int32_t>("MYDUMMY/SOME_INT"));
+  BOOST_CHECK( acc_someInt_as_int.getNChannels() == 1 );
+  BOOST_CHECK( acc_someInt_as_int.getNElementsPerChannel() == 1 );
+  acc_someInt_as_int.read();
+  BOOST_CHECK( acc_someInt_as_int[0][0] == 42 );
 
-  ScalarRegisterAccessor<int32_t> acc_someInt(device.getScalarRegisterAccessor<int32_t>("MYDUMMY/SOME_INT"));
-  acc_someInt.read();
-  BOOST_CHECK( acc_someInt == 42 );
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",120);
+
+  BOOST_CHECK( acc_someInt_as_int[0][0] == 42 );
+  acc_someInt_as_int.read();
+  BOOST_CHECK( acc_someInt_as_int[0][0] == 120 );
+
+  acc_someInt_as_int[0][0] = 1234;
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 120 );
+  acc_someInt_as_int.write();
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 1234 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",42);
+
+  TwoDRegisterAccessor<double> acc_someInt_as_double(device.getTwoDRegisterAccessor<double>("MYDUMMY/SOME_INT"));
+  BOOST_CHECK( acc_someInt_as_double.getNChannels() == 1 );
+  BOOST_CHECK( acc_someInt_as_double.getNElementsPerChannel() == 1 );
+  acc_someInt_as_double.read();
+  BOOST_CHECK_CLOSE( acc_someInt_as_double[0][0], 42, 0.001 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",120);
+
+  BOOST_CHECK_CLOSE( acc_someInt_as_double[0][0], 42, 0.001 );
+  acc_someInt_as_double.read();
+  BOOST_CHECK_CLOSE( acc_someInt_as_double[0][0], 120, 0.001 );
+
+  acc_someInt_as_double[0][0] = 1234.3;
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 120 );
+  acc_someInt_as_double.write();
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 1234 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",42);
+
+  TwoDRegisterAccessor<float> acc_someInt_as_float(device.getTwoDRegisterAccessor<float>("MYDUMMY/SOME_INT"));
+  BOOST_CHECK( acc_someInt_as_float.getNChannels() == 1 );
+  BOOST_CHECK( acc_someInt_as_float.getNElementsPerChannel() == 1 );
+  acc_someInt_as_float.read();
+  BOOST_CHECK_CLOSE( acc_someInt_as_float[0][0], 42, 0.001 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",120);
+
+  BOOST_CHECK_CLOSE( acc_someInt_as_float[0][0], 42, 0.001 );
+  acc_someInt_as_float.read();
+  BOOST_CHECK_CLOSE( acc_someInt_as_float[0][0], 120, 0.001 );
+
+  acc_someInt_as_float[0][0] = 1233.9;
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 120 );
+  acc_someInt_as_float.write();
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 1234 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",42);
+
+  TwoDRegisterAccessor<std::string> acc_someInt_as_string(device.getTwoDRegisterAccessor<std::string>("MYDUMMY/SOME_INT"));
+  BOOST_CHECK( acc_someInt_as_string.getNChannels() == 1 );
+  BOOST_CHECK( acc_someInt_as_string.getNElementsPerChannel() == 1 );
+  acc_someInt_as_string.read();
+  BOOST_CHECK( acc_someInt_as_string[0][0] == "42" );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",120);
+
+  BOOST_CHECK( acc_someInt_as_string[0][0] == "42" );
+  acc_someInt_as_string.read();
+  BOOST_CHECK( acc_someInt_as_string[0][0] == "120" );
+
+  acc_someInt_as_string[0][0] = "1234";
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 120 );
+  acc_someInt_as_string.write();
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 1234 );
 
   device.close();
 

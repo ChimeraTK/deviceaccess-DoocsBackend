@@ -38,12 +38,9 @@ namespace mtca4u {
       throw DeviceException("",DeviceException::WRONG_PARAMETER);
     }
 
-    std::cout << parameters.front() << std::endl;
-
     // form server address
     RegisterPath serverAddress = parameters.front();
     parameters.pop_front();
-    std::cout << parameters.front() << std::endl;
     serverAddress /= parameters.front();
 
     // create and return the backend
