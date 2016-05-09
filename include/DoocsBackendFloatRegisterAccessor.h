@@ -70,7 +70,9 @@ namespace mtca4u {
       NDRegisterAccessor<float>::buffer_2D[0][0] = dst.get_float();
     }
     else {
-      memcpy(dst.get_float_array(), NDRegisterAccessor<float>::buffer_2D[0].data(), sizeof(float)*nElements);
+      for(size_t i=0; i<DoocsBackendRegisterAccessor<float>::nElements; i++) {
+        NDRegisterAccessor<float>::buffer_2D[0][i] = dst.get_float(i);
+      }
     }
   }
 
@@ -85,7 +87,9 @@ namespace mtca4u {
       NDRegisterAccessor<double>::buffer_2D[0][0] = dst.get_double();
     }
     else {
-      memcpy(dst.get_float_array(), NDRegisterAccessor<double>::buffer_2D[0].data(), sizeof(double)*nElements);
+      for(size_t i=0; i<DoocsBackendRegisterAccessor<double>::nElements; i++) {
+        NDRegisterAccessor<double>::buffer_2D[0][i] = dst.get_double(i);
+      }
     }
   }
 
