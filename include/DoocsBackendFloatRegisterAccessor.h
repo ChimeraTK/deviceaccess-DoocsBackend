@@ -16,10 +16,12 @@
 
 #include <eq_client.h>
 
+#include "DoocsBackendRegisterAccessor.h"
+
 namespace mtca4u {
 
   template<typename UserType>
-  class DoocsBackendFloatRegisterAccessor : public NDRegisterAccessor<UserType> {
+  class DoocsBackendFloatRegisterAccessor : public DoocsBackendRegisterAccessor<UserType> {
 
     public:
 
@@ -31,73 +33,23 @@ namespace mtca4u {
 
       virtual void write();
 
-      virtual bool isSameRegister(const boost::shared_ptr<TransferElement const> &other) const {
-        auto rhsCasted = boost::dynamic_pointer_cast< const DoocsBackendFloatRegisterAccessor<UserType> >(other);
-        if(!rhsCasted) return false;
-        if(_path != rhsCasted->_path) return false;
-        return true;
-      }
-
-      virtual bool isReadOnly() const {
-        return false;
-      }
-
-    protected:
-
-      /// register path
-      RegisterPath _path;
-
-      /// DOOCS address structure
-      EqAdr ea;
-
-      /// DOOCS rpc call object
-      EqCall eq;
-
-      /// DOOCS data structures
-      EqData src,dst;
-
-      /// number of elements
-      size_t nElements;
-
-      /// internal read into EqData dst
-      void read_internal();
-
-      /// internal write from EqData src
-      void write_internal();
-
-      virtual std::vector< boost::shared_ptr<TransferElement> > getHardwareAccessingElements() {
-        return { boost::enable_shared_from_this<TransferElement>::shared_from_this() };
-      }
-
-      virtual void replaceTransferElement(boost::shared_ptr<TransferElement> /*newElement*/) {} // LCOV_EXCL_LINE
-
   };
 
   /**********************************************************************************************************************/
 
   template<typename UserType>
   DoocsBackendFloatRegisterAccessor<UserType>::DoocsBackendFloatRegisterAccessor(const RegisterPath &path)
-  : _path(path)
+  : DoocsBackendRegisterAccessor<UserType>(path)
   {
 
-    // set address
-    ea.adr(std::string(path).substr(1).c_str());        // strip leading slash
-
-    // try to read data, to check connectivity and to obtain size of the register
-    read_internal();
-
     // check data type
-    if( dst.type() != DATA_FLOAT && dst.type() != DATA_A_FLOAT &&
-        dst.type() != DATA_DOUBLE && dst.type() != DATA_A_DOUBLE  ) {
+    if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_FLOAT &&
+        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_FLOAT &&
+        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_DOUBLE &&
+        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_DOUBLE  ) {
       throw DeviceException("DOOCS data type not supported by DoocsBackendFloatRegisterAccessor.",
           DeviceException::WRONG_PARAMETER);
     }
-
-    // set buffer size
-    nElements = dst.array_length();
-    if(nElements == 0) nElements = 1;
-    NDRegisterAccessor<UserType>::buffer_2D.resize(1);
-    NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
   }
 
   /**********************************************************************************************************************/
@@ -105,19 +57,6 @@ namespace mtca4u {
   template<typename UserType>
   DoocsBackendFloatRegisterAccessor<UserType>::~DoocsBackendFloatRegisterAccessor() {
 
-  }
-
-  /**********************************************************************************************************************/
-
-  template<typename UserType>
-  void DoocsBackendFloatRegisterAccessor<UserType>::read_internal() {
-    // read data
-    int rc = eq.get(&ea, &src, &dst);
-    // check error
-    if(rc) {
-      throw DeviceException(std::string("Cannot read from DOOCS property: ")+dst.get_string(),
-          DeviceException::CANNOT_OPEN_DEVICEBACKEND);
-    }
   }
 
   /**********************************************************************************************************************/
@@ -171,28 +110,15 @@ namespace mtca4u {
   template<typename UserType>   // only integral types left!  FIXME better add type trait
   void DoocsBackendFloatRegisterAccessor<UserType>::read() {
     // read data
-    read_internal();
+    DoocsBackendRegisterAccessor<UserType>::read_internal();
     // copy data into our buffer
-    if(nElements == 1) {
-      NDRegisterAccessor<UserType>::buffer_2D[0][0] = std::round(dst.get_double());
+    if(DoocsBackendRegisterAccessor<UserType>::nElements == 1) {
+      NDRegisterAccessor<UserType>::buffer_2D[0][0] = std::round(DoocsBackendRegisterAccessor<UserType>::dst.get_double());
     }
     else {
-      for(size_t i=0; i<nElements; i++) {
-        NDRegisterAccessor<UserType>::buffer_2D[0][i] = std::round(dst.get_double(i));
+      for(size_t i=0; i<DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
+        NDRegisterAccessor<UserType>::buffer_2D[0][i] = std::round(DoocsBackendRegisterAccessor<UserType>::dst.get_double(i));
       }
-    }
-  }
-
-  /**********************************************************************************************************************/
-
-  template<typename UserType>
-  void DoocsBackendFloatRegisterAccessor<UserType>::write_internal() {
-    // write data
-    int rc = eq.set(&ea, &src, &dst);
-    // check error
-    if(rc) {
-      throw DeviceException(std::string("Cannot write to DOOCS property: ")+dst.get_string(),
-          DeviceException::CANNOT_OPEN_DEVICEBACKEND);
     }
   }
 
@@ -219,18 +145,18 @@ namespace mtca4u {
   template<typename UserType>
   void DoocsBackendFloatRegisterAccessor<UserType>::write() {
     // copy data into our buffer
-    if(nElements == 1) {
+    if(DoocsBackendRegisterAccessor<UserType>::nElements == 1) {
       double val = NDRegisterAccessor<UserType>::buffer_2D[0][0];
-      src.set(val);
+      DoocsBackendRegisterAccessor<UserType>::src.set(val);
     }
     else {
-      for(size_t i=0; i<nElements; i++) {
+      for(size_t i=0; i<DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
         double val = NDRegisterAccessor<UserType>::buffer_2D[0][i];
-        src.set(val,(int)i);
+        DoocsBackendRegisterAccessor<UserType>::src.set(val,(int)i);
       }
     }
     // write data
-    write_internal();
+    DoocsBackendRegisterAccessor<UserType>::write_internal();
   }
 
 } /* namespace mtca4u */
