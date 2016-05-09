@@ -131,10 +131,8 @@ namespace mtca4u {
       src.set(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str());
     }
     else {
-      for(size_t i=0; i<nElements; i++) {
-        throw(DeviceException("Writing an array of std::string is not supported by DOOCS.",
-            DeviceException::NOT_IMPLEMENTED));
-      }
+      throw(DeviceException("Writing an array of std::string is not supported by DOOCS.",
+          DeviceException::NOT_IMPLEMENTED));
     }
     // write data
     write_internal();
