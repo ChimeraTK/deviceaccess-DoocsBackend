@@ -8,7 +8,9 @@
 #include <mtca4u/BackendFactory.h>
 
 #include "DoocsBackend.h"
-#include "DoocsBackendRegisterAccessor.h"
+#include "DoocsBackendIntRegisterAccessor.h"
+#include "DoocsBackendFloatRegisterAccessor.h"
+#include "DoocsBackendStringRegisterAccessor.h"
 
 namespace mtca4u {
 
@@ -62,7 +64,40 @@ namespace mtca4u {
   template<typename UserType>
   boost::shared_ptr< NDRegisterAccessor<UserType> > DoocsBackend::getRegisterAccessor_impl(
       const RegisterPath &registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, bool enforceRawAccess) {
-    auto *p = new DoocsBackendRegisterAccessor<UserType>(_serverAddress/registerPathName);
+
+    NDRegisterAccessor<UserType> *p;
+    RegisterPath path = _serverAddress/registerPathName;
+
+    // read property once
+    EqAdr ea;
+    EqCall eq;
+    EqData src,dst;
+    ea.adr(std::string(path).substr(1).c_str());        // strip leading slash
+    int rc = eq.get(&ea, &src, &dst);
+    if(rc) {
+      throw DeviceException(std::string("Cannot open DOOCS property: ")+dst.get_string(),
+          DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+    }
+
+    // check type and create matching accessor
+    if( dst.type() == DATA_INT || dst.type() == DATA_A_INT ||
+        dst.type() == DATA_BOOL || dst.type() == DATA_A_BOOL ||
+        dst.type() == DATA_A_SHORT || dst.type() == DATA_A_LONG  ) {
+      p = new DoocsBackendIntRegisterAccessor<UserType>(path);
+    }
+    else if( dst.type() == DATA_FLOAT || dst.type() == DATA_A_FLOAT ||
+        dst.type() == DATA_DOUBLE || dst.type() == DATA_A_DOUBLE  ) {
+      p = new DoocsBackendFloatRegisterAccessor<UserType>(path);
+    }
+    else if( dst.type() == DATA_TEXT || dst.type() == DATA_STRING || dst.type() == DATA_STRING16) {
+      p = new DoocsBackendStringRegisterAccessor<UserType>(path);
+    }
+    else {
+      throw DeviceException("Unsupported DOOCS data type: "+std::to_string(dst.type()),
+          DeviceException::WRONG_PARAMETER);
+    }
+
+
     return boost::shared_ptr< NDRegisterAccessor<UserType> > ( p );
   }
 

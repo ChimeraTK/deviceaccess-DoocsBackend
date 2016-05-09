@@ -1,12 +1,12 @@
 /*
- * DoocsBackendRegisterAccessor.h
+ * DoocsBackendFloatRegisterAccessor.h
  *
  *  Created on: May 3, 2016
  *      Author: Martin Hierholzer
  */
 
-#ifndef MTCA4U_DOOCS_BACKEND_REGISTER_ACCESSOR_H
-#define MTCA4U_DOOCS_BACKEND_REGISTER_ACCESSOR_H
+#ifndef MTCA4U_DOOCS_BACKEND_FLOAT_REGISTER_ACCESSOR_H
+#define MTCA4U_DOOCS_BACKEND_FLOAT_REGISTER_ACCESSOR_H
 
 #include <type_traits>
 
@@ -19,20 +19,20 @@
 namespace mtca4u {
 
   template<typename UserType>
-  class DoocsBackendRegisterAccessor : public NDRegisterAccessor<UserType> {
+  class DoocsBackendFloatRegisterAccessor : public NDRegisterAccessor<UserType> {
 
     public:
 
-      DoocsBackendRegisterAccessor(const RegisterPath &path);
+      DoocsBackendFloatRegisterAccessor(const RegisterPath &path);
 
-      virtual ~DoocsBackendRegisterAccessor();
+      virtual ~DoocsBackendFloatRegisterAccessor();
 
       virtual void read();
 
       virtual void write();
 
       virtual bool isSameRegister(const boost::shared_ptr<TransferElement const> &other) const {
-        auto rhsCasted = boost::dynamic_pointer_cast< const DoocsBackendRegisterAccessor<UserType> >(other);
+        auto rhsCasted = boost::dynamic_pointer_cast< const DoocsBackendFloatRegisterAccessor<UserType> >(other);
         if(!rhsCasted) return false;
         if(_path != rhsCasted->_path) return false;
         return true;
@@ -59,24 +59,11 @@ namespace mtca4u {
       /// number of elements
       size_t nElements;
 
-      /// data type (DOOCS type constant)
-      int dataType;
-
-      /// fixed point converter for writing integers (used with default 32.0 signed settings, since DOOCS knows only "int")
-      FixedPointConverter fixedPointConverter;
-
       /// internal read into EqData dst
       void read_internal();
 
       /// internal write from EqData src
       void write_internal();
-
-      /// type-tagged version of write(), to realise different implementations for integral and floating-point write()
-      void write_tagged(std::true_type);
-      void write_tagged(std::false_type);
-
-      /// callback function used for the monitor
-      static void callback(EqData *ed, void *p);
 
       virtual std::vector< boost::shared_ptr<TransferElement> > getHardwareAccessingElements() {
         return { boost::enable_shared_from_this<TransferElement>::shared_from_this() };
@@ -89,7 +76,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const RegisterPath &path)
+  DoocsBackendFloatRegisterAccessor<UserType>::DoocsBackendFloatRegisterAccessor(const RegisterPath &path)
   : _path(path)
   {
 
@@ -98,6 +85,13 @@ namespace mtca4u {
 
     // try to read data, to check connectivity and to obtain size of the register
     read_internal();
+
+    // check data type
+    if( dst.type() != DATA_FLOAT && dst.type() != DATA_A_FLOAT &&
+        dst.type() != DATA_DOUBLE && dst.type() != DATA_A_DOUBLE  ) {
+      throw DeviceException("DOOCS data type not supported by DoocsBackendFloatRegisterAccessor.",
+          DeviceException::WRONG_PARAMETER);
+    }
 
     // set buffer size
     nElements = dst.array_length();
@@ -109,14 +103,14 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendRegisterAccessor<UserType>::~DoocsBackendRegisterAccessor() {
+  DoocsBackendFloatRegisterAccessor<UserType>::~DoocsBackendFloatRegisterAccessor() {
 
   }
 
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendRegisterAccessor<UserType>::read_internal() {
+  void DoocsBackendFloatRegisterAccessor<UserType>::read_internal() {
     // read data
     int rc = eq.get(&ea, &src, &dst);
     // check error
@@ -129,7 +123,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendRegisterAccessor<float>::read() {
+  void DoocsBackendFloatRegisterAccessor<float>::read() {
     // read data
     read_internal();
     // copy data into our buffer
@@ -144,7 +138,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendRegisterAccessor<double>::read() {
+  void DoocsBackendFloatRegisterAccessor<double>::read() {
     // read data
     read_internal();
     // copy data into our buffer
@@ -159,7 +153,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendRegisterAccessor<std::string>::read() {
+  void DoocsBackendFloatRegisterAccessor<std::string>::read() {
     // read data
     read_internal();
     // copy data into our buffer
@@ -175,16 +169,16 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>   // only integral types left!  FIXME better add type trait
-  void DoocsBackendRegisterAccessor<UserType>::read() {
+  void DoocsBackendFloatRegisterAccessor<UserType>::read() {
     // read data
     read_internal();
     // copy data into our buffer
     if(nElements == 1) {
-      NDRegisterAccessor<UserType>::buffer_2D[0][0] = dst.get_int();
+      NDRegisterAccessor<UserType>::buffer_2D[0][0] = std::round(dst.get_double());
     }
     else {
       for(size_t i=0; i<nElements; i++) {
-        NDRegisterAccessor<UserType>::buffer_2D[0][i] = dst.get_int(i);
+        NDRegisterAccessor<UserType>::buffer_2D[0][i] = std::round(dst.get_double(i));
       }
     }
   }
@@ -192,7 +186,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendRegisterAccessor<UserType>::write_internal() {
+  void DoocsBackendFloatRegisterAccessor<UserType>::write_internal() {
     // write data
     int rc = eq.set(&ea, &src, &dst);
     // check error
@@ -205,7 +199,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendRegisterAccessor<std::string>::write() {
+  void DoocsBackendFloatRegisterAccessor<std::string>::write() {
     // copy data into our buffer
     if(nElements == 1) {
       src.set(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str());
@@ -223,55 +217,22 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendRegisterAccessor<UserType>::write_tagged(std::true_type) {   // integral UserType
+  void DoocsBackendFloatRegisterAccessor<UserType>::write() {
     // copy data into our buffer
     if(nElements == 1) {
-      int32_t raw = fixedPointConverter.toRaw(NDRegisterAccessor<UserType>::buffer_2D[0][0]);
-      src.set(raw);
+      double val = NDRegisterAccessor<UserType>::buffer_2D[0][0];
+      src.set(val);
     }
     else {
       for(size_t i=0; i<nElements; i++) {
-        int32_t raw = fixedPointConverter.toRaw(NDRegisterAccessor<UserType>::buffer_2D[0][i]);
-        src.set(raw,(int)i);
+        double val = NDRegisterAccessor<UserType>::buffer_2D[0][i];
+        src.set(val,(int)i);
       }
     }
     // write data
     write_internal();
-  }
-
-  /**********************************************************************************************************************/
-
-  template<typename UserType>
-  void DoocsBackendRegisterAccessor<UserType>::write_tagged(std::false_type) {   // floating-point UserType
-    // copy data into our buffer
-    if(nElements == 1) {
-      src.set(NDRegisterAccessor<UserType>::buffer_2D[0][0]);
-    }
-    else {
-      for(size_t i=0; i<nElements; i++) {
-        src.set(NDRegisterAccessor<UserType>::buffer_2D[0][i],(int)i);
-      }
-    }
-    // write data
-    write_internal();
-  }
-
-  /**********************************************************************************************************************/
-
-  template<typename UserType>
-  void DoocsBackendRegisterAccessor<UserType>::write() {
-    // dispatch to tagged version
-    write_tagged(std::is_integral<UserType>());
-  }
-
-  /**********************************************************************************************************************/
-
-  template<typename UserType>
-  void DoocsBackendRegisterAccessor<UserType>::callback(EqData *ed, void *p) {
-    DoocsBackendRegisterAccessor *self = static_cast<DoocsBackendRegisterAccessor*>(p);
-
   }
 
 } /* namespace mtca4u */
 
-#endif /* MTCA4U_DOOCS_BACKEND_REGISTER_ACCESSOR_H */
+#endif /* MTCA4U_DOOCS_BACKEND_FLOAT_REGISTER_ACCESSOR_H */
