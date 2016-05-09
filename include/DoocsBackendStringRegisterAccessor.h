@@ -38,8 +38,12 @@ namespace mtca4u {
 
   template<typename UserType>
   DoocsBackendStringRegisterAccessor<UserType>::DoocsBackendStringRegisterAccessor(const RegisterPath &path)
-  : DoocsBackendRegisterAccessor<UserType>(path)
+  : DoocsBackendRegisterAccessor<UserType>(path, false)
   {
+
+    // set buffer size (nElements will be the number of characters, so the buffer allocation in the base class would be incorrect)
+    NDRegisterAccessor<UserType>::buffer_2D.resize(1);
+    NDRegisterAccessor<UserType>::buffer_2D[0].resize(1);
 
     // check data type
     if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_TEXT &&
@@ -52,12 +56,6 @@ namespace mtca4u {
     // check UserType
     if(typeid(UserType) != typeid(std::string)) {
       throw DeviceException("Trying to access a string DOOCS property with a non-string user data type.",
-          DeviceException::WRONG_PARAMETER);
-    }
-
-    // set buffer size
-    if(DoocsBackendRegisterAccessor<UserType>::nElements != 0) {
-      throw DeviceException("Arrays of strings are not supported by DoocsBackendStringRegisterAccessor.",
           DeviceException::WRONG_PARAMETER);
     }
   }

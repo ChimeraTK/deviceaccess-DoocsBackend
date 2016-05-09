@@ -23,7 +23,7 @@ namespace mtca4u {
 
     public:
 
-      DoocsBackendRegisterAccessor(const RegisterPath &path);
+      DoocsBackendRegisterAccessor(const RegisterPath &path, bool allocateBuffers = true);
 
       virtual ~DoocsBackendRegisterAccessor();
 
@@ -72,7 +72,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const RegisterPath &path)
+  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const RegisterPath &path, bool allocateBuffers)
   : _path(path)
   {
 
@@ -82,11 +82,15 @@ namespace mtca4u {
     // try to read data, to check connectivity and to obtain size of the register
     read_internal();
 
-    // set buffer size
+    // obtain number of elements
     nElements = dst.array_length();
     if(nElements == 0) nElements = 1;
-    NDRegisterAccessor<UserType>::buffer_2D.resize(1);
-    NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
+
+    // allocate buffers
+    if(allocateBuffers) {
+      NDRegisterAccessor<UserType>::buffer_2D.resize(1);
+      NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
+    }
   }
 
   /**********************************************************************************************************************/
