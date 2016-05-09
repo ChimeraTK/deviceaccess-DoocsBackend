@@ -26,6 +26,7 @@ class DoocsBackendTest {
     void testScalarFloat();
     void testString();
     void testArrayInt();
+    void testArrayFloat();
 };
 
 /**********************************************************************************************************************/
@@ -39,6 +40,7 @@ class DoocsBackendTestSuite : public test_suite {
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarFloat, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testString, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayInt, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayFloat, doocsBackendTest) );
     }
 };
 
@@ -327,10 +329,44 @@ void DoocsBackendTest::testArrayInt() {
 
   for(int i=0; i<42; i++) acc_someArray[0][i] = i-21;
   vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
-  for(int i=0; i<42; i++) vals[i] = -55*i;
+  for(int i=0; i<42; i++) BOOST_CHECK(vals[i] == -55*i);
   acc_someArray.write();
   vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
-  for(int i=0; i<42; i++) vals[i] = i-21;
+  for(int i=0; i<42; i++) BOOST_CHECK(vals[i] == i-21);
+
+  device.close();
+
+}
+
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testArrayFloat() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  device.open("DoocsServer1");
+
+  TwoDRegisterAccessor<float> acc_someArray(device.getTwoDRegisterAccessor<float>("MYDUMMY/SOME_FLOAT_ARRAY"));
+  BOOST_CHECK( acc_someArray.getNChannels() == 1 );
+  BOOST_CHECK( acc_someArray.getNElementsPerChannel() == 5 );
+  acc_someArray.read();
+  for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(acc_someArray[0][i], i/1000., 0.00001);
+
+  std::vector<float> vals(5);
+  for(int i=0; i<5; i++) vals[i] = -3.14159265*i;
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT_ARRAY", vals);
+
+  for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(acc_someArray[0][i], i/1000., 0.00001);
+  acc_someArray.read();
+  for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(acc_someArray[0][i], -3.14159265*i, 0.00001);
+
+  for(int i=0; i<5; i++) acc_someArray[0][i] = 2./(i+0.01);
+  vals = doocsServerTestHelper::doocsGet_floatArray("//MYDUMMY/SOME_FLOAT_ARRAY");
+  for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], -3.14159265*i, 0.00001);
+  acc_someArray.write();
+  vals = doocsServerTestHelper::doocsGet_floatArray("//MYDUMMY/SOME_FLOAT_ARRAY");
+  for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], 2./(i+0.01), 0.00001);
 
   device.close();
 

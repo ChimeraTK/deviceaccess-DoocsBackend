@@ -9,11 +9,12 @@ class eq_dummy  : public EqFct {
     eq_dummy();
     virtual ~eq_dummy();
     
-    D_int       prop_someInt;
-    D_float     prop_someFloat;
-    D_string    prop_someString;
+    D_int         prop_someInt;
+    D_float       prop_someFloat;
+    D_string      prop_someString;
     
-    D_intarray  prop_someIntArray;
+    D_intarray    prop_someIntArray;
+    D_floatarray  prop_someFloatArray;
 
     void init();
     void update();

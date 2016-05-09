@@ -5,7 +5,8 @@ eq_dummy::eq_dummy()
   prop_someInt("SOME_INT",this),
   prop_someFloat("SOME_FLOAT",this),
   prop_someString("SOME_STRING", this),
-  prop_someIntArray("SOME_INT_ARRAY", 42, this)
+  prop_someIntArray("SOME_INT_ARRAY", 42, this),
+  prop_someFloatArray("SOME_FLOAT_ARRAY", 5, this)
 {
 }
 
@@ -17,6 +18,7 @@ void eq_dummy::init() {
     prop_someFloat.set_value(3.1415);
     prop_someString.set_value("The quick brown fox jumps over the lazy dog.");
     for(int i=0; i<42; i++) prop_someIntArray.set_value(3*i+120, i);
+    for(int i=0; i<5; i++) prop_someFloatArray.set_value((float)i/1000., i);
 }
 
 void eq_dummy::update() {
