@@ -91,6 +91,12 @@ namespace mtca4u {
       NDRegisterAccessor<UserType>::buffer_2D.resize(1);
       NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
     }
+
+    // set proper type information in the source EqData
+    src.set_type(dst.type());
+    if(allocateBuffers) {
+      src.length(nElements);
+    }
   }
 
   /**********************************************************************************************************************/
