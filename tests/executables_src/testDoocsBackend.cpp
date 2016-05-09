@@ -24,6 +24,7 @@ class DoocsBackendTest {
 
     void testScalarInt();
     void testScalarFloat();
+    void testString();
 };
 
 /**********************************************************************************************************************/
@@ -35,6 +36,7 @@ class DoocsBackendTestSuite : public test_suite {
 
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarInt, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarFloat, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testString, doocsBackendTest) );
     }
 };
 
@@ -268,4 +270,33 @@ void DoocsBackendTest::testScalarFloat() {
 
 }
 
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testString() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  device.open("DoocsServer1");
+
+  TwoDRegisterAccessor<std::string> acc_someString(device.getTwoDRegisterAccessor<std::string>("MYDUMMY/SOME_STRING"));
+  BOOST_CHECK( acc_someString.getNChannels() == 1 );
+  BOOST_CHECK( acc_someString.getNElementsPerChannel() == 1 );
+  acc_someString.read();
+  BOOST_CHECK(acc_someString[0][0] == "The quick brown fox jumps over the lazy dog.");
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_STRING","Something else.");
+
+  BOOST_CHECK(acc_someString[0][0] == "The quick brown fox jumps over the lazy dog.");
+  acc_someString.read();
+  BOOST_CHECK(acc_someString[0][0] == "Something else.");
+
+  acc_someString[0][0] = "Even different!";
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_string("//MYDUMMY/SOME_STRING") == "Something else." );
+  acc_someString.write();
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_string("//MYDUMMY/SOME_STRING") == "Even different!" );
+
+  device.close();
+
+}
 /**********************************************************************************************************************/
