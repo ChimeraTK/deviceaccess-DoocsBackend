@@ -13,6 +13,8 @@ class eq_dummy  : public EqFct {
     D_float     prop_someFloat;
     D_string    prop_someString;
     
+    D_intarray  prop_someIntArray;
+
     void init();
     void update();
 

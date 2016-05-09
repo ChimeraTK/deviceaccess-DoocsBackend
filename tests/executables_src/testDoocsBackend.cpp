@@ -25,6 +25,7 @@ class DoocsBackendTest {
     void testScalarInt();
     void testScalarFloat();
     void testString();
+    void testArrayInt();
 };
 
 /**********************************************************************************************************************/
@@ -37,6 +38,7 @@ class DoocsBackendTestSuite : public test_suite {
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarInt, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarFloat, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testString, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayInt, doocsBackendTest) );
     }
 };
 
@@ -299,4 +301,39 @@ void DoocsBackendTest::testString() {
   device.close();
 
 }
+
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testArrayInt() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  device.open("DoocsServer1");
+
+  TwoDRegisterAccessor<int> acc_someArray(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_INT_ARRAY"));
+  BOOST_CHECK( acc_someArray.getNChannels() == 1 );
+  BOOST_CHECK( acc_someArray.getNElementsPerChannel() == 42 );
+  acc_someArray.read();
+  for(int i=0; i<42; i++) BOOST_CHECK(acc_someArray[0][i] == 3*i+120);
+
+  std::vector<int> vals(42);
+  for(int i=0; i<42; i++) vals[i] = -55*i;
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT_ARRAY", vals);
+
+  for(int i=0; i<42; i++) BOOST_CHECK(acc_someArray[0][i] == 3*i+120);
+  acc_someArray.read();
+  for(int i=0; i<42; i++) BOOST_CHECK(acc_someArray[0][i] == -55*i);
+
+  for(int i=0; i<42; i++) acc_someArray[0][i] = i-21;
+  vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+  for(int i=0; i<42; i++) vals[i] = -55*i;
+  acc_someArray.write();
+  vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+  for(int i=0; i<42; i++) vals[i] = i-21;
+
+  device.close();
+
+}
+
 /**********************************************************************************************************************/
