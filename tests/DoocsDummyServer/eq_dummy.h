@@ -9,8 +9,9 @@ class eq_dummy  : public EqFct {
     eq_dummy();
     virtual ~eq_dummy();
     
-    D_string    prop_someString;
     D_int       prop_someInt;
+    D_float     prop_someFloat;
+    D_string    prop_someString;
     
     void init();
     void update();
