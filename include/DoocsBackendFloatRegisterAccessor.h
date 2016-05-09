@@ -128,7 +128,7 @@ namespace mtca4u {
   void DoocsBackendFloatRegisterAccessor<std::string>::write() {
     // copy data into our buffer
     if(nElements == 1) {
-      src.set(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str());
+      src.set(std::stod(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str()));
     }
     else {
       throw(DeviceException("Writing an array of std::string is not supported by DOOCS.",
