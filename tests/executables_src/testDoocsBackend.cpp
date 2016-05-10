@@ -31,6 +31,7 @@ class DoocsBackendTest {
     void testArrayFloat();
     void testArrayDouble();
     void testBitAndStatus();
+    void testExceptions();
 };
 
 /**********************************************************************************************************************/
@@ -49,6 +50,7 @@ class DoocsBackendTestSuite : public test_suite {
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayFloat, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayDouble, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testBitAndStatus, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testExceptions, doocsBackendTest) );
     }
 };
 
@@ -589,6 +591,63 @@ void DoocsBackendTest::testBitAndStatus() {
   BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_STATUS") == 0xFFFE );
   acc_someStatus.write();
   BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_STATUS") == 123 );
+
+  device.close();
+
+}
+
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testExceptions() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  // broken URIs
+  try {
+    device.open("BrokenURI1");
+    BOOST_ERROR("Exception expected.");
+  }
+  catch(DeviceException &ex) {
+    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
+  }
+
+  try {
+    device.open("BrokenURI2");
+    BOOST_ERROR("Exception expected.");
+  }
+  catch(DeviceException &ex) {
+    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
+  }
+
+  device.open("DoocsServer1");
+
+  // unsupported data type
+  try {
+    device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_SPECTRUM");
+    BOOST_ERROR("Exception expected.");
+  }
+  catch(DeviceException &ex) {
+    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
+  }
+
+  // non-existing DOOCS property
+  try {
+    device.getTwoDRegisterAccessor<int>("MYDUMMY/NOT_EXISTING");
+    BOOST_ERROR("Exception expected.");
+  }
+  catch(DeviceException &ex) {
+    BOOST_CHECK(ex.getID() == DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+  }
+
+  // read string with non-string user type
+  try {
+    device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_STRING");
+    BOOST_ERROR("Exception expected.");
+  }
+  catch(DeviceException &ex) {
+    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
+  }
 
   device.close();
 

@@ -11,7 +11,8 @@ eq_dummy::eq_dummy()
   prop_someIntArray("SOME_INT_ARRAY", 42, this),
   prop_someShortArray("SOME_SHORT_ARRAY", 5, this),
   prop_someFloatArray("SOME_FLOAT_ARRAY", 5, this),
-  prop_someDoubleArray("SOME_DOUBLE_ARRAY", 5, this)
+  prop_someDoubleArray("SOME_DOUBLE_ARRAY", 5, this),
+  prop_someSpectrum("SOME_SPECTRUM", 100, this)
 {
 }
 

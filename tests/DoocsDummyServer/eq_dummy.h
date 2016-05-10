@@ -21,6 +21,8 @@ class eq_dummy  : public EqFct {
     D_floatarray    prop_someFloatArray;
     D_doublearray   prop_someDoubleArray;
 
+    D_spectrum      prop_someSpectrum;
+
     void init();
     void update();
 
