@@ -32,6 +32,7 @@ class DoocsBackendTest {
     void testArrayDouble();
     void testBitAndStatus();
     void testExceptions();
+    void testOther();
 };
 
 /**********************************************************************************************************************/
@@ -51,6 +52,7 @@ class DoocsBackendTestSuite : public test_suite {
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayDouble, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testBitAndStatus, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testExceptions, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testOther, doocsBackendTest) );
     }
 };
 
@@ -431,6 +433,24 @@ void DoocsBackendTest::testArrayInt() {
   vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
   for(int i=0; i<42; i++) BOOST_CHECK(vals[i] == i-21);
 
+  // access via double
+  TwoDRegisterAccessor<double> acc_someArrayAsDouble(device.getTwoDRegisterAccessor<double>("MYDUMMY/SOME_INT_ARRAY"));
+  acc_someArrayAsDouble.read();
+  for(int i=0; i<5; i++) BOOST_CHECK_CLOSE( acc_someArrayAsDouble[0][i], i-21, 0.00001 );
+  for(int i=0; i<5; i++) acc_someArrayAsDouble[0][i] = 2.4*i;
+  acc_someArrayAsDouble.write();
+  vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+  for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], round(2.4*i), 0.00001 );
+
+  // access via string
+  TwoDRegisterAccessor<std::string> acc_someArrayAsString(device.getTwoDRegisterAccessor<std::string>("MYDUMMY/SOME_INT_ARRAY"));
+  acc_someArrayAsString.read();
+  for(int i=0; i<5; i++) BOOST_CHECK_CLOSE( std::stod(acc_someArrayAsString[0][i]),round(2.4*i), 0.00001 );
+  for(int i=0; i<5; i++) acc_someArrayAsString[0][i] = std::to_string(3*i);
+  acc_someArrayAsString.write();
+  vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+  for(int i=0; i<5; i++) BOOST_CHECK(vals[i] == 3*i);
+
   device.close();
 
 }
@@ -533,6 +553,24 @@ void DoocsBackendTest::testArrayDouble() {
   acc_someArray.write();
   vals = doocsServerTestHelper::doocsGet_doubleArray("//MYDUMMY/SOME_DOUBLE_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], 2./(i+0.01), 0.00001);
+
+  // access via int
+  TwoDRegisterAccessor<int> acc_someArrayAsInt(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_DOUBLE_ARRAY"));
+  acc_someArrayAsInt.read();
+  for(int i=0; i<5; i++) BOOST_CHECK( acc_someArrayAsInt[0][i] == round(2./(i+0.01)));
+  for(int i=0; i<5; i++) acc_someArrayAsInt[0][i] = 2*i;
+  acc_someArrayAsInt.write();
+  vals = doocsServerTestHelper::doocsGet_doubleArray("//MYDUMMY/SOME_DOUBLE_ARRAY");
+  for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], 2*i, 0.00001);
+
+  // access via string
+  TwoDRegisterAccessor<std::string> acc_someArrayAsString(device.getTwoDRegisterAccessor<std::string>("MYDUMMY/SOME_DOUBLE_ARRAY"));
+  acc_someArrayAsString.read();
+  for(int i=0; i<5; i++) BOOST_CHECK_CLOSE( std::stod(acc_someArrayAsString[0][i]), 2*i, 0.00001 );
+  for(int i=0; i<5; i++) acc_someArrayAsString[0][i] = std::to_string(2.1*i);
+  acc_someArrayAsString.write();
+  vals = doocsServerTestHelper::doocsGet_doubleArray("//MYDUMMY/SOME_DOUBLE_ARRAY");
+  for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], 2.1*i, 0.00001);
 
   device.close();
 
@@ -648,6 +686,21 @@ void DoocsBackendTest::testExceptions() {
   catch(DeviceException &ex) {
     BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
   }
+
+  device.close();
+
+}
+
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testOther() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  device.open("DoocsServer1");
+
+  BOOST_CHECK( device.readDeviceInfo() == "DOOCS server address: /TEST.DOOCS/LOCALHOST_610498009" );
 
   device.close();
 
