@@ -49,8 +49,8 @@ namespace mtca4u {
     if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_TEXT &&
         DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING &&
         DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING16) {
-      throw DeviceException("DOOCS data type not supported by DoocsBackendStringRegisterAccessor.",
-          DeviceException::WRONG_PARAMETER);
+      throw DeviceException("DOOCS data type not supported by DoocsBackendStringRegisterAccessor.",     // LCOV_EXCL_LINE (already prevented in the Backend)
+          DeviceException::WRONG_PARAMETER);                                                            // LCOV_EXCL_LINE
     }
 
     // check UserType
@@ -90,18 +90,18 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendStringRegisterAccessor<UserType>::read() {
-    throw DeviceException("Trying to access a string DOOCS property with a non-string user data type.",
-        DeviceException::WRONG_PARAMETER);
-  }
+  void DoocsBackendStringRegisterAccessor<UserType>::read() {                                               // LCOV_EXCL_LINE (already prevented in constructor)
+    throw DeviceException("Trying to access a string DOOCS property with a non-string user data type.",     // LCOV_EXCL_LINE
+        DeviceException::WRONG_PARAMETER);                                                                  // LCOV_EXCL_LINE
+  }                                                                                                         // LCOV_EXCL_LINE
 
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendStringRegisterAccessor<UserType>::write() {
-    throw DeviceException("Trying to access a string DOOCS property with a non-string user data type.",
-        DeviceException::WRONG_PARAMETER);
-  }
+  void DoocsBackendStringRegisterAccessor<UserType>::write() {                                              // LCOV_EXCL_LINE (already prevented in constructor)
+    throw DeviceException("Trying to access a string DOOCS property with a non-string user data type.",     // LCOV_EXCL_LINE
+        DeviceException::WRONG_PARAMETER);                                                                  // LCOV_EXCL_LINE
+  }                                                                                                         // LCOV_EXCL_LINE
 
 } /* namespace mtca4u */
 
