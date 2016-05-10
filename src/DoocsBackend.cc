@@ -36,8 +36,9 @@ namespace mtca4u {
       std::string /*instance*/, std::list<std::string> parameters, std::string /*mapFileName*/) {
 
     // check presense of required parameters
-    if (parameters.size() < 2) {
-      throw DeviceException("",DeviceException::WRONG_PARAMETER);
+    if(parameters.size() < 2) {
+      throw DeviceException("DoocsBackend: The SDM URI is missing a parameter: FACILITY and DEVICE must be specified.",
+          DeviceException::WRONG_PARAMETER);
     }
 
     // form server address
