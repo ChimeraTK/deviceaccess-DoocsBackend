@@ -720,6 +720,30 @@ void DoocsBackendTest::testPartialAccess() {
     }
   }
 
+  // float array with string user type, 1 elements, offset of 0
+  {
+    ScalarRegisterAccessor<std::string> acc_someArray(device.getScalarRegisterAccessor<std::string>("MYDUMMY/SOME_FLOAT_ARRAY", 0));
+
+    std::vector<float> vals(5);
+    for(int i=0; i<5; i++) vals[i] = 2.82*(i+1);
+    doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT_ARRAY", vals);
+
+    acc_someArray.read();
+    BOOST_CHECK_CLOSE( std::stod(acc_someArray), 2.82, 0.00001 );
+
+    acc_someArray = "-11.111";
+    acc_someArray.write();
+    vals = doocsServerTestHelper::doocsGet_floatArray("//MYDUMMY/SOME_FLOAT_ARRAY");
+    for(int i=0; i<5; i++) {
+      if(i == 0) {
+        BOOST_CHECK_CLOSE(vals[i], -11.111, 0.00001 );
+      }
+      else {
+        BOOST_CHECK_CLOSE(vals[i], 2.82*(i+1), 0.00001 );
+      }
+    }
+  }
+
   device.close();
 
 }
