@@ -27,6 +27,7 @@ class DoocsBackendTest {
     void testString();
     void testArrayInt();
     void testArrayFloat();
+    void testBitAndStatus();
 };
 
 /**********************************************************************************************************************/
@@ -41,6 +42,7 @@ class DoocsBackendTestSuite : public test_suite {
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testString, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayInt, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayFloat, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testBitAndStatus, doocsBackendTest) );
     }
 };
 
@@ -367,6 +369,64 @@ void DoocsBackendTest::testArrayFloat() {
   acc_someArray.write();
   vals = doocsServerTestHelper::doocsGet_floatArray("//MYDUMMY/SOME_FLOAT_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], 2./(i+0.01), 0.00001);
+
+  device.close();
+
+}
+
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testBitAndStatus() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  device.open("DoocsServer1");
+
+  TwoDRegisterAccessor<int> acc_someBit(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_BIT"));
+  TwoDRegisterAccessor<int> acc_someStatus(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_STATUS"));
+  TwoDRegisterAccessor<uint16_t> acc_someStatusU16(device.getTwoDRegisterAccessor<uint16_t>("MYDUMMY/SOME_STATUS"));
+
+  BOOST_CHECK( acc_someBit.getNChannels() == 1 );
+  BOOST_CHECK( acc_someStatus.getNChannels() == 1 );
+  BOOST_CHECK( acc_someBit.getNElementsPerChannel() == 1 );
+  BOOST_CHECK( acc_someStatus.getNElementsPerChannel() == 1 );
+
+  acc_someBit.read();
+  BOOST_CHECK( acc_someBit[0][0] == 1 );
+  acc_someStatus.read();
+  BOOST_CHECK( acc_someStatus[0][0] == 3 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_BIT", 0);
+
+  BOOST_CHECK( acc_someBit[0][0] == 1 );
+  acc_someBit.read();
+  BOOST_CHECK( acc_someBit[0][0] == 0 );
+  BOOST_CHECK( acc_someStatus[0][0] == 3 );
+  acc_someStatus.read();
+  BOOST_CHECK( acc_someStatus[0][0] == 2 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_STATUS", 0xFFFF);
+
+  BOOST_CHECK( acc_someBit[0][0] == 0 );
+  acc_someBit.read();
+  BOOST_CHECK( acc_someBit[0][0] == 1 );
+  BOOST_CHECK( acc_someStatus[0][0] == 2 );
+  acc_someStatus.read();
+  BOOST_CHECK( acc_someStatus[0][0] == 0xFFFF );
+
+  acc_someStatusU16.read();
+  BOOST_CHECK( acc_someStatusU16[0][0] == 0xFFFF );
+
+  acc_someBit[0][0] = 0;
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_STATUS") == 0xFFFF );
+  acc_someBit.write();
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_STATUS") == 0xFFFE );
+
+  acc_someStatus[0][0] = 123;
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_STATUS") == 0xFFFE );
+  acc_someStatus.write();
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_STATUS") == 123 );
 
   device.close();
 
