@@ -104,8 +104,10 @@ namespace mtca4u {
       NDRegisterAccessor<std::string>::buffer_2D[0][0] = dst.get_string();
     }
     else {
-      throw(DeviceException("Reading an array of std::string is not supported by DOOCS.",
-          DeviceException::NOT_IMPLEMENTED));
+      for(size_t i=0; i<DoocsBackendRegisterAccessor<std::string>::nElements; i++) {
+        NDRegisterAccessor<std::string>::buffer_2D[0][i] = std::to_string(
+            DoocsBackendRegisterAccessor<std::string>::dst.get_double(i));
+      }
     }
   }
 
@@ -135,8 +137,9 @@ namespace mtca4u {
       src.set(std::stod(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str()));
     }
     else {
-      throw(DeviceException("Writing an array of std::string is not supported by DOOCS.",
-          DeviceException::NOT_IMPLEMENTED));
+      for(size_t i=0; i<DoocsBackendRegisterAccessor<std::string>::nElements; i++) {
+        src.set(std::stod(NDRegisterAccessor<std::string>::buffer_2D[0][i].c_str()), (int)i);
+      }
     }
     // write data
     write_internal();
