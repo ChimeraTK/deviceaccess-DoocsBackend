@@ -25,7 +25,7 @@ namespace mtca4u {
 
     public:
 
-      DoocsBackendStringRegisterAccessor(const RegisterPath &path);
+      DoocsBackendStringRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister);
 
       virtual ~DoocsBackendStringRegisterAccessor();
 
@@ -37,8 +37,9 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendStringRegisterAccessor<UserType>::DoocsBackendStringRegisterAccessor(const RegisterPath &path)
-  : DoocsBackendRegisterAccessor<UserType>(path, false)
+  DoocsBackendStringRegisterAccessor<UserType>::DoocsBackendStringRegisterAccessor(const RegisterPath &path,
+      size_t numberOfWords, size_t wordOffsetInRegister)
+  : DoocsBackendRegisterAccessor<UserType>(path,numberOfWords,wordOffsetInRegister, false)
   {
 
     // set buffer size (nElements will be the number of characters, so the buffer allocation in the base class would be incorrect)

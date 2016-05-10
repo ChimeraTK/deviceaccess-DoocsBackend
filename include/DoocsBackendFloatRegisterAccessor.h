@@ -25,7 +25,7 @@ namespace mtca4u {
 
     public:
 
-      DoocsBackendFloatRegisterAccessor(const RegisterPath &path);
+      DoocsBackendFloatRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister);
 
       virtual ~DoocsBackendFloatRegisterAccessor();
 
@@ -38,8 +38,9 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendFloatRegisterAccessor<UserType>::DoocsBackendFloatRegisterAccessor(const RegisterPath &path)
-  : DoocsBackendRegisterAccessor<UserType>(path)
+  DoocsBackendFloatRegisterAccessor<UserType>::DoocsBackendFloatRegisterAccessor(const RegisterPath &path,
+      size_t numberOfWords, size_t wordOffsetInRegister)
+  : DoocsBackendRegisterAccessor<UserType>(path,numberOfWords,wordOffsetInRegister)
   {
 
     // check data type
@@ -66,12 +67,13 @@ namespace mtca4u {
     // read data
     read_internal();
     // copy data into our buffer
-    if(nElements == 1) {
+    if(!isArray) {
       NDRegisterAccessor<float>::buffer_2D[0][0] = dst.get_float();
     }
     else {
       for(size_t i=0; i<DoocsBackendRegisterAccessor<float>::nElements; i++) {
-        NDRegisterAccessor<float>::buffer_2D[0][i] = dst.get_float(i);
+        int idx = i+DoocsBackendRegisterAccessor<float>::elementOffset;
+        NDRegisterAccessor<float>::buffer_2D[0][i] = dst.get_float(idx);
       }
     }
   }
@@ -83,12 +85,13 @@ namespace mtca4u {
     // read data
     read_internal();
     // copy data into our buffer
-    if(nElements == 1) {
+    if(!isArray) {
       NDRegisterAccessor<double>::buffer_2D[0][0] = dst.get_double();
     }
     else {
       for(size_t i=0; i<DoocsBackendRegisterAccessor<double>::nElements; i++) {
-        NDRegisterAccessor<double>::buffer_2D[0][i] = dst.get_double(i);
+        int idx = i+DoocsBackendRegisterAccessor<double>::elementOffset;
+        NDRegisterAccessor<double>::buffer_2D[0][i] = dst.get_double(idx);
       }
     }
   }
@@ -100,13 +103,14 @@ namespace mtca4u {
     // read data
     read_internal();
     // copy data into our buffer
-    if(nElements == 1) {
+    if(!isArray) {
       NDRegisterAccessor<std::string>::buffer_2D[0][0] = dst.get_string();
     }
     else {
       for(size_t i=0; i<DoocsBackendRegisterAccessor<std::string>::nElements; i++) {
+        int idx = i+DoocsBackendRegisterAccessor<std::string>::elementOffset;
         NDRegisterAccessor<std::string>::buffer_2D[0][i] = std::to_string(
-            DoocsBackendRegisterAccessor<std::string>::dst.get_double(i));
+            DoocsBackendRegisterAccessor<std::string>::dst.get_double(idx));
       }
     }
   }
@@ -118,12 +122,13 @@ namespace mtca4u {
     // read data
     DoocsBackendRegisterAccessor<UserType>::read_internal();
     // copy data into our buffer
-    if(DoocsBackendRegisterAccessor<UserType>::nElements == 1) {
+    if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       NDRegisterAccessor<UserType>::buffer_2D[0][0] = std::round(DoocsBackendRegisterAccessor<UserType>::dst.get_double());
     }
     else {
       for(size_t i=0; i<DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
-        NDRegisterAccessor<UserType>::buffer_2D[0][i] = std::round(DoocsBackendRegisterAccessor<UserType>::dst.get_double(i));
+        int idx = i+DoocsBackendRegisterAccessor<UserType>::elementOffset;
+        NDRegisterAccessor<UserType>::buffer_2D[0][i] = std::round(DoocsBackendRegisterAccessor<UserType>::dst.get_double(idx));
       }
     }
   }
@@ -133,12 +138,19 @@ namespace mtca4u {
   template<>
   void DoocsBackendFloatRegisterAccessor<std::string>::write() {
     // copy data into our buffer
-    if(nElements == 1) {
+    if(!isArray) {
       src.set(std::stod(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str()));
     }
     else {
+      if(DoocsBackendRegisterAccessor<std::string>::isPartial) {   // implement read-modify-write
+        DoocsBackendRegisterAccessor<std::string>::read_internal();
+        for(int i=0; i<DoocsBackendRegisterAccessor<std::string>::src.array_length(); i++) {
+          DoocsBackendRegisterAccessor<std::string>::src.set(DoocsBackendRegisterAccessor<std::string>::dst.get_double(i),i);
+        }
+      }
       for(size_t i=0; i<DoocsBackendRegisterAccessor<std::string>::nElements; i++) {
-        src.set(std::stod(NDRegisterAccessor<std::string>::buffer_2D[0][i].c_str()), (int)i);
+        int idx = i+DoocsBackendRegisterAccessor<std::string>::elementOffset;
+        src.set(std::stod(NDRegisterAccessor<std::string>::buffer_2D[0][i].c_str()), idx);
       }
     }
     // write data
@@ -150,14 +162,21 @@ namespace mtca4u {
   template<typename UserType>
   void DoocsBackendFloatRegisterAccessor<UserType>::write() {
     // copy data into our buffer
-    if(DoocsBackendRegisterAccessor<UserType>::nElements == 1) {
+    if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       double val = NDRegisterAccessor<UserType>::buffer_2D[0][0];
       DoocsBackendRegisterAccessor<UserType>::src.set(val);
     }
     else {
+      if(DoocsBackendRegisterAccessor<UserType>::isPartial) {   // implement read-modify-write
+        DoocsBackendRegisterAccessor<UserType>::read_internal();
+        for(int i=0; i<DoocsBackendRegisterAccessor<UserType>::src.array_length(); i++) {
+          DoocsBackendRegisterAccessor<UserType>::src.set(DoocsBackendRegisterAccessor<UserType>::dst.get_double(i),i);
+        }
+      }
       for(size_t i=0; i<DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
+        int idx = i+DoocsBackendRegisterAccessor<UserType>::elementOffset;
         double val = NDRegisterAccessor<UserType>::buffer_2D[0][i];
-        DoocsBackendRegisterAccessor<UserType>::src.set(val,(int)i);
+        DoocsBackendRegisterAccessor<UserType>::src.set(val,idx);
       }
     }
     // write data

@@ -25,7 +25,7 @@ namespace mtca4u {
 
     public:
 
-      DoocsBackendIntRegisterAccessor(const RegisterPath &path);
+      DoocsBackendIntRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister);
 
       virtual ~DoocsBackendIntRegisterAccessor();
 
@@ -43,8 +43,9 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendIntRegisterAccessor<UserType>::DoocsBackendIntRegisterAccessor(const RegisterPath &path)
-  : DoocsBackendRegisterAccessor<UserType>(path)
+  DoocsBackendIntRegisterAccessor<UserType>::DoocsBackendIntRegisterAccessor(const RegisterPath &path,
+      size_t numberOfWords, size_t wordOffsetInRegister)
+  : DoocsBackendRegisterAccessor<UserType>(path,numberOfWords,wordOffsetInRegister)
   {
 
     // check data type
@@ -72,12 +73,15 @@ namespace mtca4u {
     // read data
     DoocsBackendRegisterAccessor<UserType>::read_internal();
     // copy data into our buffer
-    if(DoocsBackendRegisterAccessor<UserType>::nElements == 1) {
-      NDRegisterAccessor<UserType>::buffer_2D[0][0] = fixedPointConverter.toCooked<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_int());
+    if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
+      UserType val = fixedPointConverter.toCooked<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_int());
+      NDRegisterAccessor<UserType>::buffer_2D[0][0] = val;
     }
     else {
       for(size_t i=0; i<DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
-        NDRegisterAccessor<UserType>::buffer_2D[0][i] = fixedPointConverter.toCooked<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_int(i));
+        int idx = i+DoocsBackendRegisterAccessor<UserType>::elementOffset;
+        UserType val = fixedPointConverter.toCooked<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_int(idx));
+        NDRegisterAccessor<UserType>::buffer_2D[0][i] = val;
       }
     }
   }
@@ -87,14 +91,21 @@ namespace mtca4u {
   template<typename UserType>
   void DoocsBackendIntRegisterAccessor<UserType>::write() {
     // copy data into our buffer
-    if(DoocsBackendRegisterAccessor<UserType>::nElements == 1) {
+    if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       int32_t raw = fixedPointConverter.toRaw(NDRegisterAccessor<UserType>::buffer_2D[0][0]);
       DoocsBackendRegisterAccessor<UserType>::src.set(raw);
     }
     else {
+      if(DoocsBackendRegisterAccessor<UserType>::isPartial) {   // implement read-modify-write
+        DoocsBackendRegisterAccessor<UserType>::read_internal();
+        for(int i=0; i<DoocsBackendRegisterAccessor<UserType>::src.array_length(); i++) {
+          DoocsBackendRegisterAccessor<UserType>::src.set(DoocsBackendRegisterAccessor<UserType>::dst.get_int(i),i);
+        }
+      }
       for(size_t i=0; i<DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
         int32_t raw = fixedPointConverter.toRaw(NDRegisterAccessor<UserType>::buffer_2D[0][i]);
-        DoocsBackendRegisterAccessor<UserType>::src.set(raw,(int)i);
+        int idx = i+DoocsBackendRegisterAccessor<UserType>::elementOffset;
+        DoocsBackendRegisterAccessor<UserType>::src.set(raw,idx);
       }
     }
     // write data

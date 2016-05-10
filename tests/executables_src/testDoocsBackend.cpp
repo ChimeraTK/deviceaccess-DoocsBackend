@@ -32,6 +32,7 @@ class DoocsBackendTest {
     void testArrayFloat();
     void testArrayDouble();
     void testBitAndStatus();
+    void testPartialAccess();
     void testExceptions();
     void testOther();
 };
@@ -52,6 +53,7 @@ class DoocsBackendTestSuite : public test_suite {
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayFloat, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayDouble, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testBitAndStatus, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testPartialAccess, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testExceptions, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testOther, doocsBackendTest) );
     }
@@ -634,6 +636,93 @@ void DoocsBackendTest::testBitAndStatus() {
   device.close();
 
 }
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testPartialAccess() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  device.open("DoocsServer1");
+
+  // int array, 20 elements, offset of 1
+  {
+    OneDRegisterAccessor<int> acc_someArray(device.getOneDRegisterAccessor<int>("MYDUMMY/SOME_INT_ARRAY", 20, 1));
+    BOOST_CHECK( acc_someArray.getNElements() == 20 );
+
+    std::vector<int> vals(42);
+    for(int i=0; i<42; i++) vals[i] = -55*i;
+    doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT_ARRAY", vals);
+
+    acc_someArray.read();
+    for(int i=0; i<20; i++) BOOST_CHECK( acc_someArray[i] == -55*(i+1) );
+
+    for(int i=0; i<20; i++) acc_someArray[i] = i;
+    acc_someArray.write();
+    vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+    for(int i=0; i<42; i++) {
+      if(i == 0 || i > 20) {
+        BOOST_CHECK(vals[i] == -55*i );
+      }
+      else {
+        BOOST_CHECK(vals[i] == i-1 );
+      }
+    }
+  }
+
+  // int array, 1 elements, offset of 10
+  {
+    OneDRegisterAccessor<int> acc_someArray(device.getOneDRegisterAccessor<int>("MYDUMMY/SOME_INT_ARRAY", 1, 10));
+    BOOST_CHECK( acc_someArray.getNElements() == 1 );
+
+    std::vector<int> vals(42);
+    for(int i=0; i<42; i++) vals[i] = 33*i;
+    doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT_ARRAY", vals);
+
+    acc_someArray.read();
+    BOOST_CHECK( acc_someArray[0] == 33*10 );
+
+    acc_someArray[0] = 42;
+    acc_someArray.write();
+    vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+    for(int i=0; i<42; i++) {
+      if(i == 10) {
+        BOOST_CHECK(vals[i] == 42 );
+      }
+      else {
+        BOOST_CHECK(vals[i] == 33*i );
+      }
+    }
+  }
+
+  // double array with float user type, 3 elements, offset of 2
+  {
+    OneDRegisterAccessor<float> acc_someArray(device.getOneDRegisterAccessor<float>("MYDUMMY/SOME_DOUBLE_ARRAY", 3, 2));
+    BOOST_CHECK( acc_someArray.getNElements() == 3 );
+
+    std::vector<double> vals(5);
+    for(int i=0; i<5; i++) vals[i] = 3.14*i;
+    doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_DOUBLE_ARRAY", vals);
+
+    acc_someArray.read();
+    for(int i=0; i<3; i++) BOOST_CHECK_CLOSE( acc_someArray[i], 3.14*(i+2), 0.00001 );
+
+    for(int i=0; i<3; i++) acc_someArray[i] = 1.2-i;
+    acc_someArray.write();
+    vals = doocsServerTestHelper::doocsGet_doubleArray("//MYDUMMY/SOME_DOUBLE_ARRAY");
+    for(int i=0; i<5; i++) {
+      if(i > 1) {
+        BOOST_CHECK_CLOSE(vals[i], 1.2-(i-2), 0.00001 );
+      }
+      else {
+        BOOST_CHECK_CLOSE(vals[i], 3.14*i, 0.00001 );
+      }
+    }
+  }
+
+  device.close();
+
+}
 
 /**********************************************************************************************************************/
 
@@ -682,6 +771,24 @@ void DoocsBackendTest::testExceptions() {
   // read string with non-string user type
   try {
     device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_STRING");
+    BOOST_ERROR("Exception expected.");
+  }
+  catch(DeviceException &ex) {
+    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
+  }
+
+  // access too many elements (double register)
+  try {
+    device.getOneDRegisterAccessor<float>("MYDUMMY/SOME_DOUBLE_ARRAY", 10, 1);
+    BOOST_ERROR("Exception expected.");
+  }
+  catch(DeviceException &ex) {
+    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
+  }
+
+  // access too many elements (int register)
+  try {
+    device.getOneDRegisterAccessor<float>("MYDUMMY/SOME_INT_ARRAY", 100, 1);
     BOOST_ERROR("Exception expected.");
   }
   catch(DeviceException &ex) {

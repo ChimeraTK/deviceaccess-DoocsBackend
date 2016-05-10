@@ -23,7 +23,8 @@ namespace mtca4u {
 
     public:
 
-      DoocsBackendRegisterAccessor(const RegisterPath &path, bool allocateBuffers = true);
+      DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
+          bool allocateBuffers = true);
 
       virtual ~DoocsBackendRegisterAccessor();
 
@@ -52,8 +53,17 @@ namespace mtca4u {
       /// DOOCS data structures
       EqData src,dst;
 
+      /// flag if the DOOCS data type is an array or not
+      bool isArray;
+
       /// number of elements
       size_t nElements;
+
+      /// element offset specified by the user
+      size_t elementOffset;
+
+      /// flag if the accessor should affect only a part of the property (in case of an array)
+      bool isPartial;
 
       /// internal read into EqData dst
       void read_internal();
@@ -72,8 +82,9 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const RegisterPath &path, bool allocateBuffers)
-  : _path(path)
+  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords,
+      size_t wordOffsetInRegister, bool allocateBuffers)
+  : _path(path), elementOffset(wordOffsetInRegister)
   {
 
     // set address
@@ -83,8 +94,30 @@ namespace mtca4u {
     read_internal();
 
     // obtain number of elements
-    nElements = dst.array_length();
-    if(nElements == 0) nElements = 1;
+    size_t actualLength = dst.array_length();
+    if(actualLength == 0) {
+      actualLength = 1;
+      isArray = false;
+    }
+    else {
+      isArray = true;
+    }
+    if(numberOfWords == 0) {
+      nElements = actualLength;
+    }
+    else {
+      nElements = numberOfWords;
+    }
+    if(nElements + elementOffset > actualLength) {
+        throw DeviceException("Requested number of words exceeds the length of the DOOCS property!",
+            DeviceException::WRONG_PARAMETER);
+    }
+    if(nElements == actualLength && elementOffset == 0) {
+      isPartial = false;
+    }
+    else {
+      isPartial = true;
+    }
 
     // allocate buffers
     if(allocateBuffers) {
@@ -95,7 +128,7 @@ namespace mtca4u {
     // set proper type information in the source EqData
     src.set_type(dst.type());
     if(allocateBuffers) {
-      src.length(nElements);
+      src.length(actualLength);
     }
   }
 
@@ -103,7 +136,6 @@ namespace mtca4u {
 
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::~DoocsBackendRegisterAccessor() {
-
   }
 
   /**********************************************************************************************************************/

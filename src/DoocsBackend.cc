@@ -84,14 +84,14 @@ namespace mtca4u {
     if( dst.type() == DATA_INT || dst.type() == DATA_A_INT ||
         dst.type() == DATA_BOOL || dst.type() == DATA_A_BOOL ||
         dst.type() == DATA_A_SHORT  ) {
-      p = new DoocsBackendIntRegisterAccessor<UserType>(path);
+      p = new DoocsBackendIntRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister);
     }
     else if( dst.type() == DATA_FLOAT || dst.type() == DATA_A_FLOAT ||
         dst.type() == DATA_DOUBLE || dst.type() == DATA_A_DOUBLE  ) {
-      p = new DoocsBackendFloatRegisterAccessor<UserType>(path);
+      p = new DoocsBackendFloatRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister);
     }
     else if( dst.type() == DATA_TEXT || dst.type() == DATA_STRING || dst.type() == DATA_STRING16) {
-      p = new DoocsBackendStringRegisterAccessor<UserType>(path);
+      p = new DoocsBackendStringRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister);
     }
     else {
       throw DeviceException("Unsupported DOOCS data type: "+std::string(dst.type_string()),
