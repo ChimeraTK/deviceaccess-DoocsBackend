@@ -11,6 +11,7 @@
 #include <boost/test/included/unit_test.hpp>
 
 #include <mtca4u/Device.h>
+#include <mtca4u/TransferGroup.h>
 #include <mtca4u-doocsServerTestHelper/doocsServerTestHelper.h>
 
 using namespace boost::unit_test_framework;
@@ -700,7 +701,25 @@ void DoocsBackendTest::testOther() {
 
   device.open("DoocsServer1");
 
+  // device info string
   BOOST_CHECK( device.readDeviceInfo() == "DOOCS server address: /TEST.DOOCS/LOCALHOST_610498009" );
+
+  // test in TransferGroup
+  TwoDRegisterAccessor<int32_t> acc1(device.getTwoDRegisterAccessor<int32_t>("MYDUMMY/SOME_INT"));
+  TwoDRegisterAccessor<int32_t> acc2(device.getTwoDRegisterAccessor<int32_t>("MYDUMMY/SOME_INT"));
+  TransferGroup group;
+  group.addAccessor(acc1);
+  group.addAccessor(acc2);
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT", 123);
+  group.read();
+  BOOST_CHECK(acc1[0][0] == 123);
+  BOOST_CHECK(acc2[0][0] == 123);
+  acc1[0][0] = 42;
+  BOOST_CHECK(acc2[0][0] == 42);    // now sharing the buffer
+  acc1.write();
+  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 42 );
+
 
   device.close();
 
