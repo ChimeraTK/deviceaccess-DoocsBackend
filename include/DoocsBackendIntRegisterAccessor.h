@@ -49,11 +49,10 @@ namespace mtca4u {
 
     // check data type
     if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_INT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_INT &&
         DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_BOOL &&
+        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_INT &&
         DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_BOOL &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_SHORT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_LONG  ) {
+        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_SHORT   ) {
       throw DeviceException("DOOCS data type not supported by DoocsBackendIntRegisterAccessor.",
           DeviceException::WRONG_PARAMETER);
     }

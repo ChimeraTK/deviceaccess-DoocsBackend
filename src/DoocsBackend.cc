@@ -82,7 +82,7 @@ namespace mtca4u {
     // check type and create matching accessor
     if( dst.type() == DATA_INT || dst.type() == DATA_A_INT ||
         dst.type() == DATA_BOOL || dst.type() == DATA_A_BOOL ||
-        dst.type() == DATA_A_SHORT || dst.type() == DATA_A_LONG  ) {
+        dst.type() == DATA_A_SHORT  ) {
       p = new DoocsBackendIntRegisterAccessor<UserType>(path);
     }
     else if( dst.type() == DATA_FLOAT || dst.type() == DATA_A_FLOAT ||
