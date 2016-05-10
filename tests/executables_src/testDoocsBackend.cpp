@@ -24,6 +24,7 @@ class DoocsBackendTest {
 
     void testScalarInt();
     void testScalarFloat();
+    void testScalarDouble();
     void testString();
     void testArrayInt();
     void testArrayFloat();
@@ -39,6 +40,7 @@ class DoocsBackendTestSuite : public test_suite {
 
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarInt, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarFloat, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarDouble, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testString, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayInt, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayFloat, doocsBackendTest) );
@@ -270,6 +272,93 @@ void DoocsBackendTest::testScalarFloat() {
   acc_someFloat_as_string[0][0] = "1234.5678";
   BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 120, 0.00001 );
   acc_someFloat_as_string.write();
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 1234.5678, 0.00001 );
+
+  device.close();
+
+}
+
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testScalarDouble() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  device.open("DoocsServer1");
+
+  TwoDRegisterAccessor<float> acc_someDouble_as_float(device.getTwoDRegisterAccessor<float>("MYDUMMY/SOME_DOUBLE"));
+  BOOST_CHECK( acc_someDouble_as_float.getNChannels() == 1 );
+  BOOST_CHECK( acc_someDouble_as_float.getNElementsPerChannel() == 1 );
+  acc_someDouble_as_float.read();
+  BOOST_CHECK_CLOSE( acc_someDouble_as_float[0][0], 2.8, 0.00001 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_DOUBLE",123.456);
+
+  BOOST_CHECK_CLOSE( acc_someDouble_as_float[0][0], 2.8, 0.00001 );
+  acc_someDouble_as_float.read();
+  BOOST_CHECK_CLOSE( acc_someDouble_as_float[0][0], 123.456, 0.00001 );
+
+  acc_someDouble_as_float[0][0] = 666.333;
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_DOUBLE"), 123.456, 0.00001 );
+  acc_someDouble_as_float.write();
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_DOUBLE"), 666.333, 0.00001 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_DOUBLE",3.1415);
+
+  TwoDRegisterAccessor<double> acc_someDouble_as_double(device.getTwoDRegisterAccessor<double>("MYDUMMY/SOME_DOUBLE"));
+  BOOST_CHECK( acc_someDouble_as_double.getNChannels() == 1 );
+  BOOST_CHECK( acc_someDouble_as_double.getNElementsPerChannel() == 1 );
+  acc_someDouble_as_double.read();
+  BOOST_CHECK_CLOSE( acc_someDouble_as_double[0][0], 3.1415, 0.00001 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_DOUBLE",123.456);
+
+  BOOST_CHECK_CLOSE( acc_someDouble_as_double[0][0], 3.1415, 0.00001 );
+  acc_someDouble_as_double.read();
+  BOOST_CHECK_CLOSE( acc_someDouble_as_double[0][0], 123.456, 0.00001 );
+
+  acc_someDouble_as_double[0][0] = 1234.3;
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_DOUBLE"), 123.456, 0.00001 );
+  acc_someDouble_as_double.write();
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_DOUBLE"), 1234.3, 0.00001 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT",3.1415);
+
+  TwoDRegisterAccessor<int> acc_someDouble_as_int(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_FLOAT"));
+  BOOST_CHECK( acc_someDouble_as_int.getNChannels() == 1 );
+  BOOST_CHECK( acc_someDouble_as_int.getNElementsPerChannel() == 1 );
+  acc_someDouble_as_int.read();
+  BOOST_CHECK( acc_someDouble_as_int[0][0] == 3 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT",119.9);
+
+  BOOST_CHECK( acc_someDouble_as_int[0][0] == 3 );
+  acc_someDouble_as_int.read();
+  BOOST_CHECK( acc_someDouble_as_int[0][0] == 120 );
+
+  acc_someDouble_as_int[0][0] = 1234;
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 119.9, 0.00001 );
+  acc_someDouble_as_int.write();
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 1234.0, 0.00001 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT",3.1415);
+
+  TwoDRegisterAccessor<std::string> acc_someDouble_as_string(device.getTwoDRegisterAccessor<std::string>("MYDUMMY/SOME_FLOAT"));
+  BOOST_CHECK( acc_someDouble_as_string.getNChannels() == 1 );
+  BOOST_CHECK( acc_someDouble_as_string.getNElementsPerChannel() == 1 );
+  acc_someDouble_as_string.read();
+  BOOST_CHECK_CLOSE( std::stod(acc_someDouble_as_string[0][0]), 3.1415, 0.00001 );
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT",120);
+
+  BOOST_CHECK_CLOSE( std::stod(acc_someDouble_as_string[0][0]), 3.1415, 0.00001 );
+  acc_someDouble_as_string.read();
+  BOOST_CHECK( acc_someDouble_as_string[0][0] == "120" );
+
+  acc_someDouble_as_string[0][0] = "1234.5678";
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 120, 0.00001 );
+  acc_someDouble_as_string.write();
   BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 1234.5678, 0.00001 );
 
   device.close();
