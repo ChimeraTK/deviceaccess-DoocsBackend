@@ -93,7 +93,7 @@ namespace mtca4u {
       p = new DoocsBackendStringRegisterAccessor<UserType>(path);
     }
     else {
-      throw DeviceException("Unsupported DOOCS data type: "+std::to_string(dst.type()),
+      throw DeviceException("Unsupported DOOCS data type: "+std::string(dst.type_string()),
           DeviceException::WRONG_PARAMETER);
     }
 
