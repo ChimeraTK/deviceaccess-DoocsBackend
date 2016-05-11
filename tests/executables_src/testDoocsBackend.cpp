@@ -137,9 +137,9 @@ void DoocsBackendTest::testScalarInt() {
   BOOST_CHECK( acc_someInt_as_int[0][0] == 120 );
 
   acc_someInt_as_int[0][0] = 1234;
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 120 );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 120 );
   acc_someInt_as_int.write();
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 1234 );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 1234 );
 
   doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",42);
 
@@ -156,9 +156,9 @@ void DoocsBackendTest::testScalarInt() {
   BOOST_CHECK_CLOSE( acc_someInt_as_double[0][0], 120, 0.001 );
 
   acc_someInt_as_double[0][0] = 1234.3;
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 120 );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 120 );
   acc_someInt_as_double.write();
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 1234 );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 1234 );
 
   doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",42);
 
@@ -175,9 +175,9 @@ void DoocsBackendTest::testScalarInt() {
   BOOST_CHECK_CLOSE( acc_someInt_as_float[0][0], 120, 0.001 );
 
   acc_someInt_as_float[0][0] = 1233.9;
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 120 );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 120 );
   acc_someInt_as_float.write();
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 1234 );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 1234 );
 
   doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",42);
 
@@ -194,9 +194,9 @@ void DoocsBackendTest::testScalarInt() {
   BOOST_CHECK( acc_someInt_as_string[0][0] == "120" );
 
   acc_someInt_as_string[0][0] = "1234";
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 120 );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 120 );
   acc_someInt_as_string.write();
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 1234 );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 1234 );
 
   device.close();
 
@@ -224,9 +224,9 @@ void DoocsBackendTest::testScalarFloat() {
   BOOST_CHECK_CLOSE( acc_someFloat_as_float[0][0], 123.456, 0.00001 );
 
   acc_someFloat_as_float[0][0] = 666.333;
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 123.456, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 123.456, 0.00001 );
   acc_someFloat_as_float.write();
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 666.333, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 666.333, 0.00001 );
 
   doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT",3.1415);
 
@@ -243,9 +243,9 @@ void DoocsBackendTest::testScalarFloat() {
   BOOST_CHECK_CLOSE( acc_someFloat_as_double[0][0], 123.456, 0.00001 );
 
   acc_someFloat_as_double[0][0] = 1234.3;
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 123.456, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 123.456, 0.00001 );
   acc_someFloat_as_double.write();
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 1234.3, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 1234.3, 0.00001 );
 
   doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT",3.1415);
 
@@ -262,9 +262,9 @@ void DoocsBackendTest::testScalarFloat() {
   BOOST_CHECK( acc_someFloat_as_int[0][0] == 120 );
 
   acc_someFloat_as_int[0][0] = 1234;
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 119.9, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 119.9, 0.00001 );
   acc_someFloat_as_int.write();
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 1234.0, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 1234.0, 0.00001 );
 
   doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT",3.1415);
 
@@ -281,9 +281,9 @@ void DoocsBackendTest::testScalarFloat() {
   BOOST_CHECK( acc_someFloat_as_string[0][0] == "120" );
 
   acc_someFloat_as_string[0][0] = "1234.5678";
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 120, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 120, 0.00001 );
   acc_someFloat_as_string.write();
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 1234.5678, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 1234.5678, 0.00001 );
 
   device.close();
 
@@ -311,9 +311,9 @@ void DoocsBackendTest::testScalarDouble() {
   BOOST_CHECK_CLOSE( acc_someDouble_as_float[0][0], 123.456, 0.00001 );
 
   acc_someDouble_as_float[0][0] = 666.333;
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_DOUBLE"), 123.456, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_DOUBLE"), 123.456, 0.00001 );
   acc_someDouble_as_float.write();
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_DOUBLE"), 666.333, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_DOUBLE"), 666.333, 0.00001 );
 
   doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_DOUBLE",3.1415);
 
@@ -330,9 +330,9 @@ void DoocsBackendTest::testScalarDouble() {
   BOOST_CHECK_CLOSE( acc_someDouble_as_double[0][0], 123.456, 0.00001 );
 
   acc_someDouble_as_double[0][0] = 1234.3;
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_DOUBLE"), 123.456, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_DOUBLE"), 123.456, 0.00001 );
   acc_someDouble_as_double.write();
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_DOUBLE"), 1234.3, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_DOUBLE"), 1234.3, 0.00001 );
 
   doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT",3.1415);
 
@@ -349,9 +349,9 @@ void DoocsBackendTest::testScalarDouble() {
   BOOST_CHECK( acc_someDouble_as_int[0][0] == 120 );
 
   acc_someDouble_as_int[0][0] = 1234;
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 119.9, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 119.9, 0.00001 );
   acc_someDouble_as_int.write();
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 1234.0, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 1234.0, 0.00001 );
 
   doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT",3.1415);
 
@@ -368,9 +368,9 @@ void DoocsBackendTest::testScalarDouble() {
   BOOST_CHECK( acc_someDouble_as_string[0][0] == "120" );
 
   acc_someDouble_as_string[0][0] = "1234.5678";
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 120, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 120, 0.00001 );
   acc_someDouble_as_string.write();
-  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet_float("//MYDUMMY/SOME_FLOAT"), 1234.5678, 0.00001 );
+  BOOST_CHECK_CLOSE( doocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 1234.5678, 0.00001 );
 
   device.close();
 
@@ -398,9 +398,9 @@ void DoocsBackendTest::testString() {
   BOOST_CHECK(acc_someString[0][0] == "Something else.");
 
   acc_someString[0][0] = "Even different!";
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_string("//MYDUMMY/SOME_STRING") == "Something else." );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<string>("//MYDUMMY/SOME_STRING") == "Something else." );
   acc_someString.write();
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_string("//MYDUMMY/SOME_STRING") == "Even different!" );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<string>("//MYDUMMY/SOME_STRING") == "Even different!" );
 
   device.close();
 
@@ -430,10 +430,10 @@ void DoocsBackendTest::testArrayInt() {
   for(int i=0; i<42; i++) BOOST_CHECK(acc_someArray[0][i] == -55*i);
 
   for(int i=0; i<42; i++) acc_someArray[0][i] = i-21;
-  vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+  vals = doocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_INT_ARRAY");
   for(int i=0; i<42; i++) BOOST_CHECK(vals[i] == -55*i);
   acc_someArray.write();
-  vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+  vals = doocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_INT_ARRAY");
   for(int i=0; i<42; i++) BOOST_CHECK(vals[i] == i-21);
 
   // access via double
@@ -442,7 +442,7 @@ void DoocsBackendTest::testArrayInt() {
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE( acc_someArrayAsDouble[0][i], i-21, 0.00001 );
   for(int i=0; i<5; i++) acc_someArrayAsDouble[0][i] = 2.4*i;
   acc_someArrayAsDouble.write();
-  vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+  vals = doocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_INT_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], round(2.4*i), 0.00001 );
 
   // access via string
@@ -451,7 +451,7 @@ void DoocsBackendTest::testArrayInt() {
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE( std::stod(acc_someArrayAsString[0][i]),round(2.4*i), 0.00001 );
   for(int i=0; i<5; i++) acc_someArrayAsString[0][i] = std::to_string(3*i);
   acc_someArrayAsString.write();
-  vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+  vals = doocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_INT_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK(vals[i] == 3*i);
 
   device.close();
@@ -483,10 +483,10 @@ void DoocsBackendTest::testArrayShort() {
 
   std::vector<int> vals2(5);
   for(int i=0; i<5; i++) acc_someArray[0][i] = i-21;
-  vals2 = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_SHORT_ARRAY");
+  vals2 = doocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_SHORT_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK(vals2[i] == -55*i);
   acc_someArray.write();
-  vals2 = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_SHORT_ARRAY");
+  vals2 = doocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_SHORT_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK(vals2[i] == i-21);
 
   device.close();
@@ -517,10 +517,10 @@ void DoocsBackendTest::testArrayFloat() {
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(acc_someArray[0][i], -3.14159265*i, 0.00001);
 
   for(int i=0; i<5; i++) acc_someArray[0][i] = 2./(i+0.01);
-  vals = doocsServerTestHelper::doocsGet_floatArray("//MYDUMMY/SOME_FLOAT_ARRAY");
+  vals = doocsServerTestHelper::doocsGetArray<float>("//MYDUMMY/SOME_FLOAT_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], -3.14159265*i, 0.00001);
   acc_someArray.write();
-  vals = doocsServerTestHelper::doocsGet_floatArray("//MYDUMMY/SOME_FLOAT_ARRAY");
+  vals = doocsServerTestHelper::doocsGetArray<float>("//MYDUMMY/SOME_FLOAT_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], 2./(i+0.01), 0.00001);
 
   device.close();
@@ -551,10 +551,10 @@ void DoocsBackendTest::testArrayDouble() {
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(acc_someArray[0][i], -3.14159265*i, 0.00001);
 
   for(int i=0; i<5; i++) acc_someArray[0][i] = 2./(i+0.01);
-  vals = doocsServerTestHelper::doocsGet_doubleArray("//MYDUMMY/SOME_DOUBLE_ARRAY");
+  vals = doocsServerTestHelper::doocsGetArray<double>("//MYDUMMY/SOME_DOUBLE_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], -3.14159265*i, 0.00001);
   acc_someArray.write();
-  vals = doocsServerTestHelper::doocsGet_doubleArray("//MYDUMMY/SOME_DOUBLE_ARRAY");
+  vals = doocsServerTestHelper::doocsGetArray<double>("//MYDUMMY/SOME_DOUBLE_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], 2./(i+0.01), 0.00001);
 
   // access via int
@@ -563,7 +563,7 @@ void DoocsBackendTest::testArrayDouble() {
   for(int i=0; i<5; i++) BOOST_CHECK( acc_someArrayAsInt[0][i] == round(2./(i+0.01)));
   for(int i=0; i<5; i++) acc_someArrayAsInt[0][i] = 2*i;
   acc_someArrayAsInt.write();
-  vals = doocsServerTestHelper::doocsGet_doubleArray("//MYDUMMY/SOME_DOUBLE_ARRAY");
+  vals = doocsServerTestHelper::doocsGetArray<double>("//MYDUMMY/SOME_DOUBLE_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], 2*i, 0.00001);
 
   // access via string
@@ -572,7 +572,7 @@ void DoocsBackendTest::testArrayDouble() {
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE( std::stod(acc_someArrayAsString[0][i]), 2*i, 0.00001 );
   for(int i=0; i<5; i++) acc_someArrayAsString[0][i] = std::to_string(2.1*i);
   acc_someArrayAsString.write();
-  vals = doocsServerTestHelper::doocsGet_doubleArray("//MYDUMMY/SOME_DOUBLE_ARRAY");
+  vals = doocsServerTestHelper::doocsGetArray<double>("//MYDUMMY/SOME_DOUBLE_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], 2.1*i, 0.00001);
 
   device.close();
@@ -624,14 +624,14 @@ void DoocsBackendTest::testBitAndStatus() {
   BOOST_CHECK( acc_someStatusU16[0][0] == 0xFFFF );
 
   acc_someBit[0][0] = 0;
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_STATUS") == 0xFFFF );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_STATUS") == 0xFFFF );
   acc_someBit.write();
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_STATUS") == 0xFFFE );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_STATUS") == 0xFFFE );
 
   acc_someStatus[0][0] = 123;
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_STATUS") == 0xFFFE );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_STATUS") == 0xFFFE );
   acc_someStatus.write();
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_STATUS") == 123 );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_STATUS") == 123 );
 
   device.close();
 
@@ -659,7 +659,7 @@ void DoocsBackendTest::testPartialAccess() {
 
     for(int i=0; i<20; i++) acc_someArray[i] = i;
     acc_someArray.write();
-    vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+    vals = doocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_INT_ARRAY");
     for(int i=0; i<42; i++) {
       if(i == 0 || i > 20) {
         BOOST_CHECK(vals[i] == -55*i );
@@ -684,7 +684,7 @@ void DoocsBackendTest::testPartialAccess() {
 
     acc_someArray[0] = 42;
     acc_someArray.write();
-    vals = doocsServerTestHelper::doocsGet_intArray("//MYDUMMY/SOME_INT_ARRAY");
+    vals = doocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_INT_ARRAY");
     for(int i=0; i<42; i++) {
       if(i == 10) {
         BOOST_CHECK(vals[i] == 42 );
@@ -709,7 +709,7 @@ void DoocsBackendTest::testPartialAccess() {
 
     for(int i=0; i<3; i++) acc_someArray[i] = 1.2-i;
     acc_someArray.write();
-    vals = doocsServerTestHelper::doocsGet_doubleArray("//MYDUMMY/SOME_DOUBLE_ARRAY");
+    vals = doocsServerTestHelper::doocsGetArray<double>("//MYDUMMY/SOME_DOUBLE_ARRAY");
     for(int i=0; i<5; i++) {
       if(i > 1) {
         BOOST_CHECK_CLOSE(vals[i], 1.2-(i-2), 0.00001 );
@@ -733,7 +733,7 @@ void DoocsBackendTest::testPartialAccess() {
 
     acc_someArray = "-11.111";
     acc_someArray.write();
-    vals = doocsServerTestHelper::doocsGet_floatArray("//MYDUMMY/SOME_FLOAT_ARRAY");
+    vals = doocsServerTestHelper::doocsGetArray<float>("//MYDUMMY/SOME_FLOAT_ARRAY");
     for(int i=0; i<5; i++) {
       if(i == 0) {
         BOOST_CHECK_CLOSE(vals[i], -11.111, 0.00001 );
@@ -849,7 +849,7 @@ void DoocsBackendTest::testOther() {
   acc1[0][0] = 42;
   BOOST_CHECK(acc2[0][0] == 42);    // now sharing the buffer
   acc1.write();
-  BOOST_CHECK( doocsServerTestHelper::doocsGet_int("//MYDUMMY/SOME_INT") == 42 );
+  BOOST_CHECK( doocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 42 );
 
 
   device.close();
