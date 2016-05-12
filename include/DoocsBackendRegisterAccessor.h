@@ -24,7 +24,7 @@ namespace mtca4u {
     public:
 
       DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
-          bool allocateBuffers = true);
+          AccessModeFlags flags, bool allocateBuffers = true);
 
       virtual ~DoocsBackendRegisterAccessor();
 
@@ -83,9 +83,12 @@ namespace mtca4u {
 
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords,
-      size_t wordOffsetInRegister, bool allocateBuffers)
+      size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
   : _path(path), elementOffset(wordOffsetInRegister)
   {
+
+    // check for unknown access mode flags
+    flags.checkForUnknownFlags({AccessMode::raw});
 
     // set address
     ea.adr(std::string(path).substr(1).c_str());        // strip leading slash

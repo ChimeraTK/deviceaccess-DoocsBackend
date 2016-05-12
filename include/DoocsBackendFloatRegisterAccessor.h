@@ -25,7 +25,8 @@ namespace mtca4u {
 
     public:
 
-      DoocsBackendFloatRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister);
+      DoocsBackendFloatRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
+          AccessModeFlags flags);
 
       virtual ~DoocsBackendFloatRegisterAccessor();
 
@@ -39,8 +40,8 @@ namespace mtca4u {
 
   template<typename UserType>
   DoocsBackendFloatRegisterAccessor<UserType>::DoocsBackendFloatRegisterAccessor(const RegisterPath &path,
-      size_t numberOfWords, size_t wordOffsetInRegister)
-  : DoocsBackendRegisterAccessor<UserType>(path,numberOfWords,wordOffsetInRegister)
+      size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
+  : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags)
   {
 
     // check data type

@@ -64,7 +64,7 @@ namespace mtca4u {
 
   template<typename UserType>
   boost::shared_ptr< NDRegisterAccessor<UserType> > DoocsBackend::getRegisterAccessor_impl(
-      const RegisterPath &registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, bool enforceRawAccess) {
+      const RegisterPath &registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags) {
 
     NDRegisterAccessor<UserType> *p;
     RegisterPath path = _serverAddress/registerPathName;
@@ -84,14 +84,14 @@ namespace mtca4u {
     if( dst.type() == DATA_INT || dst.type() == DATA_A_INT ||
         dst.type() == DATA_BOOL || dst.type() == DATA_A_BOOL ||
         dst.type() == DATA_A_SHORT  ) {
-      p = new DoocsBackendIntRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister);
+      p = new DoocsBackendIntRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
     }
     else if( dst.type() == DATA_FLOAT || dst.type() == DATA_A_FLOAT ||
         dst.type() == DATA_DOUBLE || dst.type() == DATA_A_DOUBLE  ) {
-      p = new DoocsBackendFloatRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister);
+      p = new DoocsBackendFloatRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
     }
     else if( dst.type() == DATA_TEXT || dst.type() == DATA_STRING || dst.type() == DATA_STRING16) {
-      p = new DoocsBackendStringRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister);
+      p = new DoocsBackendStringRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
     }
     else {
       throw DeviceException("Unsupported DOOCS data type: "+std::string(dst.type_string()),

@@ -25,7 +25,8 @@ namespace mtca4u {
 
     public:
 
-      DoocsBackendIntRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister);
+      DoocsBackendIntRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
+          AccessModeFlags flags);
 
       virtual ~DoocsBackendIntRegisterAccessor();
 
@@ -44,8 +45,8 @@ namespace mtca4u {
 
   template<typename UserType>
   DoocsBackendIntRegisterAccessor<UserType>::DoocsBackendIntRegisterAccessor(const RegisterPath &path,
-      size_t numberOfWords, size_t wordOffsetInRegister)
-  : DoocsBackendRegisterAccessor<UserType>(path,numberOfWords,wordOffsetInRegister)
+      size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
+  : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags)
   {
 
     // check data type
