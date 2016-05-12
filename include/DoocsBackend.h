@@ -25,9 +25,11 @@ namespace mtca4u {
 
     public:
 
-      DoocsBackend(const RegisterPath &serverAddress);
-
       virtual ~DoocsBackend(){}
+
+    protected:
+
+      DoocsBackend(const RegisterPath &serverAddress);
 
       virtual void open();
 
@@ -39,8 +41,6 @@ namespace mtca4u {
 
       static boost::shared_ptr<DeviceBackend> createInstance(std::string host, std::string instance,
           std::list<std::string> parameters, std::string mapFileName);
-
-    protected:
 
       template<typename UserType>
       boost::shared_ptr< NDRegisterAccessor<UserType> > getRegisterAccessor_impl(

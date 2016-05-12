@@ -23,10 +23,12 @@ namespace mtca4u {
 
     public:
 
+      virtual ~DoocsBackendRegisterAccessor();
+
+    protected:
+
       DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags, bool allocateBuffers = true);
-
-      virtual ~DoocsBackendRegisterAccessor();
 
       virtual bool isSameRegister(const boost::shared_ptr<TransferElement const> &other) const {
         auto rhsCasted = boost::dynamic_pointer_cast< const DoocsBackendRegisterAccessor<UserType> >(other);
@@ -38,8 +40,6 @@ namespace mtca4u {
       virtual bool isReadOnly() const {
         return false;
       }
-
-    protected:
 
       /// register path
       RegisterPath _path;

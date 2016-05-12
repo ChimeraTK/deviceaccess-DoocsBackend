@@ -25,14 +25,18 @@ namespace mtca4u {
 
     public:
 
+      virtual ~DoocsBackendFloatRegisterAccessor();
+
+    protected:
+
       DoocsBackendFloatRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags);
-
-      virtual ~DoocsBackendFloatRegisterAccessor();
 
       virtual void read();
 
       virtual void write();
+
+      friend class DoocsBackend;
 
   };
 

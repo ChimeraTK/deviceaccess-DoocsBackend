@@ -25,19 +25,21 @@ namespace mtca4u {
 
     public:
 
+      virtual ~DoocsBackendIntRegisterAccessor();
+
+    protected:
+
       DoocsBackendIntRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags);
-
-      virtual ~DoocsBackendIntRegisterAccessor();
 
       virtual void read();
 
       virtual void write();
 
-    protected:
-
       /// fixed point converter for writing integers (used with default 32.0 signed settings, since DOOCS knows only "int")
       FixedPointConverter fixedPointConverter;
+
+      friend class DoocsBackend;
 
   };
 
