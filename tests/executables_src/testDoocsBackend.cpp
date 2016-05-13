@@ -34,6 +34,7 @@ class DoocsBackendTest {
     void testArrayDouble();
     void testBitAndStatus();
     void testPartialAccess();
+    void testZeroMQ();
     void testExceptions();
     void testOther();
 };
@@ -56,6 +57,7 @@ class DoocsBackendTestSuite : public test_suite {
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayDouble, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testBitAndStatus, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testPartialAccess, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testZeroMQ, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testExceptions, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testOther, doocsBackendTest) );
     }
@@ -783,6 +785,34 @@ void DoocsBackendTest::testPartialAccess() {
 
   device.close();
 
+}
+
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testZeroMQ() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  device.open("DoocsServer1");
+
+  ScalarRegisterAccessor<int32_t> acc(device.getScalarRegisterAccessor<int32_t>("MYDUMMY/SOME_ZMQINT", 0,
+      {AccessMode::wait_for_new_data}));
+
+  usleep(100000);
+
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_ZMQINT",1);
+  doocsServerTestHelper::runUpdate();
+  acc.read();
+  BOOST_CHECK( acc == 2 );
+
+  usleep(100000);
+
+  doocsServerTestHelper::runUpdate();
+  acc.read();
+  BOOST_CHECK( acc == 3 );
+
+  device.close();
 }
 
 /**********************************************************************************************************************/

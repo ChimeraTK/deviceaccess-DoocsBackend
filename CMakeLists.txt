@@ -21,8 +21,7 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-dynamic
 FIND_PACKAGE(mtca4u-deviceaccess 00.11 REQUIRED)
 include_directories(SYSTEM ${mtca4u-deviceaccess_INCLUDE_DIRS})
 
-FIND_PACKAGE(DOOCS 18.10 REQUIRED)
-FIND_PACKAGE(DOOCS 18.10 COMPONENTS server)
+FIND_PACKAGE(DOOCS 18.10 COMPONENTS server REQUIRED)
 include_directories(SYSTEM ${DOOCS_INCLUDE_DIRS})
 link_directories(${DOOCS_LIBRARY_DIRS})
 
@@ -35,12 +34,12 @@ FIND_PACKAGE(Boost COMPONENTS thread REQUIRED)
 #For some reason the system library has to be mentioned explicitly to the linker.
 #This is strange because the thead library has it as a dependency.
 FIND_PACKAGE(Boost COMPONENTS thread system unit_test_framework)
-IF(Boost_UNIT_TEST_FRAMEWORK_FOUND AND DOOCS_FOUND)
+IF(Boost_UNIT_TEST_FRAMEWORK_FOUND)
   set(TESTING_IS_ENABLED "true")
   ENABLE_TESTING()
-ELSE(Boost_UNIT_TEST_FRAMEWORK_FOUND AND DOOCS_FOUND)
-  message("Boost unit_test_framework and/or DOOCS not found, disabling testing")
-ENDIF(Boost_UNIT_TEST_FRAMEWORK_FOUND AND DOOCS_FOUND)
+ELSE(Boost_UNIT_TEST_FRAMEWORK_FOUND)
+  message("Boost unit_test_framework, disabling testing")
+ENDIF(Boost_UNIT_TEST_FRAMEWORK_FOUND)
 
 
 include_directories(${CMAKE_SOURCE_DIR}/include)

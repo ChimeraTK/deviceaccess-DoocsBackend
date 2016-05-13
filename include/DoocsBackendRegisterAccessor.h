@@ -8,13 +8,19 @@
 #ifndef MTCA4U_DOOCS_BACKEND_REGISTER_ACCESSOR_H
 #define MTCA4U_DOOCS_BACKEND_REGISTER_ACCESSOR_H
 
+#include <mutex>
 #include <type_traits>
+#include <condition_variable>
+#include <queue>
 
 #include <mtca4u/NDRegisterAccessor.h>
+#include <mtca4u/RegisterPath.h>
 #include <mtca4u/DeviceException.h>
 #include <mtca4u/FixedPointConverter.h>
+#include <mtca4u/AccessMode.h>
 
 #include <eq_client.h>
+#include <eq_fct.h>
 
 namespace mtca4u {
 
@@ -65,11 +71,26 @@ namespace mtca4u {
       /// flag if the accessor should affect only a part of the property (in case of an array)
       bool isPartial;
 
+      /// flag if a ZeroMQ subscribtion is used for reading data (c.f. AccessMode::wait_for_new_data)
+      bool useZMQ;
+
+      /// ring buffer of EqData buffers received via ZMQ
+      std::queue<EqData> ZMQbuffer;
+
+      /// condition_variable and mutex pair used to synchronise the ZMQqueue
+      std::condition_variable ZMQnotifier;
+      std::mutex ZMQmtx;
+
       /// internal read into EqData dst
       void read_internal();
 
       /// internal write from EqData src
       void write_internal();
+
+      /// callback function for ZeroMQ
+      /// This is a static function so we can pass a plain pointer to the DOOCS client. The first argument will contain
+      /// the pointer to the object (will be statically casted into DoocsBackendRegisterAccessor<UserType>*).
+      static void zmq_callback(void *self, EqData *data, dmsg_info_t *info);
 
       virtual std::vector< boost::shared_ptr<TransferElement> > getHardwareAccessingElements() {
         return { boost::enable_shared_from_this<TransferElement>::shared_from_this() };
@@ -84,11 +105,11 @@ namespace mtca4u {
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords,
       size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
-  : _path(path), elementOffset(wordOffsetInRegister)
+  : _path(path), elementOffset(wordOffsetInRegister), useZMQ(false)
   {
 
     // check for unknown access mode flags
-    flags.checkForUnknownFlags({AccessMode::raw});
+    flags.checkForUnknownFlags({AccessMode::wait_for_new_data});
 
     // set address
     ea.adr(std::string(path).substr(1).c_str());        // strip leading slash
@@ -133,6 +154,24 @@ namespace mtca4u {
     if(allocateBuffers) {
       src.length(actualLength);
     }
+
+    // use ZeroMQ with AccessMode::wait_for_new_data
+    if(flags.has(AccessMode::wait_for_new_data)) {
+      // set flag
+      useZMQ = true;
+      // subscribe to property
+      int err = dmsg_attach(&ea, &dst, (void*)this, &zmq_callback);
+      if(err) {
+        throw DeviceException(std::string("Cannot subscribe to DOOCS property via ZeroMQ: ")+dst.get_string(),
+                  DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+      }
+      // run dmsg_start() once
+      std::unique_lock<std::mutex> lck(DoocsBackend::dmsgStartCalled_mutex);
+      if(!DoocsBackend::dmsgStartCalled) {
+        dmsg_start();
+        DoocsBackend::dmsgStartCalled = true;
+      }
+    }
   }
 
   /**********************************************************************************************************************/
@@ -145,12 +184,20 @@ namespace mtca4u {
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::read_internal() {
-    // read data
-    int rc = eq.get(&ea, &src, &dst);
-    // check error
-    if(rc) {
-      throw DeviceException(std::string("Cannot read from DOOCS property: ")+dst.get_string(),
-          DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+    if(!useZMQ) {
+      // read data
+      int rc = eq.get(&ea, &src, &dst);
+      // check error
+      if(rc) {
+        throw DeviceException(std::string("Cannot read from DOOCS property: ")+dst.get_string(),
+            DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+      }
+    }
+    else {
+      std::unique_lock<std::mutex> lck(ZMQmtx);
+      while(ZMQbuffer.empty()) ZMQnotifier.wait(lck);
+      dst = ZMQbuffer.front();
+      ZMQbuffer.pop();
     }
   }
 
@@ -165,6 +212,25 @@ namespace mtca4u {
       throw DeviceException(std::string("Cannot write to DOOCS property: ")+dst.get_string(),
           DeviceException::CANNOT_OPEN_DEVICEBACKEND);
     }
+  }
+
+
+  /**********************************************************************************************************************/
+
+  template<typename UserType>
+  void DoocsBackendRegisterAccessor<UserType>::zmq_callback(void *self_, EqData *data, dmsg_info_t *info) {
+
+    // obtain pointer to accessor object
+    DoocsBackendRegisterAccessor<UserType> *self = static_cast<DoocsBackendRegisterAccessor<UserType>*>(self_);
+
+    // create lock
+    std::unique_lock<std::mutex> lck(self->ZMQmtx);
+
+    // add EqData to queue
+    self->ZMQbuffer.push(*data);
+
+    // send notification to a potentially waiting read()
+    self->ZMQnotifier.notify_one();
   }
 
 } /* namespace mtca4u */

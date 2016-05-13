@@ -24,6 +24,10 @@ class eq_dummy  : public EqFct {
 
     D_spectrum      prop_someSpectrum;
 
+    D_int           prop_someZMQInt;
+
+    int64_t counter;
+
     void init();
     void post_init();
     void update();

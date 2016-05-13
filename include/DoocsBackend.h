@@ -8,6 +8,8 @@
 #ifndef MTCA4U_DOOCS_BACKEND_H
 #define MTCA4U_DOOCS_BACKEND_H
 
+#include <mutex>
+
 #include <mtca4u/DeviceBackendImpl.h>
 
 namespace mtca4u {
@@ -47,15 +49,22 @@ namespace mtca4u {
           const RegisterPath &registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
       DEFINE_VIRTUAL_FUNCTION_TEMPLATE_VTABLE_FILLER( DoocsBackend, getRegisterAccessor_impl, 4);
 
-      /// DOOCS address component for the server (FACILITY/DEVICE)
+      /** DOOCS address component for the server (FACILITY/DEVICE) */
       RegisterPath _serverAddress;
 
-      /* Class to register the backend type with the factory. */
+      /** Class to register the backend type with the factory. */
       class BackendRegisterer {
         public:
           BackendRegisterer();
       };
       static BackendRegisterer backendRegisterer;
+
+      /** static flag if dmsg_start() has been called already, with mutex for thread safety */
+      static bool dmsgStartCalled;
+      static std::mutex dmsgStartCalled_mutex;
+
+      template<typename UserType>
+      friend class DoocsBackendRegisterAccessor;
 
   };
 

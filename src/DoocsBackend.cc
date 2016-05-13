@@ -25,6 +25,11 @@ namespace mtca4u {
 
   /********************************************************************************************************************/
 
+  bool DoocsBackend::dmsgStartCalled = false;
+  std::mutex DoocsBackend::dmsgStartCalled_mutex;
+
+  /********************************************************************************************************************/
+
   DoocsBackend::DoocsBackend(const RegisterPath &serverAddress)
   : _serverAddress(serverAddress)
   {

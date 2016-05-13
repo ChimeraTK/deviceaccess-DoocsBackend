@@ -13,7 +13,9 @@ eq_dummy::eq_dummy()
   prop_someLongArray("SOME_LONG_ARRAY", 5, this),
   prop_someFloatArray("SOME_FLOAT_ARRAY", 5, this),
   prop_someDoubleArray("SOME_DOUBLE_ARRAY", 5, this),
-  prop_someSpectrum("SOME_SPECTRUM", 100, this)
+  prop_someSpectrum("SOME_SPECTRUM", 100, this),
+  prop_someZMQInt("SOME_ZMQINT",this),
+  counter(0)
 {
 }
 
@@ -31,10 +33,29 @@ void eq_dummy::init() {
     for(int i=0; i<5; i++) prop_someLongArray.set_value(10+i, i);
     for(int i=0; i<5; i++) prop_someFloatArray.set_value((float)i/1000., i);
     for(int i=0; i<5; i++) prop_someDoubleArray.set_value((float)i/333., i);
+    prop_someZMQInt.set_value(0);
 }
 
-void eq_dummy::post_init() {
+void eq_dummy::post_init()
+{
+    // enable data messaging for property
+    int res = prop_someZMQInt.set_mode(DMSG_EN);
+    if(res != 0) {
+      std::cout << "Could not enable ZeroMQ messaging for prop_someZMQInt. Code: " << res << std::endl;
+      exit(1);
+    }
 }
 
-void eq_dummy::update() {
+void eq_dummy::update()
+{
+    // set new value of ZMQINT
+    prop_someZMQInt.set_value( prop_someZMQInt.value() + 1 );
+
+    // publish new value via ZeroMQ
+    dmsg_info_t db;
+    db.sec   = 12345;
+    db.usec  = 0;
+    db.ident = counter++;
+    db.stat  = 0;
+    prop_someZMQInt.send(&db);
 }
