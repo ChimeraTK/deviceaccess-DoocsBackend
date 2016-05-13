@@ -29,6 +29,7 @@ class DoocsBackendTest {
     void testString();
     void testArrayInt();
     void testArrayShort();
+    void testArrayLong();
     void testArrayFloat();
     void testArrayDouble();
     void testBitAndStatus();
@@ -50,6 +51,7 @@ class DoocsBackendTestSuite : public test_suite {
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testString, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayInt, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayShort, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayLong, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayFloat, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayDouble, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testBitAndStatus, doocsBackendTest) );
@@ -487,6 +489,41 @@ void DoocsBackendTest::testArrayShort() {
   for(int i=0; i<5; i++) BOOST_CHECK(vals2[i] == -55*i);
   acc_someArray.write();
   vals2 = doocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_SHORT_ARRAY");
+  for(int i=0; i<5; i++) BOOST_CHECK(vals2[i] == i-21);
+
+  device.close();
+
+}
+
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testArrayLong() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  device.open("DoocsServer1");
+
+  TwoDRegisterAccessor<int> acc_someArray(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_LONG_ARRAY"));
+  BOOST_CHECK( acc_someArray.getNChannels() == 1 );
+  BOOST_CHECK( acc_someArray.getNElementsPerChannel() == 5 );
+  acc_someArray.read();
+  for(int i=0; i<5; i++) BOOST_CHECK(acc_someArray[0][i] == 10+i);
+
+  std::vector<long long int> vals(5);
+  for(int i=0; i<5; i++) vals[i] = -55*i;
+  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_LONG_ARRAY", vals);
+
+  for(int i=0; i<5; i++) BOOST_CHECK(acc_someArray[0][i] == 10+i);
+  acc_someArray.read();
+  for(int i=0; i<5; i++) BOOST_CHECK(acc_someArray[0][i] == -55*i);
+
+  std::vector<int> vals2(5);
+  for(int i=0; i<5; i++) acc_someArray[0][i] = i-21;
+  vals2 = doocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_LONG_ARRAY");
+  for(int i=0; i<5; i++) BOOST_CHECK(vals2[i] == -55*i);
+  acc_someArray.write();
+  vals2 = doocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_LONG_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK(vals2[i] == i-21);
 
   device.close();

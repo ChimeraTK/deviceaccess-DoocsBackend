@@ -9,6 +9,7 @@
 
 #include "DoocsBackend.h"
 #include "DoocsBackendIntRegisterAccessor.h"
+#include "DoocsBackendLongRegisterAccessor.h"
 #include "DoocsBackendFloatRegisterAccessor.h"
 #include "DoocsBackendStringRegisterAccessor.h"
 
@@ -83,8 +84,11 @@ namespace mtca4u {
     // check type and create matching accessor
     if( dst.type() == DATA_INT || dst.type() == DATA_A_INT ||
         dst.type() == DATA_BOOL || dst.type() == DATA_A_BOOL ||
-        dst.type() == DATA_A_SHORT  ) {
+        dst.type() == DATA_A_SHORT ) {
       p = new DoocsBackendIntRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
+    }
+    else if( dst.type() == DATA_A_LONG ) {
+      p = new DoocsBackendLongRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
     }
     else if( dst.type() == DATA_FLOAT || dst.type() == DATA_A_FLOAT ||
         dst.type() == DATA_DOUBLE || dst.type() == DATA_A_DOUBLE  ) {

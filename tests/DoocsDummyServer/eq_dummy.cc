@@ -10,6 +10,7 @@ eq_dummy::eq_dummy()
   prop_someBit("SOME_BIT",0,&prop_someStatus.stat_,this),
   prop_someIntArray("SOME_INT_ARRAY", 42, this),
   prop_someShortArray("SOME_SHORT_ARRAY", 5, this),
+  prop_someLongArray("SOME_LONG_ARRAY", 5, this),
   prop_someFloatArray("SOME_FLOAT_ARRAY", 5, this),
   prop_someDoubleArray("SOME_DOUBLE_ARRAY", 5, this),
   prop_someSpectrum("SOME_SPECTRUM", 100, this)
@@ -27,10 +28,13 @@ void eq_dummy::init() {
     prop_someStatus.set_value(3);
     for(int i=0; i<42; i++) prop_someIntArray.set_value(3*i+120, i);
     for(int i=0; i<5; i++) prop_someShortArray.set_value(10+i, i);
+    for(int i=0; i<5; i++) prop_someLongArray.set_value(10+i, i);
     for(int i=0; i<5; i++) prop_someFloatArray.set_value((float)i/1000., i);
     for(int i=0; i<5; i++) prop_someDoubleArray.set_value((float)i/333., i);
 }
 
-void eq_dummy::update() {
+void eq_dummy::post_init() {
 }
 
+void eq_dummy::update() {
+}

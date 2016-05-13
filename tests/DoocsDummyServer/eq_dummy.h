@@ -18,12 +18,14 @@ class eq_dummy  : public EqFct {
     
     D_intarray      prop_someIntArray;
     D_shortarray    prop_someShortArray;
+    D_longarray     prop_someLongArray;
     D_floatarray    prop_someFloatArray;
     D_doublearray   prop_someDoubleArray;
 
     D_spectrum      prop_someSpectrum;
 
     void init();
+    void post_init();
     void update();
 
     int fct_code() { return fctCode; }
