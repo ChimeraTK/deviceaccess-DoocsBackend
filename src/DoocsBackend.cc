@@ -13,6 +13,9 @@
 #include "DoocsBackendFloatRegisterAccessor.h"
 #include "DoocsBackendStringRegisterAccessor.h"
 
+// this is required since we link against the DOOCS libEqServer.so
+const char *object_name = "DoocsBackend";
+
 namespace mtca4u {
 
   /********************************************************************************************************************/
