@@ -31,6 +31,8 @@ namespace mtca4u {
 
       virtual ~DoocsBackendRegisterAccessor();
 
+      virtual unsigned int getNInputQueueElements() const;
+
     protected:
 
       DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
@@ -78,8 +80,9 @@ namespace mtca4u {
       std::queue<EqData> ZMQbuffer;
 
       /// condition_variable and mutex pair used to synchronise the ZMQqueue
+      /// the mutex is mutable since we might need to obtain the lock also in const functions.
       std::condition_variable ZMQnotifier;
-      std::mutex ZMQmtx;
+      mutable std::mutex ZMQmtx;
 
       /// internal read into EqData dst
       void read_internal();
@@ -183,6 +186,19 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
+  unsigned int DoocsBackendRegisterAccessor<UserType>::getNInputQueueElements() const {
+    if(!useZMQ) {
+      return 1;
+    }
+    else {
+      std::unique_lock<std::mutex> lck(ZMQmtx);
+      return ZMQbuffer.size();
+    }
+  }
+
+  /**********************************************************************************************************************/
+
+  template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::read_internal() {
     if(!useZMQ) {
       // read data
@@ -214,7 +230,6 @@ namespace mtca4u {
     }
   }
 
-
   /**********************************************************************************************************************/
 
   template<typename UserType>
@@ -226,7 +241,7 @@ namespace mtca4u {
     // create lock
     std::unique_lock<std::mutex> lck(self->ZMQmtx);
 
-    // add EqData to queue
+    // add (a copy of) EqData to queue
     self->ZMQbuffer.push(*data);
 
     // send notification to a potentially waiting read()
