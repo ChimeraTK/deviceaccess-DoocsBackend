@@ -1,3 +1,5 @@
+#include <unistd.h>
+
 #include "eq_dummy.h"
 
 eq_dummy::eq_dummy()
@@ -58,4 +60,7 @@ void eq_dummy::update()
     db.ident = counter++;
     db.stat  = 0;
     prop_someZMQInt.send(&db);
+
+    // wait some time to limit the rate
+    usleep(10000);
 }
