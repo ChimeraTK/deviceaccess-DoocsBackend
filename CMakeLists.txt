@@ -21,7 +21,11 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-dynamic
 FIND_PACKAGE(mtca4u-deviceaccess 00.11 REQUIRED)
 include_directories(SYSTEM ${mtca4u-deviceaccess_INCLUDE_DIRS})
 
-FIND_PACKAGE(DOOCS 18.10 COMPONENTS server REQUIRED)
+FIND_PACKAGE(DOOCS 18.10.5 COMPONENTS server REQUIRED)
+IF(${DOOCS_VERSION} VERSION_EQUAL "18.10.5")
+  message("Found DOOCS version 18.10.5, falling back to compatibility mode. Please use 18.10.6 instead!")
+  set(DOOCS_CXX_FLAGS "${DOOCS_CXX_FLAGS} -DDOOCS_COMPAT_18_10_5")
+ENDIF()
 include_directories(SYSTEM ${DOOCS_INCLUDE_DIRS})
 link_directories(${DOOCS_LIBRARY_DIRS})
 
@@ -51,7 +55,7 @@ aux_source_directory(${CMAKE_SOURCE_DIR}/src library_sources)
 # Currently we assume that they are all tests contained in one file, so
 # each file gives a new executable. This section has to be adapted if this should change.
 if(TESTING_IS_ENABLED)
-  
+
   # loop over all sources files in execultables_src directory
   aux_source_directory(${CMAKE_SOURCE_DIR}/tests/executables_src testExecutables)
   foreach( testExecutableSrcFile ${testExecutables})
@@ -118,7 +122,7 @@ install(TARGETS ${PROJECT_NAME}
 #The exclusion of ${PROJECT_NAME} prevents the recursive installation of the files just being installed.
 #The original headers are in include/*.h, the installed ones in include/PROJECT_NAME/*.h.
 install(DIRECTORY ${${PROJECT_NAME}_INCLUDE_DIRS} DESTINATION include/${PROJECT_NAME}
-          FILES_MATCHING PATTERN "*.h" 
+          FILES_MATCHING PATTERN "*.h"
 	  PATTERN ".svn" EXCLUDE
 	  PATTERN "${PROJECT_NAME}" EXCLUDE
 	  )
