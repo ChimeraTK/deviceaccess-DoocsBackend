@@ -177,20 +177,6 @@ namespace mtca4u {
         dmsg_start();
         DoocsBackend::dmsgStartCalled = true;
       }
-      // wait until subscription is done
-#ifndef DOOCS_COMPAT_18_10_5
-      int timeoutCounter = 0;
-      while(!dmsg_is_attached(&ea)) {
-        usleep(1000);
-        timeoutCounter++;
-        if(timeoutCounter > ZMQsubscribeTimeout) {
-          throw DeviceException("Cannot subscribe to DOOCS property via ZeroMQ: timeout reached while subscribing.",
-                    DeviceException::CANNOT_OPEN_DEVICEBACKEND);
-        }
-      }
-#else
-      usleep(200000); // compatibility with DOOCS 18.10.5 and earlier: wait 200ms and hope the subscription is done.
-#endif
     }
   }
 
