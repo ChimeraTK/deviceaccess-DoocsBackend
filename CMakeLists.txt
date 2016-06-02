@@ -22,10 +22,6 @@ FIND_PACKAGE(mtca4u-deviceaccess 00.12 REQUIRED)
 include_directories(SYSTEM ${mtca4u-deviceaccess_INCLUDE_DIRS})
 
 FIND_PACKAGE(DOOCS 18.10.5 COMPONENTS server REQUIRED)
-IF(${DOOCS_VERSION} VERSION_LESS "18.10.7")
-  message("Found DOOCS version prior to 18.10.7, falling back to compatibility mode. Please update DOOCS!")
-  set(DOOCS_CXX_FLAGS "${DOOCS_CXX_FLAGS} -DDOOCS_COMPAT_18_10_5")
-ENDIF()
 include_directories(SYSTEM ${DOOCS_INCLUDE_DIRS})
 link_directories(${DOOCS_LIBRARY_DIRS})
 
