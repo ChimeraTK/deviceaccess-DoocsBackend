@@ -152,13 +152,19 @@ void DoocsBackendTest::testZeroMQ() {
   BOOST_CHECK( acc == 5 );
 
   // test if read really blocks when having no update in the queue
+  std::atomic<bool> readFinished(false);
   std::promise<void> prom;
   std::future<void> fut = prom.get_future();
-  std::thread readAsync([&acc, &prom]() { acc.read(); prom.set_value(); });
-
-  BOOST_CHECK( fut.wait_for(std::chrono::milliseconds(500)) == std::future_status::timeout ) ;
+  std::thread readAsync( [&acc, &prom, &readFinished]() {
+    acc.read();
+    prom.set_value();
+    readFinished = true;
+  } );
+  fut.wait_for(std::chrono::milliseconds(500));
+  BOOST_CHECK( readFinished == false );
   doocsServerTestHelper::runUpdate();
-  BOOST_CHECK( fut.wait_for(std::chrono::milliseconds(500)) == std::future_status::ready ) ;
+  fut.wait_for(std::chrono::milliseconds(500));
+  BOOST_CHECK( readFinished == true );
   readAsync.join();
 
   device.close();
