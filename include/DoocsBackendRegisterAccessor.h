@@ -218,6 +218,11 @@ namespace mtca4u {
       dst = ZMQbuffer.front();
       ZMQbuffer.pop();
     }
+    // check for error code in dst
+    if(dst.error() != 0) {
+      throw DeviceException(std::string("Cannot read from DOOCS property: ")+dst.get_string(),
+          DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+    }
   }
 
   /**********************************************************************************************************************/
@@ -227,7 +232,7 @@ namespace mtca4u {
     // write data
     int rc = eq.set(&ea, &src, &dst);
     // check error
-    if(rc) {
+    if(rc || dst.error() != 0) {
       throw DeviceException(std::string("Cannot write to DOOCS property: ")+dst.get_string(),
           DeviceException::CANNOT_OPEN_DEVICEBACKEND);
     }
@@ -236,7 +241,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendRegisterAccessor<UserType>::zmq_callback(void *self_, EqData *data, dmsg_info_t *info) {
+  void DoocsBackendRegisterAccessor<UserType>::zmq_callback(void *self_, EqData *data, dmsg_info_t *) {
 
     // obtain pointer to accessor object
     DoocsBackendRegisterAccessor<UserType> *self = static_cast<DoocsBackendRegisterAccessor<UserType>*>(self_);
