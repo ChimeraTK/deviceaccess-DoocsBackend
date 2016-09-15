@@ -5,9 +5,8 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
 
 set(${PROJECT_NAME}_MAJOR_VERSION 00)
 set(${PROJECT_NAME}_MINOR_VERSION 01)
-set(${PROJECT_NAME}_PATCH_VERSION 00)
-set(${PROJECT_NAME}_VERSION ${${PROJECT_NAME}_MAJOR_VERSION}.${${PROJECT_NAME}_MINOR_VERSION}.${${PROJECT_NAME}_PATCH_VERSION})
-set(${PROJECT_NAME}_SOVERSION ${${PROJECT_NAME}_MAJOR_VERSION}.${${PROJECT_NAME}_MINOR_VERSION})
+set(${PROJECT_NAME}_PATCH_VERSION 01)
+include(cmake/set_version_numbers.cmake)
 
 #Moderate version of the compiler flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -fPIC -Wextra -ansi -Wuninitialized")
@@ -18,70 +17,49 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 --coverage")
 # linker flags
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-dynamic")
 
-FIND_PACKAGE(mtca4u-deviceaccess 00.12 REQUIRED)
-include_directories(SYSTEM ${mtca4u-deviceaccess_INCLUDE_DIRS})
+include(cmake/add_dependency.cmake)
+add_dependency(mtca4u-deviceaccess 00.12 REQUIRED)
+add_dependency(DOOCS 18.10.5 COMPONENTS server REQUIRED)
+add_dependency(doocs-server-test-helper REQUIRED)
 
-FIND_PACKAGE(DOOCS 18.10.5 COMPONENTS server REQUIRED)
-include_directories(SYSTEM ${DOOCS_INCLUDE_DIRS})
-link_directories(${DOOCS_LIBRARY_DIRS})
-
-FIND_PACKAGE(mtca4u-doocsServerTestHelper REQUIRED)
-include_directories(SYSTEM ${mtca4u-doocsServerTestHelper_INCLUDE_DIRS})
-link_directories(${mtca4u-doocsServerTestHelper_LIBRARY_DIRS})
-
-FIND_PACKAGE(Boost COMPONENTS thread REQUIRED)
-
-#For some reason the system library has to be mentioned explicitly to the linker.
-#This is strange because the thead library has it as a dependency.
-FIND_PACKAGE(Boost COMPONENTS thread system unit_test_framework)
-IF(Boost_UNIT_TEST_FRAMEWORK_FOUND)
-  set(TESTING_IS_ENABLED "true")
-  ENABLE_TESTING()
-ELSE(Boost_UNIT_TEST_FRAMEWORK_FOUND)
-  message("Boost unit_test_framework, disabling testing")
-ENDIF(Boost_UNIT_TEST_FRAMEWORK_FOUND)
-
-
+FIND_PACKAGE(Boost COMPONENTS thread system unit_test_framework REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 set(${PROJECT_NAME}_INCLUDE_DIRS ${${PROJECT_NAME}_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/include/)
+ENABLE_TESTING()
 
 aux_source_directory(${CMAKE_SOURCE_DIR}/src library_sources)
 
 # Create the executables for automated unit testing.
 # Currently we assume that they are all tests contained in one file, so
 # each file gives a new executable. This section has to be adapted if this should change.
-if(TESTING_IS_ENABLED)
+# loop over all sources files in execultables_src directory
+aux_source_directory(${CMAKE_SOURCE_DIR}/tests/executables_src testExecutables)
+foreach( testExecutableSrcFile ${testExecutables})
+  # NAME_WE means the base name without path and (longest) extension
+  get_filename_component(excutableName ${testExecutableSrcFile} NAME_WE)
+  # each test includes a DOOCS server
+  add_executable(${excutableName} ${testExecutableSrcFile} ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/doocsDummy_rpc_server.cc ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/eq_dummy.cc)
+  set_target_properties(${excutableName} PROPERTIES COMPILE_FLAGS "${mtca4u-deviceaccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
+  set_target_properties(${excutableName} PROPERTIES LINK_FLAGS ${DOOCS_LINK_FLAGS})
+  target_link_libraries(${excutableName} ${doocs-server-test-helper_LIBRARIES} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME})
+  add_test(${excutableName} ${excutableName})
+  # copy config file
+  FILE( COPY ${CMAKE_SOURCE_DIR}/tests/doocsDummy_rpc_server.conf DESTINATION ${PROJECT_BINARY_DIR})
+  FILE( RENAME ${PROJECT_BINARY_DIR}/doocsDummy_rpc_server.conf ${PROJECT_BINARY_DIR}/${excutableName}.conf)
+endforeach( testExecutableSrcFile )
 
-  # loop over all sources files in execultables_src directory
-  aux_source_directory(${CMAKE_SOURCE_DIR}/tests/executables_src testExecutables)
-  foreach( testExecutableSrcFile ${testExecutables})
-    # NAME_WE means the base name without path and (longest) extension
-    get_filename_component(excutableName ${testExecutableSrcFile} NAME_WE)
-    # each test includes a DOOCS server
-    add_executable(${excutableName} ${testExecutableSrcFile} ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/doocsDummy_rpc_server.cc ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/eq_dummy.cc)
-    set_target_properties(${excutableName} PROPERTIES COMPILE_FLAGS "${mtca4u-deviceaccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
-    set_target_properties(${excutableName} PROPERTIES LINK_FLAGS ${DOOCS_LINK_FLAGS})
-    target_link_libraries(${excutableName} ${mtca4u-doocsServerTestHelper_LIBRARIES} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME})
-    add_test(${excutableName} ${excutableName})
-    # copy config file
-    FILE( COPY ${CMAKE_SOURCE_DIR}/tests/doocsDummy_rpc_server.conf DESTINATION ${PROJECT_BINARY_DIR})
-    FILE( RENAME ${PROJECT_BINARY_DIR}/doocsDummy_rpc_server.conf ${PROJECT_BINARY_DIR}/${excutableName}.conf)
-  endforeach( testExecutableSrcFile )
+FILE( COPY ${CMAKE_SOURCE_DIR}/tests/dummies.dmap DESTINATION ${PROJECT_BINARY_DIR})
 
-  FILE( COPY ${CMAKE_SOURCE_DIR}/tests/dummies.dmap DESTINATION ${PROJECT_BINARY_DIR})
-
-  #The make coverage command is only available in debug mode
-  IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    configure_file(cmake/Makefile.coverage.in
-      ${PROJECT_BINARY_DIR}/Makefile.coverage @ONLY)
-    add_custom_target(coverage
-      make -f Makefile.coverage
-      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      COMMENT "Generating test coverage documentation" VERBATIM
-      )
-  ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
-
-endif(TESTING_IS_ENABLED)
+#The make coverage command is only available in debug mode
+IF(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  configure_file(cmake/Makefile.coverage.in
+    ${PROJECT_BINARY_DIR}/Makefile.coverage @ONLY)
+  add_custom_target(coverage
+    make -f Makefile.coverage
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating test coverage documentation" VERBATIM
+    )
+ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 # C++ library
 add_library(${PROJECT_NAME} SHARED ${library_sources} )
@@ -134,5 +112,3 @@ set(${PROJECT_NAME}_CPPFLAGS "${mtca4u-deviceaccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS
 set(${PROJECT_NAME}_LDFLAGS "")
 include(${CMAKE_SOURCE_DIR}/cmake/create_cmake_config_files.cmake)
 
-# The instructions to create a debian package are loaded from a separate file
-#include(${CMAKE_SOURCE_DIR}/cmake/prepare_debian_package.cmake)
