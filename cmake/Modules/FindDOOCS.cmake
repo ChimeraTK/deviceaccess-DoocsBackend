@@ -3,7 +3,7 @@
 # cmake module for finding DOOCS
 #
 # By default, only the client API is included. If the component "server" is specified, also the
-# server library will be used.
+# server library will be used. If the component "zmq" is specified, the DOOCSdzmq library will be used as well.
 #
 # returns:
 #   DOOCS_FOUND        : true or false, depending on whether the package was found
@@ -32,18 +32,26 @@
 
 SET(DOOCS_FOUND 0)
 
-if("${DOOCS_FIND_COMPONENTS}" STREQUAL "server")
+FIND_PATH(DOOCS_DIR libDOOCSapi.so
+  ${CMAKE_CURRENT_LIST_DIR}
+  /export/doocs/lib
+)
+set(DOOCS_LIBRARIES DOOCSapi nsl dl pthread m rt ldap)
+
+if (";${DOOCS_FIND_COMPONENTS};" MATCHES ";server;")
   FIND_PATH(DOOCS_DIR libEqServer.so
     ${CMAKE_CURRENT_LIST_DIR}
     /export/doocs/lib
   )
-  set(DOOCS_LIBRARIES EqServer DOOCSapi nsl dl pthread m rt ldap)
-else()
-  FIND_PATH(DOOCS_DIR libDOOCSapi.so
+  set(DOOCS_LIBRARIES ${DOOCS_LIBRARIES} EqServer)
+endif()
+
+if (";${DOOCS_FIND_COMPONENTS};" MATCHES ";zmq;")
+  FIND_PATH(DOOCS_DIR libDOOCSdzmq.so
     ${CMAKE_CURRENT_LIST_DIR}
     /export/doocs/lib
   )
-  set(DOOCS_LIBRARIES DOOCSapi nsl dl pthread m rt ldap)
+  set(DOOCS_LIBRARIES ${DOOCS_LIBRARIES} DOOCSdzmq)
 endif()
 
 # now set the required variables based on the determined DOOCS_DIR
