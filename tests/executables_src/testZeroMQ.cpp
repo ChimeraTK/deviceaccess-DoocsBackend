@@ -12,7 +12,7 @@
 
 #include <mtca4u/Device.h>
 #include <mtca4u/TransferGroup.h>
-#include <mtca4u-doocsServerTestHelper/doocsServerTestHelper.h>
+#include <doocs-server-test-helper/doocsServerTestHelper.h>
 
 using namespace boost::unit_test_framework;
 using namespace mtca4u;
@@ -74,7 +74,7 @@ test_suite* myInit( int /*argc*/, char* /*argv*/ [] ) {
 void DoocsBackendTest::testRoutine() {     // version to run the unit and integration tests
 
   // initialise virtual timing system and wait until server has started
-  doocsServerTestHelper::initialise(false);
+  DoocsServerTestHelper::initialise(false);
 
   // initialise BOOST test suite
   extern char **svr_argv;
@@ -111,7 +111,7 @@ void DoocsBackendTest::testZeroMQ() {
 
   // send updates until the ZMQ interface is initialised (this is done in the background unfortunately)
   while(acc.getNInputQueueElements() == 0) {
-    doocsServerTestHelper::runUpdate();
+    DoocsServerTestHelper::runUpdate();
   }
   // empty the queue
   usleep(100000);
@@ -123,8 +123,8 @@ void DoocsBackendTest::testZeroMQ() {
   BOOST_CHECK( acc.getNInputQueueElements() == 0 );
 
   // check a simple read
-  doocsServerTestHelper::doocsSet("//MYDUMMY/SOME_ZMQINT",1);
-  doocsServerTestHelper::runUpdate();
+  DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_ZMQINT",1);
+  DoocsServerTestHelper::runUpdate();
 
   usleep(100000);
   BOOST_CHECK( acc.getNInputQueueElements() == 1 );
@@ -135,9 +135,9 @@ void DoocsBackendTest::testZeroMQ() {
   usleep(100000);
 
   // test having 3 updates in the queue
-  doocsServerTestHelper::runUpdate();
-  doocsServerTestHelper::runUpdate();
-  doocsServerTestHelper::runUpdate();
+  DoocsServerTestHelper::runUpdate();
+  DoocsServerTestHelper::runUpdate();
+  DoocsServerTestHelper::runUpdate();
   usleep(100000);
 
   BOOST_CHECK( acc.getNInputQueueElements() == 3 );
@@ -162,7 +162,7 @@ void DoocsBackendTest::testZeroMQ() {
   } );
   fut.wait_for(std::chrono::milliseconds(500));
   BOOST_CHECK( readFinished == false );
-  doocsServerTestHelper::runUpdate();
+  DoocsServerTestHelper::runUpdate();
   fut.wait_for(std::chrono::milliseconds(500));
   BOOST_CHECK( readFinished == true );
   readAsync.join();
