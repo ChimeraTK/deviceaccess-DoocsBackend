@@ -96,7 +96,7 @@ test_suite* myInit( int /*argc*/, char* /*argv*/ [] ) {
 void DoocsBackendTest::testRoutine() {     // version to run the unit and integration tests
 
   // initialise virtual timing system and wait until server has started
-  DoocsServerTestHelper::initialise(false, false);
+  DoocsServerTestHelper::initialise();
 
   // initialise BOOST test suite
   extern char **svr_argv;
