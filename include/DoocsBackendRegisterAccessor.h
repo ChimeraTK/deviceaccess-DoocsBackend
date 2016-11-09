@@ -49,6 +49,16 @@ namespace mtca4u {
         return false;
       }
 
+      virtual bool isReadable() const {
+        return true;
+      }
+
+      virtual bool isWriteable() const {
+        return true;
+      }
+      
+      virtual bool readNonBlocking();
+
       /// register path
       RegisterPath _path;
 
@@ -196,6 +206,22 @@ namespace mtca4u {
     else {
       std::unique_lock<std::mutex> lck(ZMQmtx);
       return ZMQbuffer.size();
+    }
+  }
+
+  /**********************************************************************************************************************/
+
+  template<typename UserType>
+  bool DoocsBackendRegisterAccessor<UserType>::readNonBlocking() {
+    if(!useZMQ) {
+      this->read();
+      return true;
+    }
+    else {
+      std::unique_lock<std::mutex> lck(ZMQmtx);
+      if(ZMQbuffer.empty()) return false;
+      this->read();
+      return true;
     }
   }
 
