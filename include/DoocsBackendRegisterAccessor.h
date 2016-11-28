@@ -121,7 +121,10 @@ namespace mtca4u {
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords,
       size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
-  : _path(path), elementOffset(wordOffsetInRegister), useZMQ(false)
+  : NDRegisterAccessor<UserType>(path),
+    _path(path),
+    elementOffset(wordOffsetInRegister),
+    useZMQ(false)
   {
 
     // check for unknown access mode flags
