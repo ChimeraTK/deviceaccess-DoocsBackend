@@ -221,8 +221,10 @@ namespace mtca4u {
       return true;
     }
     else {
-      std::unique_lock<std::mutex> lck(ZMQmtx);
-      if(ZMQbuffer.empty()) return false;
+      {
+        std::unique_lock<std::mutex> lck(ZMQmtx);
+        if(ZMQbuffer.empty()) return false;
+      }
       this->read();
       return true;
     }
