@@ -23,6 +23,7 @@ namespace mtca4u {
   DoocsBackend::BackendRegisterer DoocsBackend::backendRegisterer;
 
   DoocsBackend::BackendRegisterer::BackendRegisterer() {
+    std::cout << "DoocsBackend::BackendRegisterer: registering backend type doocs" << std::endl;
     mtca4u::BackendFactory::getInstance().registerBackendType("doocs","",&DoocsBackend::createInstance);
   }
 
