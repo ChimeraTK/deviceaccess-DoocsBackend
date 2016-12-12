@@ -40,7 +40,7 @@ foreach( testExecutableSrcFile ${testExecutables})
   # each test includes a DOOCS server
   add_executable(${excutableName} ${testExecutableSrcFile} ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/doocsDummy_rpc_server.cc ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/eq_dummy.cc)
   set_target_properties(${excutableName} PROPERTIES COMPILE_FLAGS "${mtca4u-deviceaccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
-  set_target_properties(${excutableName} PROPERTIES LINK_FLAGS ${DOOCS_LINK_FLAGS})
+  set_target_properties(${excutableName} PROPERTIES LINK_FLAGS "${DOOCS_LINKER_FLAGS}")
   target_link_libraries(${excutableName} ${doocs-server-test-helper_LIBRARIES} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES} ${PROJECT_NAME})
   add_test(${excutableName} ${excutableName})
   # copy config file
