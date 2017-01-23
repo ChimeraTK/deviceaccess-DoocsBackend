@@ -32,9 +32,9 @@ namespace mtca4u {
       DoocsBackendFloatRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags);
 
-      virtual void read();
+      void postRead() override;
 
-      virtual void write();
+      void preWrite() override;
 
       friend class DoocsBackend;
 
@@ -68,9 +68,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<float>::read() {
-    // read data
-    read_internal();
+  void DoocsBackendFloatRegisterAccessor<float>::postRead() {
     // copy data into our buffer
     if(!isArray) {
       NDRegisterAccessor<float>::buffer_2D[0][0] = dst.get_float();
@@ -86,9 +84,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<double>::read() {
-    // read data
-    read_internal();
+  void DoocsBackendFloatRegisterAccessor<double>::postRead() {
     // copy data into our buffer
     if(!isArray) {
       NDRegisterAccessor<double>::buffer_2D[0][0] = dst.get_double();
@@ -104,9 +100,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<std::string>::read() {
-    // read data
-    read_internal();
+  void DoocsBackendFloatRegisterAccessor<std::string>::postRead() {
     // copy data into our buffer
     if(!isArray) {
       NDRegisterAccessor<std::string>::buffer_2D[0][0] = dst.get_string();
@@ -123,9 +117,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>   // only integral types left!  FIXME better add type trait
-  void DoocsBackendFloatRegisterAccessor<UserType>::read() {
-    // read data
-    DoocsBackendRegisterAccessor<UserType>::read_internal();
+  void DoocsBackendFloatRegisterAccessor<UserType>::postRead() {
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       NDRegisterAccessor<UserType>::buffer_2D[0][0] = std::round(DoocsBackendRegisterAccessor<UserType>::dst.get_double());
@@ -141,14 +133,14 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<std::string>::write() {
+  void DoocsBackendFloatRegisterAccessor<std::string>::preWrite() {
     // copy data into our buffer
     if(!isArray) {
       src.set(std::stod(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str()));
     }
     else {
       if(DoocsBackendRegisterAccessor<std::string>::isPartial) {   // implement read-modify-write
-        DoocsBackendRegisterAccessor<std::string>::read_internal();
+        DoocsBackendRegisterAccessor<std::string>::doReadTransfer();
         for(int i=0; i<DoocsBackendRegisterAccessor<std::string>::src.array_length(); i++) {
           DoocsBackendRegisterAccessor<std::string>::src.set(DoocsBackendRegisterAccessor<std::string>::dst.get_double(i),i);
         }
@@ -158,14 +150,12 @@ namespace mtca4u {
         src.set(std::stod(NDRegisterAccessor<std::string>::buffer_2D[0][i].c_str()), idx);
       }
     }
-    // write data
-    write_internal();
   }
 
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendFloatRegisterAccessor<UserType>::write() {
+  void DoocsBackendFloatRegisterAccessor<UserType>::preWrite() {
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       double val = NDRegisterAccessor<UserType>::buffer_2D[0][0];
@@ -173,7 +163,7 @@ namespace mtca4u {
     }
     else {
       if(DoocsBackendRegisterAccessor<UserType>::isPartial) {   // implement read-modify-write
-        DoocsBackendRegisterAccessor<UserType>::read_internal();
+        DoocsBackendRegisterAccessor<UserType>::doReadTransfer();
         for(int i=0; i<DoocsBackendRegisterAccessor<UserType>::src.array_length(); i++) {
           DoocsBackendRegisterAccessor<UserType>::src.set(DoocsBackendRegisterAccessor<UserType>::dst.get_double(i),i);
         }
@@ -184,8 +174,6 @@ namespace mtca4u {
         DoocsBackendRegisterAccessor<UserType>::src.set(val,idx);
       }
     }
-    // write data
-    DoocsBackendRegisterAccessor<UserType>::write_internal();
   }
 
 } /* namespace mtca4u */

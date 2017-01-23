@@ -32,9 +32,9 @@ namespace mtca4u {
       DoocsBackendIntRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags);
 
-      virtual void read();
+      void postRead() override;
 
-      virtual void write();
+      void preWrite() override;
 
       /// fixed point converter for writing integers (used with default 32.0 signed settings, since DOOCS knows only "int")
       FixedPointConverter fixedPointConverter;
@@ -72,9 +72,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendIntRegisterAccessor<UserType>::read() {
-    // read data
-    DoocsBackendRegisterAccessor<UserType>::read_internal();
+  void DoocsBackendIntRegisterAccessor<UserType>::postRead() {
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       UserType val = fixedPointConverter.toCooked<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_int());
@@ -92,7 +90,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendIntRegisterAccessor<UserType>::write() {
+  void DoocsBackendIntRegisterAccessor<UserType>::preWrite() {
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       int32_t raw = fixedPointConverter.toRaw(NDRegisterAccessor<UserType>::buffer_2D[0][0]);
@@ -100,7 +98,7 @@ namespace mtca4u {
     }
     else {
       if(DoocsBackendRegisterAccessor<UserType>::isPartial) {   // implement read-modify-write
-        DoocsBackendRegisterAccessor<UserType>::read_internal();
+        DoocsBackendRegisterAccessor<UserType>::doReadTransfer();
         for(int i=0; i<DoocsBackendRegisterAccessor<UserType>::src.array_length(); i++) {
           DoocsBackendRegisterAccessor<UserType>::src.set(DoocsBackendRegisterAccessor<UserType>::dst.get_int(i),i);
         }
@@ -111,8 +109,6 @@ namespace mtca4u {
         DoocsBackendRegisterAccessor<UserType>::src.set(raw,idx);
       }
     }
-    // write data
-    DoocsBackendRegisterAccessor<UserType>::write_internal();
   }
 
 } /* namespace mtca4u */

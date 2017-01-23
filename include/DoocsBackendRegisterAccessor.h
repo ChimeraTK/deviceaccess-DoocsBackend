@@ -31,33 +31,40 @@ namespace mtca4u {
 
       virtual ~DoocsBackendRegisterAccessor();
 
-      virtual unsigned int getNInputQueueElements() const;
+      unsigned int getNInputQueueElements() const override;
+
+      void doReadTransfer() override;
+      
+      bool doReadTransferNonBlocking() override;
+      
+      void write() override {
+        this->preWrite();
+        write_internal();
+      }
 
     protected:
 
       DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags, bool allocateBuffers = true);
 
-      virtual bool isSameRegister(const boost::shared_ptr<TransferElement const> &other) const {
+      bool isSameRegister(const boost::shared_ptr<TransferElement const> &other) const override {
         auto rhsCasted = boost::dynamic_pointer_cast< const DoocsBackendRegisterAccessor<UserType> >(other);
         if(!rhsCasted) return false;
         if(_path != rhsCasted->_path) return false;
         return true;
       }
 
-      virtual bool isReadOnly() const {
+      bool isReadOnly() const override {
         return false;
       }
 
-      virtual bool isReadable() const {
+      bool isReadable() const override {
         return true;
       }
 
-      virtual bool isWriteable() const {
+      bool isWriteable() const override {
         return true;
       }
-      
-      virtual bool readNonBlocking();
 
       /// register path
       RegisterPath _path;
@@ -97,9 +104,6 @@ namespace mtca4u {
       /// timeout in milliseconds for initiating the ZeroMQ subscription
       static constexpr int ZMQsubscribeTimeout = 10000;
 
-      /// internal read into EqData dst
-      void read_internal();
-
       /// internal write from EqData src
       void write_internal();
 
@@ -108,11 +112,11 @@ namespace mtca4u {
       /// the pointer to the object (will be statically casted into DoocsBackendRegisterAccessor<UserType>*).
       static void zmq_callback(void *self, EqData *data, dmsg_info_t *info);
 
-      virtual std::vector< boost::shared_ptr<TransferElement> > getHardwareAccessingElements() {
+      std::vector< boost::shared_ptr<TransferElement> > getHardwareAccessingElements() override {
         return { boost::enable_shared_from_this<TransferElement>::shared_from_this() };
       }
 
-      virtual void replaceTransferElement(boost::shared_ptr<TransferElement> /*newElement*/) {} // LCOV_EXCL_LINE
+      void replaceTransferElement(boost::shared_ptr<TransferElement> /*newElement*/) override {} // LCOV_EXCL_LINE
 
   };
 
@@ -134,7 +138,7 @@ namespace mtca4u {
     ea.adr(std::string(path).substr(1).c_str());        // strip leading slash
 
     // try to read data, to check connectivity and to obtain size of the register
-    read_internal();
+    doReadTransfer();
 
     // obtain number of elements
     size_t actualLength = dst.array_length();
@@ -215,9 +219,9 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  bool DoocsBackendRegisterAccessor<UserType>::readNonBlocking() {
+  bool DoocsBackendRegisterAccessor<UserType>::doReadTransferNonBlocking() {
     if(!useZMQ) {
-      this->read();
+      this->doReadTransfer();
       return true;
     }
     else {
@@ -225,7 +229,7 @@ namespace mtca4u {
         std::unique_lock<std::mutex> lck(ZMQmtx);
         if(ZMQbuffer.empty()) return false;
       }
-      this->read();
+      this->doReadTransfer();
       return true;
     }
   }
@@ -233,7 +237,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendRegisterAccessor<UserType>::read_internal() {
+  void DoocsBackendRegisterAccessor<UserType>::doReadTransfer() {
     if(!useZMQ) {
       // read data
       int rc = eq.get(&ea, &src, &dst);
