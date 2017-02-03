@@ -6,6 +6,7 @@
  */
 
 #include <mtca4u/BackendFactory.h>
+#include <mtca4u/DeviceAccessVersion.h>
 
 #include "DoocsBackend.h"
 #include "DoocsBackendIntRegisterAccessor.h"
@@ -24,7 +25,7 @@ namespace mtca4u {
 
   DoocsBackend::BackendRegisterer::BackendRegisterer() {
     std::cout << "DoocsBackend::BackendRegisterer: registering backend type doocs" << std::endl;
-    mtca4u::BackendFactory::getInstance().registerBackendType("doocs","",&DoocsBackend::createInstance);
+    mtca4u::BackendFactory::getInstance().registerBackendType("doocs","",&DoocsBackend::createInstance, CHIMERATK_DEVICEACCESS_VERSION);
   }
 
   /********************************************************************************************************************/
