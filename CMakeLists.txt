@@ -27,6 +27,9 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 set(${PROJECT_NAME}_INCLUDE_DIRS ${${PROJECT_NAME}_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/include/)
 ENABLE_TESTING()
 
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib:${DOOCS_DIR}")
+
 aux_source_directory(${CMAKE_SOURCE_DIR}/src library_sources)
 
 # Create the executables for automated unit testing.
@@ -65,6 +68,7 @@ ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 add_library(${PROJECT_NAME} SHARED ${library_sources} )
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_VERSION} SOVERSION ${${PROJECT_NAME}_SOVERSION})
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "${mtca4u-deviceaccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_FLAGS "-Wl,-rpath=${DOOCS_DIR},--enable-new-dtags")
 target_link_libraries(${PROJECT_NAME} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES})
 
 #configure a header file which contains the version information for use in C++
