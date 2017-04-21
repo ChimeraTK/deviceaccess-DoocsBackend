@@ -48,7 +48,8 @@ namespace mtca4u {
   template<typename UserType>
   DoocsBackendLongRegisterAccessor<UserType>::DoocsBackendLongRegisterAccessor(const RegisterPath &path,
       size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
-  : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags)
+  : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags),
+    fixedPointConverter(path)
   {
 
     // check data type

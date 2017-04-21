@@ -37,6 +37,8 @@ namespace mtca4u {
       
       bool doReadTransferNonBlocking() override;
       
+      bool doReadTransferLatest() override;
+      
       void write() override {
         this->preWrite();
         write_internal();
@@ -228,6 +230,25 @@ namespace mtca4u {
       {
         std::unique_lock<std::mutex> lck(ZMQmtx);
         if(ZMQbuffer.empty()) return false;
+      }
+      this->doReadTransfer();
+      return true;
+    }
+  }
+
+  /**********************************************************************************************************************/
+
+  template<typename UserType>
+  bool DoocsBackendRegisterAccessor<UserType>::doReadTransferLatest() {
+    if(!useZMQ) {
+      this->doReadTransfer();
+      return true;
+    }
+    else {
+      {
+        std::unique_lock<std::mutex> lck(ZMQmtx);
+        if(ZMQbuffer.empty()) return false;
+        while(ZMQbuffer.size() > 1) ZMQbuffer.pop();        // remove all elements but one
       }
       this->doReadTransfer();
       return true;
