@@ -39,9 +39,10 @@ namespace mtca4u {
       
       bool doReadTransferLatest() override;
       
-      void write() override {
+      bool write() override {
         this->preWrite();
         write_internal();
+        return false;
       }
 
     protected:
