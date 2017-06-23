@@ -260,6 +260,7 @@ namespace mtca4u {
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::doReadTransfer() {
+    boost::this_thread::interruption_point();
     if(!useZMQ) {
       // read data
       int rc = eq.get(&ea, &src, &dst);
@@ -271,7 +272,10 @@ namespace mtca4u {
     }
     else {
       std::unique_lock<std::mutex> lck(ZMQmtx);
-      while(ZMQbuffer.empty()) ZMQnotifier.wait(lck);
+      while(ZMQbuffer.empty()) {
+        ZMQnotifier.wait_for(lck, std::chrono::milliseconds(200));
+        boost::this_thread::interruption_point();
+      }
       dst = ZMQbuffer.front();
       ZMQbuffer.pop();
     }
