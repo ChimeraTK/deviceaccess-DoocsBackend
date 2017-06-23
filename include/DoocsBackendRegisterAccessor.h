@@ -271,13 +271,33 @@ namespace mtca4u {
       }
     }
     else {
-      std::unique_lock<std::mutex> lck(ZMQmtx);
-      while(ZMQbuffer.empty()) {
-        ZMQnotifier.wait_for(lck, std::chrono::milliseconds(200));
-        boost::this_thread::interruption_point();
+      // loop to allow retries in case of timeout errors
+      while(true) {
+        // obtain lock as required for the condition variable
+        std::unique_lock<std::mutex> lck(ZMQmtx);
+        // wait until new data has been received
+        while(ZMQbuffer.empty()) {
+          ZMQnotifier.wait_for(lck, std::chrono::milliseconds(200));
+          boost::this_thread::interruption_point();
+        }
+        // obtain new data and remove it from the queue
+        dst = ZMQbuffer.front();
+        ZMQbuffer.pop();
+        // check for an error
+        if(dst.error() != 0) {
+          // try obtaining data through RPC call instead to verify error
+          int rc = eq.get(&ea, &src, &dst);
+          // if again error received, throw exception
+          if(rc) {
+            throw DeviceException(std::string("Cannot read from DOOCS property: ")+dst.get_string(),
+                DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+          }
+          // otherwise try again
+          continue;
+        }
+        // terminate loop, since no retry needed
+        break;
       }
-      dst = ZMQbuffer.front();
-      ZMQbuffer.pop();
     }
     // check for error code in dst
     if(dst.error() != 0) {
