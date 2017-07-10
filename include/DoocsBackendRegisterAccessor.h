@@ -104,9 +104,6 @@ namespace mtca4u {
       std::condition_variable ZMQnotifier;
       mutable std::mutex ZMQmtx;
 
-      /// timeout in milliseconds for initiating the ZeroMQ subscription
-      static constexpr int ZMQsubscribeTimeout = 10000;
-
       /// internal write from EqData src
       void write_internal();
 
