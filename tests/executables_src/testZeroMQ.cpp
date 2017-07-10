@@ -24,7 +24,6 @@ class DoocsBackendTest {
     void testRoutine();
 
     void testZeroMQ();
-    void testExceptions();
 };
 
 /**********************************************************************************************************************/
@@ -35,7 +34,6 @@ class DoocsBackendTestSuite : public test_suite {
       boost::shared_ptr<DoocsBackendTest> doocsBackendTest(new DoocsBackendTest);
 
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testZeroMQ, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testExceptions, doocsBackendTest) );
     }
 };
 
@@ -103,7 +101,6 @@ void DoocsBackendTest::testZeroMQ() {
   mtca4u::Device device;
 
   device.open("DoocsServer1");
-
   ScalarRegisterAccessor<int32_t> acc(device.getScalarRegisterAccessor<int32_t>("MYDUMMY/SOME_ZMQINT", 0,
       {AccessMode::wait_for_new_data}));
 
@@ -168,33 +165,6 @@ void DoocsBackendTest::testZeroMQ() {
   readAsync.join();
 
   device.close();
-}
-
-/**********************************************************************************************************************/
-
-void DoocsBackendTest::testExceptions() {
-
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
-
-  device.open("DoocsServer1");
-
-  // non-ZeroMQ variable
-  ScalarRegisterAccessor<int32_t> acc(device.getScalarRegisterAccessor<int32_t>("MYDUMMY/SOME_INT", 0,
-      {AccessMode::wait_for_new_data}));
-
-  usleep(100000);
-
-  try {
-    acc.read();
-    BOOST_ERROR("Exception expected.");
-  }
-  catch(DeviceException &ex) {
-    BOOST_CHECK(ex.getID() == DeviceException::CANNOT_OPEN_DEVICEBACKEND);
-  }
-
-  device.close();
-
 }
 
 /**********************************************************************************************************************/

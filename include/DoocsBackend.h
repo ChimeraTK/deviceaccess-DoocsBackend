@@ -22,6 +22,13 @@ namespace mtca4u {
    *  FACILITY and DEVICE are the first two components of the DOOCS addresses targeted by this device. The full addess
    *  is completed by adding the location and property name from the register path names. Thus the register path names
    *  must be of the form "LOCATION/PROPERTY".
+   * 
+   *  If AccessMode::wait_for_new_data is specified when obtaining accessors, ZeroMQ is used to subscribe to the
+   *  variable and blocking read() will wait until new data has arrived via the subscribtion. If the flag is not
+   *  specified, data will be retrieved through standard RPC calls. Note that in either case a first read transfer
+   *  is performed upon creation of the accessor to make sure the property exists and the server is reachable. Due
+   *  to limitations in the DOOCS API it is not possible to test whether a property has been published via ZeroMQ
+   *  or not, so specifying AccessMode::wait_for_new_data for non-ZeroMQ properties will make read() waiting forever.
    */
   class DoocsBackend : public DeviceBackendImpl {
 
