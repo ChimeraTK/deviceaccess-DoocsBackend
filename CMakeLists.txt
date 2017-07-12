@@ -1,11 +1,11 @@
-PROJECT(deviceaccess-DoocsBackend)
+PROJECT(ChimeraTK-DeviceAccess-DoocsBackend)
 cmake_minimum_required(VERSION 2.8)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
 
 set(${PROJECT_NAME}_MAJOR_VERSION 00)
 set(${PROJECT_NAME}_MINOR_VERSION 03)
-set(${PROJECT_NAME}_PATCH_VERSION 01)
+set(${PROJECT_NAME}_PATCH_VERSION 02)
 include(cmake/set_version_numbers.cmake)
 
 #Moderate version of the compiler flags
@@ -66,7 +66,7 @@ ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 
 # C++ library
 add_library(${PROJECT_NAME} SHARED ${library_sources} )
-set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_VERSION} SOVERSION ${${PROJECT_NAME}_SOVERSION})
+set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_FULL_LIBRARY_VERSION} SOVERSION ${${PROJECT_NAME}_SOVERSION})
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "${mtca4u-deviceaccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_FLAGS "-Wl,-rpath=${DOOCS_DIR},--enable-new-dtags")
 target_link_libraries(${PROJECT_NAME} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES})
