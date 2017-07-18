@@ -40,6 +40,8 @@ namespace mtca4u {
 
       DoocsBackend(const RegisterPath &serverAddress);
 
+      void fillCatalogue(std::string fixedComponents, int level);
+      
       virtual void open();
 
       virtual void close();

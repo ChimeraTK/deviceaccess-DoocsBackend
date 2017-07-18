@@ -4,7 +4,7 @@
 
 eq_dummy::eq_dummy()
 : EqFct("NAME = location"),
-  prop_someInt("SOME_INT",this),
+  prop_someInt("SOME_INT Some integer property",this),
   prop_someFloat("SOME_FLOAT",this),
   prop_someDouble("SOME_DOUBLE",this),
   prop_someString("SOME_STRING", this),

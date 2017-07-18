@@ -1,3 +1,2 @@
 DoocsServer1     sdm://./doocs=TEST.DOOCS,LOCALHOST_610498009   none
-BrokenURI1       sdm://./doocs=TEST.DOOCS                       none
-BrokenURI2       sdm://./doocs=TEST.DOOCS/LOCALHOST_610498009   none
+DoocsServer2     sdm://./doocs=TEST.DOOCS,LOCALHOST_610498009,MYDUMMY   none

@@ -5,6 +5,8 @@
  *      Author: Martin Hierholzer
  */
 
+#include <algorithm>
+
 #include <mtca4u/BackendFactory.h>
 #include <mtca4u/DeviceAccessVersion.h>
 
@@ -16,6 +18,39 @@
 
 // this is required since we link against the DOOCS libEqServer.so
 const char *object_name = "DoocsBackend";
+
+// You have to define an "extern C" function with this signature. It has to return
+// CHIMERATK_DEVICEACCESS_VERSION for version checking when the library is loaded
+// at run time. This function is used to determine that this is a valid DeviceAcces
+// backend library. Just copy this code, sorry for the boiler plate.
+extern "C"{
+  const char * deviceAccessVersionUsedToCompile(){
+    return CHIMERATK_DEVICEACCESS_VERSION;
+  }
+}
+
+/**
+ *  RegisterInfo-derived class to be put into the RegisterCatalogue
+ */
+namespace {
+  class DoocsBackendRegisterInfo : public mtca4u::RegisterInfo {
+    public:
+
+      virtual ~DoocsBackendRegisterInfo() {}
+
+      mtca4u::RegisterPath getRegisterName() const override { return name; }
+
+      unsigned int getNumberOfElements() const override { return length; }
+
+      unsigned int getNumberOfChannels() const override { return 1; }
+
+      unsigned int getNumberOfDimensions() const override { return length > 1 ? 1 : 0; }
+      
+      mtca4u::RegisterPath name;
+      unsigned int length;
+      
+  };
+}
 
 namespace mtca4u {
 
@@ -47,23 +82,92 @@ namespace mtca4u {
       std::string /*instance*/, std::list<std::string> parameters, std::string /*mapFileName*/) {
 
     // check presense of required parameters
-    if(parameters.size() < 2) {
-      throw DeviceException("DoocsBackend: The SDM URI is missing a parameter: FACILITY and DEVICE must be specified.",
+    if(parameters.size() > 3) {
+      throw DeviceException("DoocsBackend: The SDM URI has too many parameters: only FACILITY, DEVICE and LOCATION can be specified.",
           DeviceException::WRONG_PARAMETER);
     }
 
     // form server address
-    RegisterPath serverAddress = parameters.front();
-    parameters.pop_front();
-    serverAddress /= parameters.front();
+    RegisterPath serverAddress;
+    for(auto &param : parameters) serverAddress /= param;
 
     // create and return the backend
     return boost::shared_ptr<DeviceBackend>(new DoocsBackend(serverAddress));
   }
+  
+  /********************************************************************************************************************/
 
+  void DoocsBackend::fillCatalogue(std::string fixedComponents, int level) {
+    
+    // obtain list of elements within the given partial address
+    EqAdr ea;
+    EqCall eq;
+    EqData src,dst;
+    ea.adr((fixedComponents+"/*").c_str());
+    int rc = eq.names(&ea, &dst);
+    if(rc) {
+      // if the enumeration failes, maybe the server is not available (but exists in ENS) -> just ignore this address
+      return;
+    }
+    
+    // iterate over list
+    for(int i=0; i<dst.array_length(); ++i) {
+      
+      // obtain the name of the element
+      char c[255];
+      dst.get_string_arg(i, c, 255);
+      std::string name = c;
+      name = name.substr(0, name.find_first_of(" "));   // ignore comment which is following the space
+
+      // if we are not yet at the property-level, recursivly call the function again to resolve the next hierarchy level      
+      if(level < 2) {
+        fillCatalogue(fixedComponents+"/"+name, level+1);
+      }
+      else {
+        
+        // this is a property: create RegisterInfo entry and set its name
+        boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
+        std::string fqn = fixedComponents+"/"+name;
+        info->name = fqn.substr(std::string(_serverAddress).length()-1);
+
+        // read property once to determine its length.
+        ///@todo Is there a more efficient way to do this?
+        EqAdr ea;
+        EqCall eq;
+        EqData src,dst;
+        ea.adr(fqn.c_str());        // strip leading slash
+        int rc = eq.get(&ea, &src, &dst);
+        if(rc) {
+          // if the property is not accessible, ignore it. This happens frequently e.g. for archiver-related properties
+          continue;
+        }
+        info->length = dst.array_length();
+        if(info->length == 0) info->length = 1;                         // DOOCS reports 0 if not an array
+        if(dst.type() == DATA_TEXT || dst.type() == DATA_STRING ||      // in case of strings, DOOCS reports the length of the string
+           dst.type() == DATA_STRING16 || dst.type() == DATA_USTR  ) {
+          info->length = 1;
+        }
+        
+        // add info to catalogue
+        _catalogue.addRegister(info);
+      }
+      
+    }
+    
+  }
+  
   /********************************************************************************************************************/
 
   void DoocsBackend::open() {
+  
+    // Fill the catalogue:
+    // first, count number of elements in address part given in DMAP file to determine how many components we have to
+    // iterate over
+    std::string sadr = std::string(_serverAddress).substr(1);        // strip leading sla
+    size_t nSlashes = std::count(sadr.begin(), sadr.end(), '/');
+    // next, iteratively call the function to fill the catalogue
+    fillCatalogue(sadr, nSlashes);
+    
   }
 
   /********************************************************************************************************************/

@@ -35,6 +35,7 @@ class DoocsBackendTest {
     void testBitAndStatus();
     void testPartialAccess();
     void testExceptions();
+    void testCatalogue();
     void testOther();
 };
 
@@ -57,6 +58,7 @@ class DoocsBackendTestSuite : public test_suite {
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testBitAndStatus, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testPartialAccess, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testExceptions, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testCatalogue, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testOther, doocsBackendTest) );
     }
 };
@@ -792,23 +794,6 @@ void DoocsBackendTest::testExceptions() {
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   mtca4u::Device device;
 
-  // broken URIs
-  try {
-    device.open("BrokenURI1");
-    BOOST_ERROR("Exception expected.");
-  }
-  catch(DeviceException &ex) {
-    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
-  }
-
-  try {
-    device.open("BrokenURI2");
-    BOOST_ERROR("Exception expected.");
-  }
-  catch(DeviceException &ex) {
-    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
-  }
-
   device.open("DoocsServer1");
 
   // unsupported data type
@@ -858,6 +843,103 @@ void DoocsBackendTest::testExceptions() {
 
   device.close();
 
+}
+
+/**********************************************************************************************************************/
+
+void DoocsBackendTest::testCatalogue() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  device.open("DoocsServer2");
+
+  auto catalogue = device.getRegisterCatalogue();
+  
+  // check number of registers, but not with the exact number, since DOOCS adds some registers!
+  BOOST_CHECK( catalogue.getNumberOfRegisters() > 13);
+  
+  // check for the presence of known registers
+  BOOST_CHECK( catalogue.hasRegister("SOME_INT") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_FLOAT") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_DOUBLE") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_STRING") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_STATUS") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_BIT") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_INT_ARRAY") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_SHORT_ARRAY") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_LONG_ARRAY") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_FLOAT_ARRAY") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_DOUBLE_ARRAY") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_SPECTRUM") );
+  BOOST_CHECK( catalogue.hasRegister("SOME_ZMQINT") );
+  
+  // check the properties of some registers
+  auto r1 = catalogue.getRegister("SOME_INT");
+  BOOST_CHECK(r1->getRegisterName() == "SOME_INT");
+  BOOST_CHECK(r1->getNumberOfElements() == 1);
+  BOOST_CHECK(r1->getNumberOfChannels() == 1);
+  BOOST_CHECK(r1->getNumberOfDimensions() == 0);
+
+  auto r2 = catalogue.getRegister("SOME_STRING");
+  BOOST_CHECK(r2->getRegisterName() == "SOME_STRING");
+  BOOST_CHECK(r2->getNumberOfElements() == 1);
+  BOOST_CHECK(r2->getNumberOfChannels() == 1);
+  BOOST_CHECK(r2->getNumberOfDimensions() == 0);
+
+  auto r3 = catalogue.getRegister("SOME_INT_ARRAY");
+  BOOST_CHECK(r3->getRegisterName() == "SOME_INT_ARRAY");
+  BOOST_CHECK(r3->getNumberOfElements() == 42);
+  BOOST_CHECK(r3->getNumberOfChannels() == 1);
+  BOOST_CHECK(r3->getNumberOfDimensions() == 1);
+
+  auto r4 = catalogue.getRegister("SOME_FLOAT_ARRAY");
+  BOOST_CHECK(r4->getRegisterName() == "SOME_FLOAT_ARRAY");
+  BOOST_CHECK(r4->getNumberOfElements() == 5);
+  BOOST_CHECK(r4->getNumberOfChannels() == 1);
+  BOOST_CHECK(r4->getNumberOfDimensions() == 1);
+
+  auto r5 = catalogue.getRegister("SOME_SPECTRUM");
+  BOOST_CHECK(r5->getRegisterName() == "SOME_SPECTRUM");
+  BOOST_CHECK(r5->getNumberOfElements() == 100);
+  BOOST_CHECK(r5->getNumberOfChannels() == 1);
+  BOOST_CHECK(r5->getNumberOfDimensions() == 1);
+
+  auto r6 = catalogue.getRegister("SOME_ZMQINT");
+  BOOST_CHECK(r6->getRegisterName() == "SOME_ZMQINT");
+  BOOST_CHECK(r6->getNumberOfElements() == 1);
+  BOOST_CHECK(r6->getNumberOfChannels() == 1);
+  BOOST_CHECK(r6->getNumberOfDimensions() == 0);
+
+  device.close();
+
+  // quick check with the other level (location is included in the register name)
+  device.open("DoocsServer1");
+
+  auto catalogue2 = device.getRegisterCatalogue();
+  
+  // check number of registers, but not with the exact number, since DOOCS adds some registers!
+  BOOST_CHECK( catalogue2.getNumberOfRegisters() > 13);
+  
+  // check for the presence of known registers
+  BOOST_CHECK( catalogue2.hasRegister("MYDUMMY/SOME_INT") );
+  BOOST_CHECK( catalogue2.hasRegister("DUMMY._SVR/SVR.BPN") );
+  
+  // check the properties of some registers
+  auto r7 = catalogue2.getRegister("MYDUMMY/SOME_INT");
+  BOOST_CHECK(r7->getRegisterName() == "MYDUMMY/SOME_INT");
+  BOOST_CHECK(r7->getNumberOfElements() == 1);
+  BOOST_CHECK(r7->getNumberOfChannels() == 1);
+  BOOST_CHECK(r7->getNumberOfDimensions() == 0);
+  
+  auto r8 = catalogue2.getRegister("DUMMY._SVR/SVR.BPN");
+  BOOST_CHECK(r8->getRegisterName() == "DUMMY._SVR/SVR.BPN");
+  BOOST_CHECK(r8->getNumberOfElements() == 1);
+  BOOST_CHECK(r8->getNumberOfChannels() == 1);
+  BOOST_CHECK(r8->getNumberOfDimensions() == 0);
+
+  device.close();
+  
 }
 
 /**********************************************************************************************************************/
