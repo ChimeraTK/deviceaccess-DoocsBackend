@@ -71,9 +71,6 @@ test_suite* myInit( int /*argc*/, char* /*argv*/ [] ) {
 
 void DoocsBackendTest::testRoutine() {     // version to run the unit and integration tests
 
-  // initialise virtual timing system and wait until server has started
-  DoocsServerTestHelper::initialise();
-
   // initialise BOOST test suite
   extern char **svr_argv;
   extern int svr_argc;
@@ -96,6 +93,9 @@ void DoocsBackendTest::testRoutine() {     // version to run the unit and integr
 /**********************************************************************************************************************/
 
 void DoocsBackendTest::testZeroMQ() {
+    
+  // run update once to make sure the server is up and running
+  DoocsServerTestHelper::runUpdate();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   mtca4u::Device device;
