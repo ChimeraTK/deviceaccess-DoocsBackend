@@ -39,7 +39,7 @@ namespace mtca4u {
       
       bool doReadTransferLatest() override;
       
-      bool write() override {
+      bool write(ChimeraTK::VersionNumber /*versionNumber*/={}) override {
         this->preWrite();
         write_internal();
         return false;
