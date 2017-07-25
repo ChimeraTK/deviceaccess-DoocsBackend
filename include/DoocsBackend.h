@@ -42,11 +42,11 @@ namespace mtca4u {
 
       void fillCatalogue(std::string fixedComponents, int level);
       
-      virtual void open();
+      void open() override;
 
-      virtual void close();
+      void close() override;
 
-      virtual std::string readDeviceInfo() {
+      std::string readDeviceInfo() override {
         return std::string("DOOCS server address: ") + _serverAddress;
       }
 
