@@ -51,15 +51,20 @@ namespace mtca4u {
   : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags),
     fixedPointConverter(path)
   {
-
-    // check data type
-    if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_INT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_BOOL &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_INT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_BOOL &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_SHORT   ) {
-      throw DeviceException("DOOCS data type not supported by DoocsBackendIntRegisterAccessor.",    // LCOV_EXCL_LINE (already prevented in the Backend)
-          DeviceException::WRONG_PARAMETER);                                                        // LCOV_EXCL_LINE
+    try {
+      // check data type
+      if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_INT &&
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_BOOL &&
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_INT &&
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_BOOL &&
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_SHORT   ) {
+        throw DeviceException("DOOCS data type not supported by DoocsBackendIntRegisterAccessor.",    // LCOV_EXCL_LINE (already prevented in the Backend)
+            DeviceException::WRONG_PARAMETER);                                                        // LCOV_EXCL_LINE
+      }
+    }
+    catch(...) {
+      this->shutdown();
+      throw;
     }
   }
 
@@ -67,7 +72,7 @@ namespace mtca4u {
 
   template<typename UserType>
   DoocsBackendIntRegisterAccessor<UserType>::~DoocsBackendIntRegisterAccessor() {
-
+    this->shutdown();
   }
 
   /**********************************************************************************************************************/

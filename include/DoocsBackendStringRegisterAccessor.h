@@ -46,23 +46,28 @@ namespace mtca4u {
       size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags, false)
   {
+    try {
+      // set buffer size (nElements will be the number of characters, so the buffer allocation in the base class would be incorrect)
+      NDRegisterAccessor<UserType>::buffer_2D.resize(1);
+      NDRegisterAccessor<UserType>::buffer_2D[0].resize(1);
 
-    // set buffer size (nElements will be the number of characters, so the buffer allocation in the base class would be incorrect)
-    NDRegisterAccessor<UserType>::buffer_2D.resize(1);
-    NDRegisterAccessor<UserType>::buffer_2D[0].resize(1);
+      // check data type
+      if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_TEXT &&
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING &&
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING16) {
+        throw DeviceException("DOOCS data type not supported by DoocsBackendStringRegisterAccessor.",     // LCOV_EXCL_LINE (already prevented in the Backend)
+            DeviceException::WRONG_PARAMETER);                                                            // LCOV_EXCL_LINE
+      }
 
-    // check data type
-    if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_TEXT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING16) {
-      throw DeviceException("DOOCS data type not supported by DoocsBackendStringRegisterAccessor.",     // LCOV_EXCL_LINE (already prevented in the Backend)
-          DeviceException::WRONG_PARAMETER);                                                            // LCOV_EXCL_LINE
+      // check UserType
+      if(typeid(UserType) != typeid(std::string)) {
+        throw DeviceException("Trying to access a string DOOCS property with a non-string user data type.",
+            DeviceException::WRONG_PARAMETER);
+      }
     }
-
-    // check UserType
-    if(typeid(UserType) != typeid(std::string)) {
-      throw DeviceException("Trying to access a string DOOCS property with a non-string user data type.",
-          DeviceException::WRONG_PARAMETER);
+    catch(...) {
+      this->shutdown();
+      throw;
     }
   }
 
@@ -70,6 +75,7 @@ namespace mtca4u {
 
   template<typename UserType>
   DoocsBackendStringRegisterAccessor<UserType>::~DoocsBackendStringRegisterAccessor() {
+    this->shutdown();
   }
 
 

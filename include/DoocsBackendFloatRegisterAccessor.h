@@ -47,14 +47,19 @@ namespace mtca4u {
       size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags)
   {
-
-    // check data type
-    if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_FLOAT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_FLOAT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_DOUBLE &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_DOUBLE  ) {
-      throw DeviceException("DOOCS data type not supported by DoocsBackendFloatRegisterAccessor.",  // LCOV_EXCL_LINE (already prevented in the Backend)
-          DeviceException::WRONG_PARAMETER);                                                        // LCOV_EXCL_LINE
+    try {
+      // check data type
+      if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_FLOAT &&
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_FLOAT &&
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_DOUBLE &&
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_DOUBLE  ) {
+        throw DeviceException("DOOCS data type not supported by DoocsBackendFloatRegisterAccessor.",  // LCOV_EXCL_LINE (already prevented in the Backend)
+            DeviceException::WRONG_PARAMETER);                                                        // LCOV_EXCL_LINE
+      }
+    }
+    catch(...) {
+      this->shutdown();
+      throw;
     }
   }
 
@@ -62,7 +67,7 @@ namespace mtca4u {
 
   template<typename UserType>
   DoocsBackendFloatRegisterAccessor<UserType>::~DoocsBackendFloatRegisterAccessor() {
-
+    this->shutdown();
   }
 
   /**********************************************************************************************************************/

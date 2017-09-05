@@ -130,70 +130,75 @@ namespace mtca4u {
     elementOffset(wordOffsetInRegister),
     useZMQ(false)
   {
+    try {
+      // check for unknown access mode flags
+      flags.checkForUnknownFlags({AccessMode::wait_for_new_data});
 
-    // check for unknown access mode flags
-    flags.checkForUnknownFlags({AccessMode::wait_for_new_data});
+      // set address
+      ea.adr(std::string(path).substr(1).c_str());        // strip leading slash
 
-    // set address
-    ea.adr(std::string(path).substr(1).c_str());        // strip leading slash
+      // try to read data, to check connectivity and to obtain size of the register
+      doReadTransfer();
 
-    // try to read data, to check connectivity and to obtain size of the register
-    doReadTransfer();
-
-    // obtain number of elements
-    size_t actualLength = dst.array_length();
-    if(actualLength == 0) {
-      actualLength = 1;
-      isArray = false;
-    }
-    else {
-      isArray = true;
-    }
-    if(numberOfWords == 0) {
-      nElements = actualLength;
-    }
-    else {
-      nElements = numberOfWords;
-    }
-    if(nElements + elementOffset > actualLength) {
-        throw DeviceException("Requested number of words exceeds the length of the DOOCS property!",
-            DeviceException::WRONG_PARAMETER);
-    }
-    if(nElements == actualLength && elementOffset == 0) {
-      isPartial = false;
-    }
-    else {
-      isPartial = true;
-    }
-
-    // allocate buffers
-    if(allocateBuffers) {
-      NDRegisterAccessor<UserType>::buffer_2D.resize(1);
-      NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
-    }
-
-    // set proper type information in the source EqData
-    src.set_type(dst.type());
-    if(allocateBuffers) {
-      src.length(actualLength);
-    }
-
-    // use ZeroMQ with AccessMode::wait_for_new_data
-    if(flags.has(AccessMode::wait_for_new_data)) {
-      // set flag
-      useZMQ = true;
-      // subscribe to property
-      int err = dmsg_attach(&ea, &dst, (void*)this, &zmq_callback);
-      if(err) {
-        throw DeviceException(std::string("Cannot subscribe to DOOCS property via ZeroMQ: ")+dst.get_string(),
-                  DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+      // obtain number of elements
+      size_t actualLength = dst.array_length();
+      if(actualLength == 0) {
+        actualLength = 1;
+        isArray = false;
       }
-      // run dmsg_start() once
-      std::unique_lock<std::mutex> lck(DoocsBackend::dmsgStartCalled_mutex);
-      if(!DoocsBackend::dmsgStartCalled) {
-        dmsg_start();
-        DoocsBackend::dmsgStartCalled = true;
+      else {
+        isArray = true;
       }
+      if(numberOfWords == 0) {
+        nElements = actualLength;
+      }
+      else {
+        nElements = numberOfWords;
+      }
+      if(nElements + elementOffset > actualLength) {
+          throw DeviceException("Requested number of words exceeds the length of the DOOCS property!",
+              DeviceException::WRONG_PARAMETER);
+      }
+      if(nElements == actualLength && elementOffset == 0) {
+        isPartial = false;
+      }
+      else {
+        isPartial = true;
+      }
+
+      // allocate buffers
+      if(allocateBuffers) {
+        NDRegisterAccessor<UserType>::buffer_2D.resize(1);
+        NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
+      }
+
+      // set proper type information in the source EqData
+      src.set_type(dst.type());
+      if(allocateBuffers) {
+        src.length(actualLength);
+      }
+
+      // use ZeroMQ with AccessMode::wait_for_new_data
+      if(flags.has(AccessMode::wait_for_new_data)) {
+        // set flag
+        useZMQ = true;
+        // subscribe to property
+        int err = dmsg_attach(&ea, &dst, (void*)this, &zmq_callback);
+        if(err) {
+          throw DeviceException(std::string("Cannot subscribe to DOOCS property via ZeroMQ: ")+dst.get_string(),
+                    DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+        }
+        // run dmsg_start() once
+        std::unique_lock<std::mutex> lck(DoocsBackend::dmsgStartCalled_mutex);
+        if(!DoocsBackend::dmsgStartCalled) {
+          dmsg_start();
+          DoocsBackend::dmsgStartCalled = true;
+        }
+      }
+    }
+    catch(...) {
+      this->shutdown();
+      throw;
     }
   }
 
