@@ -52,7 +52,8 @@ namespace mtca4u {
       if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_FLOAT &&
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_FLOAT &&
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_DOUBLE &&
-          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_DOUBLE  ) {
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_DOUBLE &&
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_SPECTRUM    ) {
         throw DeviceException("DOOCS data type not supported by DoocsBackendFloatRegisterAccessor.",  // LCOV_EXCL_LINE (already prevented in the Backend)
             DeviceException::WRONG_PARAMETER);                                                        // LCOV_EXCL_LINE
       }

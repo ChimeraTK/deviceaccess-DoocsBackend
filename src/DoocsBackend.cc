@@ -205,7 +205,7 @@ namespace mtca4u {
       p = new DoocsBackendLongRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
     }
     else if( dst.type() == DATA_FLOAT || dst.type() == DATA_A_FLOAT ||
-        dst.type() == DATA_DOUBLE || dst.type() == DATA_A_DOUBLE  ) {
+             dst.type() == DATA_DOUBLE || dst.type() == DATA_A_DOUBLE || dst.type() == DATA_SPECTRUM  ) {
       p = new DoocsBackendFloatRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
     }
     else if( dst.type() == DATA_TEXT || dst.type() == DATA_STRING || dst.type() == DATA_STRING16) {

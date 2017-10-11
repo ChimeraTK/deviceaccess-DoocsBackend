@@ -32,6 +32,7 @@ class DoocsBackendTest {
     void testArrayLong();
     void testArrayFloat();
     void testArrayDouble();
+    void testSpectrum();
     void testBitAndStatus();
     void testPartialAccess();
     void testExceptions();
@@ -55,6 +56,7 @@ class DoocsBackendTestSuite : public test_suite {
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayLong, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayFloat, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayDouble, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testSpectrum, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testBitAndStatus, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testPartialAccess, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testExceptions, doocsBackendTest) );
@@ -620,6 +622,25 @@ void DoocsBackendTest::testArrayDouble() {
 
 /**********************************************************************************************************************/
 
+void DoocsBackendTest::testSpectrum() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  mtca4u::Device device;
+
+  device.open("DoocsServer1");
+
+  TwoDRegisterAccessor<float> acc_someArray(device.getTwoDRegisterAccessor<float>("MYDUMMY/SOME_SPECTRUM"));
+  BOOST_CHECK( acc_someArray.getNChannels() == 1 );
+  BOOST_CHECK( acc_someArray.getNElementsPerChannel() == 100 );
+  acc_someArray.read();
+  for(int i=0; i<100; i++) BOOST_CHECK_CLOSE(acc_someArray[0][i], i/42., 0.00001);
+
+  device.close();
+
+}
+
+/**********************************************************************************************************************/
+
 void DoocsBackendTest::testBitAndStatus() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
@@ -798,7 +819,7 @@ void DoocsBackendTest::testExceptions() {
 
   // unsupported data type
   try {
-    device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_SPECTRUM");
+    device.getTwoDRegisterAccessor<int>("MYDUMMY/UNSUPPORTED_DATA_TYPE");     // D_iiii
     BOOST_ERROR("Exception expected.");
   }
   catch(DeviceException &ex) {

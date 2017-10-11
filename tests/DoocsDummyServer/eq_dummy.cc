@@ -16,6 +16,7 @@ eq_dummy::eq_dummy()
   prop_someFloatArray("SOME_FLOAT_ARRAY", 5, this),
   prop_someDoubleArray("SOME_DOUBLE_ARRAY", 5, this),
   prop_someSpectrum("SOME_SPECTRUM", 100, this),
+  prop_unsupportedDataType("UNSUPPORTED_DATA_TYPE", this),
   prop_someZMQInt("SOME_ZMQINT",this),
   counter(0)
 {
@@ -35,6 +36,7 @@ void eq_dummy::init() {
     for(int i=0; i<5; i++) prop_someLongArray.set_value(10+i, i);
     for(int i=0; i<5; i++) prop_someFloatArray.set_value((float)i/1000., i);
     for(int i=0; i<5; i++) prop_someDoubleArray.set_value((float)i/333., i);
+    for(int i=0; i<100; i++) prop_someSpectrum.fill_spectrum(i, (float)i/42.);
     prop_someZMQInt.set_value(0);
 }
 
