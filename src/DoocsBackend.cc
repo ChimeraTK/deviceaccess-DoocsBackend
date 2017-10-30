@@ -46,8 +46,11 @@ namespace {
 
       unsigned int getNumberOfDimensions() const override { return length > 1 ? 1 : 0; }
       
+      const mtca4u::RegisterInfo::DataDescriptor& getDataDescriptor() const override { return dataDescriptor; }
+
       mtca4u::RegisterPath name;
       unsigned int length;
+      mtca4u::RegisterInfo::DataDescriptor dataDescriptor;
       
   };
 }
@@ -130,7 +133,7 @@ namespace mtca4u {
         std::string fqn = fixedComponents+"/"+name;
         info->name = fqn.substr(std::string(_serverAddress).length()-1);
 
-        // read property once to determine its length.
+        // read property once to determine its length and data type
         ///@todo Is there a more efficient way to do this?
         EqAdr ea;
         EqCall eq;
@@ -146,6 +149,29 @@ namespace mtca4u {
         if(dst.type() == DATA_TEXT || dst.type() == DATA_STRING ||      // in case of strings, DOOCS reports the length of the string
            dst.type() == DATA_STRING16 || dst.type() == DATA_USTR  ) {
           info->length = 1;
+          info->dataDescriptor = mtca4u::RegisterInfo::DataDescriptor( mtca4u::RegisterInfo::FundamentalType::string );
+        }
+        else if(dst.type() == DATA_INT || dst.type() == DATA_A_INT || dst.type() == DATA_A_SHORT ||
+                dst.type() == DATA_A_LONG || dst.type() == DATA_A_BYTE ) {    // integral data types
+          size_t digits;
+          if(dst.type() == DATA_A_SHORT) {      // 16 bit signed
+            digits = 6;
+          }
+          else if(dst.type() == DATA_A_BYTE) {  // 8 bit signed
+            digits = 4;
+          }
+          else if(dst.type() == DATA_A_LONG) {  // 64 bit signed
+            digits = 20;
+          }
+          else {                                // 32 bit signed
+            digits = 11;
+          }
+          info->dataDescriptor = mtca4u::RegisterInfo::DataDescriptor( mtca4u::RegisterInfo::FundamentalType::numeric,
+                                                                       true, true, digits );
+        }
+        else {                                                                // floating point data types: always treat like double
+          info->dataDescriptor = mtca4u::RegisterInfo::DataDescriptor( mtca4u::RegisterInfo::FundamentalType::numeric,
+                                                                       false, true, 320, 300 );
         }
         
         // add info to catalogue
