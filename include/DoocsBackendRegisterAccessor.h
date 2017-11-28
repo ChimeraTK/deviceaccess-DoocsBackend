@@ -13,7 +13,7 @@
 #include <condition_variable>
 #include <queue>
 
-#include <mtca4u/NDRegisterAccessor.h>
+#include <mtca4u/SyncNDRegisterAccessor.h>
 #include <mtca4u/RegisterPath.h>
 #include <mtca4u/DeviceException.h>
 #include <mtca4u/FixedPointConverter.h>
@@ -25,7 +25,7 @@
 namespace mtca4u {
 
   template<typename UserType>
-  class DoocsBackendRegisterAccessor : public NDRegisterAccessor<UserType> {
+  class DoocsBackendRegisterAccessor : public SyncNDRegisterAccessor<UserType> {    /// @todo Make proper implementation for readAsync()!
 
     public:
 
@@ -34,13 +34,12 @@ namespace mtca4u {
       unsigned int getNInputQueueElements() const override;
 
       void doReadTransfer() override;
-      
+
       bool doReadTransferNonBlocking() override;
-      
+
       bool doReadTransferLatest() override;
-      
-      bool write(ChimeraTK::VersionNumber /*versionNumber*/={}) override {
-        this->preWrite();
+
+      bool doWriteTransfer(ChimeraTK::VersionNumber /*versionNumber*/={}) override {
         write_internal();
         return false;
       }
@@ -125,7 +124,7 @@ namespace mtca4u {
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords,
       size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
-  : NDRegisterAccessor<UserType>(path),
+  : SyncNDRegisterAccessor<UserType>(path),
     _path(path),
     elementOffset(wordOffsetInRegister),
     useZMQ(false)
