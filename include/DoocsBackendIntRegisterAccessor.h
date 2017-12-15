@@ -51,7 +51,6 @@ namespace mtca4u {
   : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags),
     fixedPointConverter(path)
   {
-    std::cout << "DoocsBackendIntRegisterAccessor::DoocsBackendIntRegisterAccessor  " << this << " " << path << std::endl;
     try {
       // check data type
       if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_INT &&
