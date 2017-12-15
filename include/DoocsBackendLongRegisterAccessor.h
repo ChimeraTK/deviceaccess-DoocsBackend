@@ -32,9 +32,9 @@ namespace mtca4u {
       DoocsBackendLongRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags);
 
-      void postRead() override;
+      void doPostRead() override;
 
-      void preWrite() override;
+      void doPreWrite() override;
 
       /// fixed point converter for writing integers (used with default 32.0 signed settings, since DOOCS knows only "int")
       FixedPointConverter fixedPointConverter;
@@ -74,7 +74,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendLongRegisterAccessor<UserType>::postRead() {
+  void DoocsBackendLongRegisterAccessor<UserType>::doPostRead() {
     // copy data into our buffer
     for(size_t i=0; i<DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
       int idx = i+DoocsBackendRegisterAccessor<UserType>::elementOffset;
@@ -86,7 +86,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendLongRegisterAccessor<UserType>::preWrite() {
+  void DoocsBackendLongRegisterAccessor<UserType>::doPreWrite() {
     // copy data into our buffer
     if(DoocsBackendRegisterAccessor<UserType>::isPartial) {   // implement read-modify-write
       DoocsBackendRegisterAccessor<UserType>::doReadTransfer();

@@ -32,9 +32,9 @@ namespace mtca4u {
       DoocsBackendFloatRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags);
 
-      void postRead() override;
+      void doPostRead() override;
 
-      void preWrite() override;
+      void doPreWrite() override;
 
       friend class DoocsBackend;
 
@@ -74,7 +74,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<float>::postRead() {
+  void DoocsBackendFloatRegisterAccessor<float>::doPostRead() {
     // copy data into our buffer
     if(!isArray) {
       NDRegisterAccessor<float>::buffer_2D[0][0] = dst.get_float();
@@ -90,7 +90,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<double>::postRead() {
+  void DoocsBackendFloatRegisterAccessor<double>::doPostRead() {
     // copy data into our buffer
     if(!isArray) {
       NDRegisterAccessor<double>::buffer_2D[0][0] = dst.get_double();
@@ -106,7 +106,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<std::string>::postRead() {
+  void DoocsBackendFloatRegisterAccessor<std::string>::doPostRead() {
     // copy data into our buffer
     if(!isArray) {
       NDRegisterAccessor<std::string>::buffer_2D[0][0] = dst.get_string();
@@ -122,8 +122,9 @@ namespace mtca4u {
 
   /**********************************************************************************************************************/
 
-  template<typename UserType>   // only integral types left!  FIXME better add type trait
-  void DoocsBackendFloatRegisterAccessor<UserType>::postRead() {
+  template<typename UserType>
+  void DoocsBackendFloatRegisterAccessor<UserType>::doPostRead() {
+    static_assert( std::numeric_limits<UserType>::is_integer, "Data type not implemented." );   // only integral types left!
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       NDRegisterAccessor<UserType>::buffer_2D[0][0] = std::round(DoocsBackendRegisterAccessor<UserType>::dst.get_double());
@@ -139,7 +140,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<std::string>::preWrite() {
+  void DoocsBackendFloatRegisterAccessor<std::string>::doPreWrite() {
     // copy data into our buffer
     if(!isArray) {
       src.set(std::stod(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str()));
@@ -161,7 +162,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendFloatRegisterAccessor<UserType>::preWrite() {
+  void DoocsBackendFloatRegisterAccessor<UserType>::doPreWrite() {
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       double val = NDRegisterAccessor<UserType>::buffer_2D[0][0];

@@ -32,9 +32,9 @@ namespace mtca4u {
       DoocsBackendIntRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags);
 
-      void postRead() override;
+      void doPostRead() override;
 
-      void preWrite() override;
+      void doPreWrite() override;
 
       /// fixed point converter for writing integers (used with default 32.0 signed settings, since DOOCS knows only "int")
       FixedPointConverter fixedPointConverter;
@@ -51,6 +51,7 @@ namespace mtca4u {
   : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags),
     fixedPointConverter(path)
   {
+    std::cout << "DoocsBackendIntRegisterAccessor::DoocsBackendIntRegisterAccessor  " << this << " " << path << std::endl;
     try {
       // check data type
       if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_INT &&
@@ -78,7 +79,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendIntRegisterAccessor<UserType>::postRead() {
+  void DoocsBackendIntRegisterAccessor<UserType>::doPostRead() {
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       UserType val = fixedPointConverter.toCooked<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_int());
@@ -96,7 +97,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendIntRegisterAccessor<UserType>::preWrite() {
+  void DoocsBackendIntRegisterAccessor<UserType>::doPreWrite() {
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       int32_t raw = fixedPointConverter.toRaw(NDRegisterAccessor<UserType>::buffer_2D[0][0]);

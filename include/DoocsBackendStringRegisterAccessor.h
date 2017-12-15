@@ -32,9 +32,9 @@ namespace mtca4u {
       DoocsBackendStringRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags);
 
-      void postRead() override;
+      void doPostRead() override;
 
-      void preWrite() override;
+      void doPreWrite() override;
 
       friend class DoocsBackend;
   };
@@ -82,7 +82,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendStringRegisterAccessor<std::string>::postRead() {
+  void DoocsBackendStringRegisterAccessor<std::string>::doPostRead() {
     // copy data into our buffer
     NDRegisterAccessor<std::string>::buffer_2D[0][0] = DoocsBackendRegisterAccessor<std::string>::dst.get_string();
   }
@@ -90,7 +90,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendStringRegisterAccessor<std::string>::preWrite() {
+  void DoocsBackendStringRegisterAccessor<std::string>::doPreWrite() {
     // copy data into our buffer
     DoocsBackendRegisterAccessor<std::string>::src.set(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str());
   }
@@ -98,7 +98,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendStringRegisterAccessor<UserType>::postRead() {                                           // LCOV_EXCL_LINE (already prevented in constructor)
+  void DoocsBackendStringRegisterAccessor<UserType>::doPostRead() {                                         // LCOV_EXCL_LINE (already prevented in constructor)
     throw DeviceException("Trying to access a string DOOCS property with a non-string user data type.",     // LCOV_EXCL_LINE
         DeviceException::WRONG_PARAMETER);                                                                  // LCOV_EXCL_LINE
   }                                                                                                         // LCOV_EXCL_LINE
@@ -106,7 +106,7 @@ namespace mtca4u {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendStringRegisterAccessor<UserType>::preWrite() {                                           // LCOV_EXCL_LINE (already prevented in constructor)
+  void DoocsBackendStringRegisterAccessor<UserType>::doPreWrite() {                                         // LCOV_EXCL_LINE (already prevented in constructor)
     throw DeviceException("Trying to access a string DOOCS property with a non-string user data type.",     // LCOV_EXCL_LINE
         DeviceException::WRONG_PARAMETER);                                                                  // LCOV_EXCL_LINE
   }                                                                                                         // LCOV_EXCL_LINE

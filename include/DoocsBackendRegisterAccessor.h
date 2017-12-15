@@ -49,7 +49,7 @@ namespace mtca4u {
       DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags, bool allocateBuffers = true);
 
-      bool isSameRegister(const boost::shared_ptr<TransferElement const> &other) const override {
+      bool mayReplaceOther(const boost::shared_ptr<TransferElement const> &other) const override {
         auto rhsCasted = boost::dynamic_pointer_cast< const DoocsBackendRegisterAccessor<UserType> >(other);
         if(!rhsCasted) return false;
         if(_path != rhsCasted->_path) return false;
@@ -113,6 +113,10 @@ namespace mtca4u {
 
       std::vector< boost::shared_ptr<TransferElement> > getHardwareAccessingElements() override {
         return { boost::enable_shared_from_this<TransferElement>::shared_from_this() };
+      }
+
+      std::list<boost::shared_ptr<mtca4u::TransferElement> > getInternalElements() {
+        return {};
       }
 
       void replaceTransferElement(boost::shared_ptr<TransferElement> /*newElement*/) override {} // LCOV_EXCL_LINE
