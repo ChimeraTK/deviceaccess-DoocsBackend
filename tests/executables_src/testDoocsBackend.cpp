@@ -876,10 +876,10 @@ void DoocsBackendTest::testCatalogue() {
   device.open("DoocsServer2");
 
   auto catalogue = device.getRegisterCatalogue();
-  
+
   // check number of registers, but not with the exact number, since DOOCS adds some registers!
   BOOST_CHECK( catalogue.getNumberOfRegisters() > 13);
-  
+
   // check for the presence of known registers
   BOOST_CHECK( catalogue.hasRegister("SOME_INT") );
   BOOST_CHECK( catalogue.hasRegister("SOME_FLOAT") );
@@ -894,7 +894,7 @@ void DoocsBackendTest::testCatalogue() {
   BOOST_CHECK( catalogue.hasRegister("SOME_DOUBLE_ARRAY") );
   BOOST_CHECK( catalogue.hasRegister("SOME_SPECTRUM") );
   BOOST_CHECK( catalogue.hasRegister("SOME_ZMQINT") );
-  
+
   // check the properties of some registers
   auto r1 = catalogue.getRegister("SOME_INT");
   BOOST_CHECK(r1->getRegisterName() == "SOME_INT");
@@ -938,21 +938,21 @@ void DoocsBackendTest::testCatalogue() {
   device.open("DoocsServer1");
 
   auto catalogue2 = device.getRegisterCatalogue();
-  
+
   // check number of registers, but not with the exact number, since DOOCS adds some registers!
   BOOST_CHECK( catalogue2.getNumberOfRegisters() > 13);
-  
+
   // check for the presence of known registers
   BOOST_CHECK( catalogue2.hasRegister("MYDUMMY/SOME_INT") );
   BOOST_CHECK( catalogue2.hasRegister("DUMMY._SVR/SVR.BPN") );
-  
+
   // check the properties of some registers
   auto r7 = catalogue2.getRegister("MYDUMMY/SOME_INT");
   BOOST_CHECK(r7->getRegisterName() == "MYDUMMY/SOME_INT");
   BOOST_CHECK(r7->getNumberOfElements() == 1);
   BOOST_CHECK(r7->getNumberOfChannels() == 1);
   BOOST_CHECK(r7->getNumberOfDimensions() == 0);
-  
+
   auto r8 = catalogue2.getRegister("DUMMY._SVR/SVR.BPN");
   BOOST_CHECK(r8->getRegisterName() == "DUMMY._SVR/SVR.BPN");
   BOOST_CHECK(r8->getNumberOfElements() == 1);
@@ -960,7 +960,7 @@ void DoocsBackendTest::testCatalogue() {
   BOOST_CHECK(r8->getNumberOfDimensions() == 0);
 
   device.close();
-  
+
 }
 
 /**********************************************************************************************************************/
@@ -984,13 +984,9 @@ void DoocsBackendTest::testOther() {
 
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT", 123);
   group.read();
-  BOOST_CHECK(acc1[0][0] == 123);
-  BOOST_CHECK(acc2[0][0] == 123);
+  BOOST_CHECK_EQUAL(acc1[0][0], 123);
+  BOOST_CHECK_EQUAL(acc2[0][0], 123);
   acc1[0][0] = 42;
-  BOOST_CHECK(acc2[0][0] == 42);    // now sharing the buffer
-  acc1.write();
-  BOOST_CHECK( DoocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 42 );
-
 
   device.close();
 
