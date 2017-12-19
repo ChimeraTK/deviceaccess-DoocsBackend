@@ -104,29 +104,25 @@ void DoocsBackendTest::testZeroMQ() {
   ScalarRegisterAccessor<int32_t> acc(device.getScalarRegisterAccessor<int32_t>("MYDUMMY/SOME_ZMQINT", 0,
       {AccessMode::wait_for_new_data}));
 
-  BOOST_CHECK( acc.getNInputQueueElements() == 0 );
+  BOOST_CHECK( acc.readNonBlocking() == false );
 
   // send updates until the ZMQ interface is initialised (this is done in the background unfortunately)
-  while(acc.getNInputQueueElements() == 0) {
+  while(acc.readNonBlocking() == false) {
     DoocsServerTestHelper::runUpdate();
   }
   // empty the queue
   usleep(100000);
-  while(acc.getNInputQueueElements() != 0) {
-    acc.read();
-  }
+  acc.readLatest();
   usleep(100000);
 
-  BOOST_CHECK( acc.getNInputQueueElements() == 0 );
+  BOOST_CHECK( acc.readNonBlocking() == false );
 
   // check a simple read
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_ZMQINT",1);
   DoocsServerTestHelper::runUpdate();
 
   usleep(100000);
-  BOOST_CHECK( acc.getNInputQueueElements() == 1 );
-  acc.read();
-  BOOST_CHECK( acc.getNInputQueueElements() == 0 );
+  BOOST_CHECK( acc.readNonBlocking() == true );
   BOOST_CHECK( acc == 2 );
 
   usleep(100000);
@@ -137,15 +133,11 @@ void DoocsBackendTest::testZeroMQ() {
   DoocsServerTestHelper::runUpdate();
   usleep(100000);
 
-  BOOST_CHECK( acc.getNInputQueueElements() == 3 );
   acc.read();
-  BOOST_CHECK( acc.getNInputQueueElements() == 2 );
   BOOST_CHECK( acc == 3 );
-  acc.read();
-  BOOST_CHECK( acc.getNInputQueueElements() == 1 );
+  BOOST_CHECK( acc.readNonBlocking() == true );
   BOOST_CHECK( acc == 4 );
   acc.read();
-  BOOST_CHECK( acc.getNInputQueueElements() == 0 );
   BOOST_CHECK( acc == 5 );
 
   // test if read really blocks when having no update in the queue

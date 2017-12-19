@@ -31,8 +31,6 @@ namespace mtca4u {
 
       virtual ~DoocsBackendRegisterAccessor();
 
-      unsigned int getNInputQueueElements() const override;
-
       void doReadTransfer() override;
 
       bool doReadTransferNonBlocking() override;
@@ -115,7 +113,7 @@ namespace mtca4u {
         return { boost::enable_shared_from_this<TransferElement>::shared_from_this() };
       }
 
-      std::list<boost::shared_ptr<mtca4u::TransferElement> > getInternalElements() {
+      std::list<boost::shared_ptr<mtca4u::TransferElement> > getInternalElements() override {
         return {};
       }
 
@@ -209,19 +207,6 @@ namespace mtca4u {
 
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::~DoocsBackendRegisterAccessor() {
-  }
-
-  /**********************************************************************************************************************/
-
-  template<typename UserType>
-  unsigned int DoocsBackendRegisterAccessor<UserType>::getNInputQueueElements() const {
-    if(!useZMQ) {
-      return 1;
-    }
-    else {
-      std::unique_lock<std::mutex> lck(ZMQmtx);
-      return ZMQbuffer.size();
-    }
   }
 
   /**********************************************************************************************************************/
