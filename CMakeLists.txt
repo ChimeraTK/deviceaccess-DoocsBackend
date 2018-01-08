@@ -18,7 +18,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 --coverage")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-dynamic")
 
 include(cmake/add_dependency.cmake)
-add_dependency(mtca4u-deviceaccess 00.27 REQUIRED)
+add_dependency(mtca4u-deviceaccess 00.29 REQUIRED)
 add_dependency(DOOCS 18.10.5 COMPONENTS server REQUIRED)
 add_dependency(doocs-server-test-helper 01.00 REQUIRED)
 
