@@ -128,7 +128,9 @@ void DoocsBackendTest::testScalarInt() {
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   mtca4u::Device device;
 
+  BOOST_CHECK( device.isOpened() == false );
   device.open("DoocsServer1");
+  BOOST_CHECK( device.isOpened() == true );
 
   TwoDRegisterAccessor<int32_t> acc_someInt_as_int(device.getTwoDRegisterAccessor<int32_t>("MYDUMMY/SOME_INT"));
   BOOST_CHECK( acc_someInt_as_int.getNChannels() == 1 );
@@ -205,6 +207,7 @@ void DoocsBackendTest::testScalarInt() {
   BOOST_CHECK( DoocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 1234 );
 
   device.close();
+  BOOST_CHECK( device.isOpened() == false );
 
 }
 

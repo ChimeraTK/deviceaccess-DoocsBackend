@@ -45,13 +45,13 @@ namespace {
       unsigned int getNumberOfChannels() const override { return 1; }
 
       unsigned int getNumberOfDimensions() const override { return length > 1 ? 1 : 0; }
-      
+
       const mtca4u::RegisterInfo::DataDescriptor& getDataDescriptor() const override { return dataDescriptor; }
 
       mtca4u::RegisterPath name;
       unsigned int length;
       mtca4u::RegisterInfo::DataDescriptor dataDescriptor;
-      
+
   };
 }
 
@@ -97,11 +97,11 @@ namespace mtca4u {
     // create and return the backend
     return boost::shared_ptr<DeviceBackend>(new DoocsBackend(serverAddress));
   }
-  
+
   /********************************************************************************************************************/
 
   void DoocsBackend::fillCatalogue(std::string fixedComponents, int level) {
-    
+
     // obtain list of elements within the given partial address
     EqAdr ea;
     EqCall eq;
@@ -112,22 +112,22 @@ namespace mtca4u {
       // if the enumeration failes, maybe the server is not available (but exists in ENS) -> just ignore this address
       return;
     }
-    
+
     // iterate over list
     for(int i=0; i<dst.array_length(); ++i) {
-      
+
       // obtain the name of the element
       char c[255];
       dst.get_string_arg(i, c, 255);
       std::string name = c;
       name = name.substr(0, name.find_first_of(" "));   // ignore comment which is following the space
 
-      // if we are not yet at the property-level, recursivly call the function again to resolve the next hierarchy level      
+      // if we are not yet at the property-level, recursivly call the function again to resolve the next hierarchy level
       if(level < 2) {
         fillCatalogue(fixedComponents+"/"+name, level+1);
       }
       else {
-        
+
         // this is a property: create RegisterInfo entry and set its name
         boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
         std::string fqn = fixedComponents+"/"+name;
@@ -173,19 +173,19 @@ namespace mtca4u {
           info->dataDescriptor = mtca4u::RegisterInfo::DataDescriptor( mtca4u::RegisterInfo::FundamentalType::numeric,
                                                                        false, true, 320, 300 );
         }
-        
+
         // add info to catalogue
         _catalogue.addRegister(info);
       }
-      
+
     }
-    
+
   }
-  
+
   /********************************************************************************************************************/
 
   void DoocsBackend::open() {
-  
+
     // Fill the catalogue:
     // first, count number of elements in address part given in DMAP file to determine how many components we have to
     // iterate over
@@ -193,12 +193,15 @@ namespace mtca4u {
     size_t nSlashes = std::count(sadr.begin(), sadr.end(), '/');
     // next, iteratively call the function to fill the catalogue
     fillCatalogue(sadr, nSlashes);
-    
+
+    _opened = true;
+
   }
 
   /********************************************************************************************************************/
 
   void DoocsBackend::close() {
+    _opened = false;
   }
 
   /********************************************************************************************************************/
