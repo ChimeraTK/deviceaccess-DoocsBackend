@@ -22,7 +22,7 @@ namespace mtca4u {
    *  FACILITY and DEVICE are the first two components of the DOOCS addresses targeted by this device. The full addess
    *  is completed by adding the location and property name from the register path names. Thus the register path names
    *  must be of the form "LOCATION/PROPERTY".
-   * 
+   *
    *  If AccessMode::wait_for_new_data is specified when obtaining accessors, ZeroMQ is used to subscribe to the
    *  variable and blocking read() will wait until new data has arrived via the subscribtion. If the flag is not
    *  specified, data will be retrieved through standard RPC calls. Note that in either case a first read transfer
@@ -40,8 +40,10 @@ namespace mtca4u {
 
       DoocsBackend(const RegisterPath &serverAddress);
 
-      void fillCatalogue(std::string fixedComponents, int level);
-      
+      void fillCatalogue(std::string fixedComponents, long level) const;
+
+      const RegisterCatalogue& getRegisterCatalogue() const override;
+
       void open() override;
 
       void close() override;
@@ -60,6 +62,12 @@ namespace mtca4u {
 
       /** DOOCS address component for the server (FACILITY/DEVICE) */
       RegisterPath _serverAddress;
+
+      /** We need to make the catalogue mutable, since we fill it within getRegisterCatalogue() */
+      mutable RegisterCatalogue _catalogue_mutable;
+
+      /** Flag whether the catalogue has already been filled */
+      mutable bool catalogueFilled{false};
 
       /** Class to register the backend type with the factory. */
       class BackendRegisterer {

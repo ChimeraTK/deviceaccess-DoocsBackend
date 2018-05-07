@@ -100,7 +100,7 @@ namespace mtca4u {
 
   /********************************************************************************************************************/
 
-  void DoocsBackend::fillCatalogue(std::string fixedComponents, int level) {
+  void DoocsBackend::fillCatalogue(std::string fixedComponents, long level) const {
 
     // obtain list of elements within the given partial address
     EqAdr ea;
@@ -175,7 +175,7 @@ namespace mtca4u {
         }
 
         // add info to catalogue
-        _catalogue.addRegister(info);
+        _catalogue_mutable.addRegister(info);
       }
 
     }
@@ -185,17 +185,23 @@ namespace mtca4u {
   /********************************************************************************************************************/
 
   void DoocsBackend::open() {
-
-    // Fill the catalogue:
-    // first, count number of elements in address part given in DMAP file to determine how many components we have to
-    // iterate over
-    std::string sadr = std::string(_serverAddress).substr(1);        // strip leading sla
-    size_t nSlashes = std::count(sadr.begin(), sadr.end(), '/');
-    // next, iteratively call the function to fill the catalogue
-    fillCatalogue(sadr, nSlashes);
-
     _opened = true;
+  }
 
+  /********************************************************************************************************************/
+
+  const RegisterCatalogue& DoocsBackend::getRegisterCatalogue() const {
+    if(!catalogueFilled) {
+      // Fill the catalogue:
+      // first, count number of elements in address part given in DMAP file to determine how many components we have to
+      // iterate over
+      std::string sadr = std::string(_serverAddress).substr(1);        // strip leading sla
+      auto nSlashes = std::count(sadr.begin(), sadr.end(), '/');
+      // next, iteratively call the function to fill the catalogue
+      fillCatalogue(sadr, nSlashes);
+      catalogueFilled = true;
+    }
+    return _catalogue_mutable;
   }
 
   /********************************************************************************************************************/
