@@ -186,12 +186,13 @@ namespace mtca4u {
 
   void DoocsBackend::open() {
     _opened = true;
+    if(catalogueObtained) fillCatalogue();
   }
 
   /********************************************************************************************************************/
 
-  const RegisterCatalogue& DoocsBackend::getRegisterCatalogue() const {
-    if(!catalogueFilled) {
+  void DoocsBackend::fillCatalogue() const {
+    if(!catalogueFilled && _opened) {
       // Fill the catalogue:
       // first, count number of elements in address part given in DMAP file to determine how many components we have to
       // iterate over
@@ -201,6 +202,13 @@ namespace mtca4u {
       fillCatalogue(sadr, nSlashes);
       catalogueFilled = true;
     }
+  }
+
+  /********************************************************************************************************************/
+
+  const RegisterCatalogue& DoocsBackend::getRegisterCatalogue() const {
+    fillCatalogue();
+    catalogueObtained = true;
     return _catalogue_mutable;
   }
 

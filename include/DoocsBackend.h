@@ -40,6 +40,8 @@ namespace mtca4u {
 
       DoocsBackend(const RegisterPath &serverAddress);
 
+      void fillCatalogue() const;
+
       void fillCatalogue(std::string fixedComponents, long level) const;
 
       const RegisterCatalogue& getRegisterCatalogue() const override;
@@ -68,6 +70,9 @@ namespace mtca4u {
 
       /** Flag whether the catalogue has already been filled */
       mutable bool catalogueFilled{false};
+
+      /** Flag whether the catalogue has been obtained */
+      mutable bool catalogueObtained{false};
 
       /** Class to register the backend type with the factory. */
       class BackendRegisterer {
