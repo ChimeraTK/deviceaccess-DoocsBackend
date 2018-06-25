@@ -42,6 +42,12 @@ namespace mtca4u {
         return false;
       }
 
+      AccessModeFlags getAccessModeFlags() const override {
+        if(useZMQ) return {AccessMode::wait_for_new_data};
+        return {};
+      }
+
+
     protected:
 
       DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
