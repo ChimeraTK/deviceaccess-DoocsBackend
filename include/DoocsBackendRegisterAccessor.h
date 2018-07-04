@@ -208,6 +208,12 @@ namespace mtca4u {
       if(flags.has(AccessMode::wait_for_new_data)) {
         // set flag
         useZMQ = true;
+
+        // create notification queue and TransferFuture
+        notifications = cppext::future_queue<EqData>(2);
+        activeFuture = TransferFuture(notifications.then<void>([](EqData&){}), this);
+        futureCreated = true;
+
         // subscribe to property
         int err = dmsg_attach(&ea, &dst, (void*)this, &zmq_callback);
         if(err) {
