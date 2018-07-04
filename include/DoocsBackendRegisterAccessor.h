@@ -25,11 +25,23 @@
 namespace mtca4u {
 
   template<typename UserType>
-  class DoocsBackendRegisterAccessor : public SyncNDRegisterAccessor<UserType> {    /// @todo Make proper implementation for readAsync()!
+  class DoocsBackendRegisterAccessor : public NDRegisterAccessor<UserType> {
 
     public:
 
       virtual ~DoocsBackendRegisterAccessor();
+
+      /**
+       * All implementations must call this function in their destructor. Also, implementations must call it in their
+       * constructors before throwing an exception.
+       */
+      void shutdown() {
+        if(readAsyncThread.joinable()) {
+          readAsyncThread.interrupt();
+          readAsyncThread.join();
+        }
+        shutdownCalled = true;
+      }
 
       void doReadTransfer() override;
 
@@ -47,6 +59,7 @@ namespace mtca4u {
         return {};
       }
 
+      TransferFuture doReadTransferAsync();
 
     protected:
 
@@ -99,13 +112,19 @@ namespace mtca4u {
       /// flag if a ZeroMQ subscribtion is used for reading data (c.f. AccessMode::wait_for_new_data)
       bool useZMQ;
 
-      /// ring buffer of EqData buffers received via ZMQ
-      std::queue<EqData> ZMQbuffer;
+      /// Thread which might be launched in readAsync() if ZQM is *not* used
+      boost::thread readAsyncThread;
 
-      /// condition_variable and mutex pair used to synchronise the ZMQqueue
-      /// the mutex is mutable since we might need to obtain the lock also in const functions.
-      std::condition_variable ZMQnotifier;
-      mutable std::mutex ZMQmtx;
+      /// future_queue used to notify the TransferFuture about completed transfers
+      cppext::future_queue<EqData> notifications;
+
+      /// Flag whether TransferFuture has been created
+      bool futureCreated{false};
+
+      /// Flag whether shutdown() has been called or not
+      bool shutdownCalled{false};
+
+      using TransferElement::activeFuture;
 
       /// internal write from EqData src
       void write_internal();
@@ -132,7 +151,7 @@ namespace mtca4u {
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords,
       size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
-  : SyncNDRegisterAccessor<UserType>(path),
+  : NDRegisterAccessor<UserType>(path),
     _path(path),
     elementOffset(wordOffsetInRegister),
     useZMQ(false)
@@ -213,6 +232,7 @@ namespace mtca4u {
 
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::~DoocsBackendRegisterAccessor() {
+    assert(shutdownCalled);
   }
 
   /**********************************************************************************************************************/
@@ -225,8 +245,7 @@ namespace mtca4u {
     }
     else {
       {
-        std::unique_lock<std::mutex> lck(ZMQmtx);
-        if(ZMQbuffer.empty()) return false;
+        if(notifications.empty()) return false;
       }
       this->doReadTransfer();
       return true;
@@ -243,11 +262,9 @@ namespace mtca4u {
     }
     else {
       {
-        std::unique_lock<std::mutex> lck(ZMQmtx);
-        if(ZMQbuffer.empty()) return false;
-        while(ZMQbuffer.size() > 1) ZMQbuffer.pop();        // remove all elements but one
+        if(notifications.empty()) return false;
+        while(notifications.pop(dst));            // remove all elements
       }
-      this->doReadTransfer();
       return true;
     }
   }
@@ -269,16 +286,8 @@ namespace mtca4u {
     else {
       // loop to allow retries in case of timeout errors
       while(true) {
-        // obtain lock as required for the condition variable
-        std::unique_lock<std::mutex> lck(ZMQmtx);
         // wait until new data has been received
-        while(ZMQbuffer.empty()) {
-          ZMQnotifier.wait_for(lck, std::chrono::milliseconds(200));
-          boost::this_thread::interruption_point();
-        }
-        // obtain new data and remove it from the queue
-        dst = ZMQbuffer.front();
-        ZMQbuffer.pop();
+        notifications.pop_wait(dst);
         // check for an error
         if(dst.error() != 0) {
           // try obtaining data through RPC call instead to verify error
@@ -323,16 +332,40 @@ namespace mtca4u {
     // obtain pointer to accessor object
     DoocsBackendRegisterAccessor<UserType> *self = static_cast<DoocsBackendRegisterAccessor<UserType>*>(self_);
 
-    // create lock
-    std::unique_lock<std::mutex> lck(self->ZMQmtx);
-
     // add (a copy of) EqData to queue
-    self->ZMQbuffer.push(*data);
+    self->notifications.push_overwrite(*data);
 
-    // send notification to a potentially waiting read()
-    self->ZMQnotifier.notify_one();
   }
 
+  /**********************************************************************************************************************/
+
+  template<typename UserType>
+  TransferFuture DoocsBackendRegisterAccessor<UserType>::doReadTransferAsync() {
+    // create future_queue if not already created and continue it to enusre postRead is called (in the user thread,
+    // so we use the deferred launch policy)
+    if(!futureCreated) {
+      notifications = cppext::future_queue<EqData>(2);
+      activeFuture = TransferFuture(notifications.then<void>([](EqData&){}), this);
+      futureCreated = true;
+    }
+
+    // launch doReadTransfer in separate thread
+    readAsyncThread = boost::thread(
+      [this] {
+        try {
+          this->doReadTransfer();
+        }
+        catch(...) {
+          this->notifications.push_exception(std::current_exception());
+          throw;
+        }
+        this->notifications.push({});
+      }
+    );
+
+    // return the TransferFuture
+    return activeFuture;
+  }
 } /* namespace mtca4u */
 
 #endif /* MTCA4U_DOOCS_BACKEND_REGISTER_ACCESSOR_H */
