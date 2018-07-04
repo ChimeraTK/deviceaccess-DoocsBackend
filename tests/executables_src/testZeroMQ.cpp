@@ -124,6 +124,7 @@ void DoocsBackendTest::testZeroMQ() {
   usleep(100000);
   BOOST_CHECK( acc.readNonBlocking() == true );
   BOOST_CHECK( acc == 2 );
+  BOOST_CHECK( acc.readNonBlocking() == false );
 
   usleep(100000);
 

@@ -210,8 +210,8 @@ namespace mtca4u {
         useZMQ = true;
 
         // create notification queue and TransferFuture
-        notifications = cppext::future_queue<EqData>(2);
-        activeFuture = TransferFuture(notifications.then<void>([](EqData&){}), this);
+        notifications = cppext::future_queue<EqData>(3);
+        activeFuture = TransferFuture(notifications.then<void>([](EqData&){}, std::launch::deferred), this);
         futureCreated = true;
 
         // subscribe to property
@@ -250,11 +250,27 @@ namespace mtca4u {
       return true;
     }
     else {
-      {
-        if(notifications.empty()) return false;
+      // loop to allow retries in case of timeout errors
+      while(true) {
+        // wait until new data has been received
+        bool gotData = notifications.pop(dst);
+        std::cout << "doReadTransferLatest " << gotData << std::endl;
+        if(!gotData) return false;
+        // check for an error
+        if(dst.error() != 0) {
+          // try obtaining data through RPC call instead to verify error
+          int rc = eq.get(&ea, &src, &dst);
+          // if again error received, throw exception
+          if(rc) {
+            throw DeviceException(std::string("Cannot read from DOOCS property: ")+dst.get_string(),
+                DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+          }
+          // otherwise try again
+          continue;
+        }
+        // we have received data, so return
+        return true;
       }
-      this->doReadTransfer();
-      return true;
     }
   }
 
@@ -267,10 +283,10 @@ namespace mtca4u {
       return true;
     }
     else {
-      {
-        if(notifications.empty()) return false;
-        while(notifications.pop(dst));            // remove all elements
-      }
+      std::cout << "doReadTransferLatest before" << std::endl;
+      if(notifications.empty()) return false;
+      while(notifications.pop(dst));            // remove all elements
+      std::cout << "doReadTransferLatest after" << std::endl;
       return true;
     }
   }
@@ -338,6 +354,7 @@ namespace mtca4u {
     // obtain pointer to accessor object
     DoocsBackendRegisterAccessor<UserType> *self = static_cast<DoocsBackendRegisterAccessor<UserType>*>(self_);
 
+    std::cout << "zmq_callback" << std::endl;
     // add (a copy of) EqData to queue
     self->notifications.push_overwrite(*data);
 
@@ -355,19 +372,21 @@ namespace mtca4u {
       futureCreated = true;
     }
 
-    // launch doReadTransfer in separate thread
-    readAsyncThread = boost::thread(
-      [this] {
-        try {
-          this->doReadTransfer();
+    if(!useZMQ) {
+      // launch doReadTransfer in separate thread
+      readAsyncThread = boost::thread(
+        [this] {
+          try {
+            this->doReadTransfer();
+          }
+          catch(...) {
+            this->notifications.push_exception(std::current_exception());
+            throw;
+          }
+          this->notifications.push({});
         }
-        catch(...) {
-          this->notifications.push_exception(std::current_exception());
-          throw;
-        }
-        this->notifications.push({});
-      }
-    );
+      );
+    }
 
     // return the TransferFuture
     return activeFuture;
