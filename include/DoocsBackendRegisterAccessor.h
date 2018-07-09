@@ -354,7 +354,6 @@ namespace mtca4u {
     // obtain pointer to accessor object
     DoocsBackendRegisterAccessor<UserType> *self = static_cast<DoocsBackendRegisterAccessor<UserType>*>(self_);
 
-    std::cout << "zmq_callback" << std::endl;
     // add (a copy of) EqData to queue
     self->notifications.push_overwrite(*data);
 
