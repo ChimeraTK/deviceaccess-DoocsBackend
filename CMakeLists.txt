@@ -4,8 +4,8 @@ cmake_minimum_required(VERSION 2.8)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
 
 set(${PROJECT_NAME}_MAJOR_VERSION 00)
-set(${PROJECT_NAME}_MINOR_VERSION 09)
-set(${PROJECT_NAME}_PATCH_VERSION 01)
+set(${PROJECT_NAME}_MINOR_VERSION 10)
+set(${PROJECT_NAME}_PATCH_VERSION 00)
 include(cmake/set_version_numbers.cmake)
 
 #Moderate version of the compiler flags
@@ -18,7 +18,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 --coverage")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-dynamic")
 
 include(cmake/add_dependency.cmake)
-add_dependency(mtca4u-deviceaccess 00.29 REQUIRED)
+add_dependency(mtca4u-deviceaccess 00.33 REQUIRED)
 add_dependency(DOOCS 18.10.5 COMPONENTS server REQUIRED)
 add_dependency(doocs-server-test-helper 01.00 REQUIRED)
 
@@ -93,7 +93,7 @@ endif(DOXYGEN_FOUND)
 #Install the library and the executables
 install(TARGETS ${PROJECT_NAME}
             RUNTIME DESTINATION bin
-	    LIBRARY DESTINATION lib
+            LIBRARY DESTINATION lib
   )
 
 #all include files go into include/PROJECT_NAME
@@ -101,9 +101,9 @@ install(TARGETS ${PROJECT_NAME}
 #The original headers are in include/*.h, the installed ones in include/PROJECT_NAME/*.h.
 install(DIRECTORY ${${PROJECT_NAME}_INCLUDE_DIRS} DESTINATION include/${PROJECT_NAME}
           FILES_MATCHING PATTERN "*.h"
-	  PATTERN ".svn" EXCLUDE
-	  PATTERN "${PROJECT_NAME}" EXCLUDE
-	  )
+          PATTERN ".svn" EXCLUDE
+          PATTERN "${PROJECT_NAME}" EXCLUDE
+          )
 
 #Create the config files by filling the correct variables into the template (*.cmake.in).
 #All variables @VARIABLE@ are replaced with the current values, but they have to be set first....
