@@ -168,11 +168,13 @@ namespace mtca4u {
 
       // obtain number of elements
       size_t actualLength = dst.array_length();
-      if(actualLength == 0) {
+      if(actualLength == 0 && dst.length() == 1) {
         actualLength = 1;
         isArray = false;
       }
       else {
+        if (actualLength == 0)
+            actualLength = dst.length();
         isArray = true;
       }
       if(numberOfWords == 0) {
@@ -200,7 +202,7 @@ namespace mtca4u {
 
       // set proper type information in the source EqData
       src.set_type(dst.type());
-      if(allocateBuffers) {
+      if(allocateBuffers && dst.type() != DATA_IIII) {
         src.length(actualLength);
       }
 

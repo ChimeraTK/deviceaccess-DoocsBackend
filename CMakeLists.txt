@@ -20,7 +20,7 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-dynamic
 include(cmake/add_dependency.cmake)
 add_dependency(mtca4u-deviceaccess 00.33 REQUIRED)
 add_dependency(DOOCS 18.10.5 COMPONENTS server REQUIRED)
-add_dependency(doocs-server-test-helper 01.00 REQUIRED)
+add_dependency(doocs-server-test-helper 01.01 REQUIRED)
 
 FIND_PACKAGE(Boost COMPONENTS thread system unit_test_framework REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/include)

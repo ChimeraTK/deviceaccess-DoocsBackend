@@ -12,6 +12,7 @@
 
 #include "DoocsBackend.h"
 #include "DoocsBackendIntRegisterAccessor.h"
+#include "DoocsBackendIIIIRegisterAccessor.h"
 #include "DoocsBackendLongRegisterAccessor.h"
 #include "DoocsBackendFloatRegisterAccessor.h"
 #include "DoocsBackendStringRegisterAccessor.h"
@@ -152,7 +153,7 @@ namespace mtca4u {
           info->dataDescriptor = mtca4u::RegisterInfo::DataDescriptor( mtca4u::RegisterInfo::FundamentalType::string );
         }
         else if(dst.type() == DATA_INT || dst.type() == DATA_A_INT || dst.type() == DATA_A_SHORT ||
-                dst.type() == DATA_A_LONG || dst.type() == DATA_A_BYTE ) {    // integral data types
+                dst.type() == DATA_A_LONG || dst.type() == DATA_A_BYTE || dst.type() == DATA_IIII ) {    // integral data types
           size_t digits;
           if(dst.type() == DATA_A_SHORT) {      // 16 bit signed
             digits = 6;
@@ -166,6 +167,10 @@ namespace mtca4u {
           else {                                // 32 bit signed
             digits = 11;
           }
+
+          if (dst.type() == DATA_IIII)
+              info->length = 4;
+
           info->dataDescriptor = mtca4u::RegisterInfo::DataDescriptor( mtca4u::RegisterInfo::FundamentalType::numeric,
                                                                        true, true, digits );
         }
@@ -241,7 +246,7 @@ namespace mtca4u {
     // check type and create matching accessor
     if( dst.type() == DATA_INT || dst.type() == DATA_A_INT ||
         dst.type() == DATA_BOOL || dst.type() == DATA_A_BOOL ||
-        dst.type() == DATA_A_SHORT ) {
+        dst.type() == DATA_A_SHORT) {
       p = new DoocsBackendIntRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
     }
     else if( dst.type() == DATA_A_LONG ) {
@@ -253,6 +258,9 @@ namespace mtca4u {
     }
     else if( dst.type() == DATA_TEXT || dst.type() == DATA_STRING || dst.type() == DATA_STRING16) {
       p = new DoocsBackendStringRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
+    }
+    else if( dst.type() == DATA_IIII) {
+      p = new DoocsBackendIIIIRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
     }
     else {
       throw DeviceException("Unsupported DOOCS data type: "+std::string(dst.type_string()),
