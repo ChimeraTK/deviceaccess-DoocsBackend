@@ -13,16 +13,16 @@
 #include <condition_variable>
 #include <queue>
 
-#include <mtca4u/SyncNDRegisterAccessor.h>
-#include <mtca4u/RegisterPath.h>
-#include <mtca4u/DeviceException.h>
-#include <mtca4u/FixedPointConverter.h>
-#include <mtca4u/AccessMode.h>
+#include <ChimeraTK/SyncNDRegisterAccessor.h>
+#include <ChimeraTK/RegisterPath.h>
+#include <ChimeraTK/Exception.h>
+#include <ChimeraTK/FixedPointConverter.h>
+#include <ChimeraTK/AccessMode.h>
 
 #include <eq_client.h>
 #include <eq_fct.h>
 
-namespace mtca4u {
+namespace ChimeraTK {
 
   template<typename UserType>
   class DoocsBackendRegisterAccessor : public NDRegisterAccessor<UserType> {
@@ -138,7 +138,7 @@ namespace mtca4u {
         return { boost::enable_shared_from_this<TransferElement>::shared_from_this() };
       }
 
-      std::list<boost::shared_ptr<mtca4u::TransferElement> > getInternalElements() override {
+      std::list<boost::shared_ptr<ChimeraTK::TransferElement> > getInternalElements() override {
         return {};
       }
 
@@ -182,8 +182,7 @@ namespace mtca4u {
         nElements = numberOfWords;
       }
       if(nElements + elementOffset > actualLength) {
-          throw DeviceException("Requested number of words exceeds the length of the DOOCS property!",
-              DeviceException::WRONG_PARAMETER);
+          throw ChimeraTK::logic_error("Requested number of words exceeds the length of the DOOCS property!");
       }
       if(nElements == actualLength && elementOffset == 0) {
         isPartial = false;
@@ -217,8 +216,7 @@ namespace mtca4u {
         // subscribe to property
         int err = dmsg_attach(&ea, &dst, (void*)this, &zmq_callback);
         if(err) {
-          throw DeviceException(std::string("Cannot subscribe to DOOCS property via ZeroMQ: ")+dst.get_string(),
-                    DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+          throw ChimeraTK::runtime_error(std::string("Cannot subscribe to DOOCS property via ZeroMQ: ")+dst.get_string());
         }
         // run dmsg_start() once
         std::unique_lock<std::mutex> lck(DoocsBackend::dmsgStartCalled_mutex);
@@ -262,8 +260,7 @@ namespace mtca4u {
           int rc = eq.get(&ea, &src, &dst);
           // if again error received, throw exception
           if(rc) {
-            throw DeviceException(std::string("Cannot read from DOOCS property: ")+dst.get_string(),
-                DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+            throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ")+dst.get_string());
           }
           // otherwise try again
           continue;
@@ -301,8 +298,7 @@ namespace mtca4u {
       int rc = eq.get(&ea, &src, &dst);
       // check error
       if(rc) {
-        throw DeviceException(std::string("Cannot read from DOOCS property: ")+dst.get_string(),
-            DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+        throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ")+dst.get_string());
       }
     }
     else {
@@ -316,8 +312,7 @@ namespace mtca4u {
           int rc = eq.get(&ea, &src, &dst);
           // if again error received, throw exception
           if(rc) {
-            throw DeviceException(std::string("Cannot read from DOOCS property: ")+dst.get_string(),
-                DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+            throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ")+dst.get_string());
           }
           // otherwise try again
           continue;
@@ -328,8 +323,7 @@ namespace mtca4u {
     }
     // check for error code in dst
     if(dst.error() != 0) {
-      throw DeviceException(std::string("Cannot read from DOOCS property: ")+dst.get_string(),
-          DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ")+dst.get_string());
     }
   }
 
@@ -341,8 +335,7 @@ namespace mtca4u {
     int rc = eq.set(&ea, &src, &dst);
     // check error
     if(rc || dst.error() != 0) {
-      throw DeviceException(std::string("Cannot write to DOOCS property: ")+dst.get_string(),
-          DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+      throw ChimeraTK::runtime_error(std::string("Cannot write to DOOCS property: ")+dst.get_string());
     }
   }
 

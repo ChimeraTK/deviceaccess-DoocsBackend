@@ -7,8 +7,8 @@
 
 #include <algorithm>
 
-#include <mtca4u/BackendFactory.h>
-#include <mtca4u/DeviceAccessVersion.h>
+#include <ChimeraTK/BackendFactory.h>
+#include <ChimeraTK/DeviceAccessVersion.h>
 
 #include "DoocsBackend.h"
 #include "DoocsBackendIntRegisterAccessor.h"
@@ -33,12 +33,12 @@ extern "C"{
  *  RegisterInfo-derived class to be put into the RegisterCatalogue
  */
 namespace {
-  class DoocsBackendRegisterInfo : public mtca4u::RegisterInfo {
+  class DoocsBackendRegisterInfo : public ChimeraTK::RegisterInfo {
     public:
 
       virtual ~DoocsBackendRegisterInfo() {}
 
-      mtca4u::RegisterPath getRegisterName() const override { return name; }
+      ChimeraTK::RegisterPath getRegisterName() const override { return name; }
 
       unsigned int getNumberOfElements() const override { return length; }
 
@@ -46,16 +46,16 @@ namespace {
 
       unsigned int getNumberOfDimensions() const override { return length > 1 ? 1 : 0; }
 
-      const mtca4u::RegisterInfo::DataDescriptor& getDataDescriptor() const override { return dataDescriptor; }
+      const ChimeraTK::RegisterInfo::DataDescriptor& getDataDescriptor() const override { return dataDescriptor; }
 
-      mtca4u::RegisterPath name;
+      ChimeraTK::RegisterPath name;
       unsigned int length;
-      mtca4u::RegisterInfo::DataDescriptor dataDescriptor;
+      ChimeraTK::RegisterInfo::DataDescriptor dataDescriptor;
 
   };
 }
 
-namespace mtca4u {
+namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
@@ -63,7 +63,7 @@ namespace mtca4u {
 
   DoocsBackend::BackendRegisterer::BackendRegisterer() {
     std::cout << "DoocsBackend::BackendRegisterer: registering backend type doocs" << std::endl;
-    mtca4u::BackendFactory::getInstance().registerBackendType("doocs","",&DoocsBackend::createInstance, CHIMERATK_DEVICEACCESS_VERSION);
+    ChimeraTK::BackendFactory::getInstance().registerBackendType("doocs","",&DoocsBackend::createInstance, CHIMERATK_DEVICEACCESS_VERSION);
   }
 
   /********************************************************************************************************************/
@@ -86,8 +86,8 @@ namespace mtca4u {
 
     // check presense of required parameters
     if(parameters.size() > 3) {
-      throw DeviceException("DoocsBackend: The SDM URI has too many parameters: only FACILITY, DEVICE and LOCATION can be specified.",
-          DeviceException::WRONG_PARAMETER);
+      throw ChimeraTK::logic_error("DoocsBackend: The SDM URI has too many parameters: only FACILITY, DEVICE and "
+                                   "LOCATION can be specified.");
     }
 
     // form server address
@@ -149,7 +149,7 @@ namespace mtca4u {
         if(dst.type() == DATA_TEXT || dst.type() == DATA_STRING ||      // in case of strings, DOOCS reports the length of the string
            dst.type() == DATA_STRING16 || dst.type() == DATA_USTR  ) {
           info->length = 1;
-          info->dataDescriptor = mtca4u::RegisterInfo::DataDescriptor( mtca4u::RegisterInfo::FundamentalType::string );
+          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor( ChimeraTK::RegisterInfo::FundamentalType::string );
         }
         else if(dst.type() == DATA_INT || dst.type() == DATA_A_INT || dst.type() == DATA_A_SHORT ||
                 dst.type() == DATA_A_LONG || dst.type() == DATA_A_BYTE ) {    // integral data types
@@ -166,11 +166,11 @@ namespace mtca4u {
           else {                                // 32 bit signed
             digits = 11;
           }
-          info->dataDescriptor = mtca4u::RegisterInfo::DataDescriptor( mtca4u::RegisterInfo::FundamentalType::numeric,
+          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor( ChimeraTK::RegisterInfo::FundamentalType::numeric,
                                                                        true, true, digits );
         }
         else {                                                                // floating point data types: always treat like double
-          info->dataDescriptor = mtca4u::RegisterInfo::DataDescriptor( mtca4u::RegisterInfo::FundamentalType::numeric,
+          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor( ChimeraTK::RegisterInfo::FundamentalType::numeric,
                                                                        false, true, 320, 300 );
         }
 
@@ -234,8 +234,7 @@ namespace mtca4u {
     ea.adr(std::string(path).substr(1).c_str());        // strip leading slash
     int rc = eq.get(&ea, &src, &dst);
     if(rc) {
-      throw DeviceException(std::string("Cannot open DOOCS property: ")+dst.get_string(),
-          DeviceException::CANNOT_OPEN_DEVICEBACKEND);
+      throw ChimeraTK::runtime_error(std::string("Cannot open DOOCS property: ")+dst.get_string());
     }
 
     // check type and create matching accessor
@@ -255,12 +254,11 @@ namespace mtca4u {
       p = new DoocsBackendStringRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
     }
     else {
-      throw DeviceException("Unsupported DOOCS data type: "+std::string(dst.type_string()),
-          DeviceException::WRONG_PARAMETER);
+      throw ChimeraTK::logic_error("Unsupported DOOCS data type: "+std::string(dst.type_string()));
     }
 
 
     return boost::shared_ptr< NDRegisterAccessor<UserType> > ( p );
   }
 
-} /* namespace mtca4u */
+} /* namespace ChimeraTK */

@@ -10,15 +10,11 @@
 
 #include <type_traits>
 
-#include <mtca4u/NDRegisterAccessor.h>
-#include <mtca4u/DeviceException.h>
-#include <mtca4u/FixedPointConverter.h>
-
 #include <eq_client.h>
 
 #include "DoocsBackendRegisterAccessor.h"
 
-namespace mtca4u {
+namespace ChimeraTK {
 
   template<typename UserType>
   class DoocsBackendIntRegisterAccessor : public DoocsBackendRegisterAccessor<UserType> {
@@ -58,8 +54,7 @@ namespace mtca4u {
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_INT &&
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_BOOL &&
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_SHORT   ) {
-        throw DeviceException("DOOCS data type not supported by DoocsBackendIntRegisterAccessor.",    // LCOV_EXCL_LINE (already prevented in the Backend)
-            DeviceException::WRONG_PARAMETER);                                                        // LCOV_EXCL_LINE
+        throw ChimeraTK::logic_error("DOOCS data type not supported by DoocsBackendIntRegisterAccessor.");    // LCOV_EXCL_LINE (already prevented in the Backend)
       }
     }
     catch(...) {

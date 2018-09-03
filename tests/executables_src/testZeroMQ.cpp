@@ -10,12 +10,12 @@
 #define BOOST_TEST_NO_MAIN      // main function is define in DOOCS
 #include <boost/test/included/unit_test.hpp>
 
-#include <mtca4u/Device.h>
-#include <mtca4u/TransferGroup.h>
+#include <ChimeraTK/Device.h>
+#include <ChimeraTK/TransferGroup.h>
 #include <doocs-server-test-helper/doocsServerTestHelper.h>
 
 using namespace boost::unit_test_framework;
-using namespace mtca4u;
+using namespace ChimeraTK;
 
 /**********************************************************************************************************************/
 
@@ -98,7 +98,7 @@ void DoocsBackendTest::testRoutine() {     // version to run the unit and integr
 void DoocsBackendTest::testZeroMQ() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
   ScalarRegisterAccessor<int32_t> acc(device.getScalarRegisterAccessor<int32_t>("MYDUMMY/SOME_ZMQINT", 0,

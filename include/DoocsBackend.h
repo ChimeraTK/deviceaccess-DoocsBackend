@@ -10,9 +10,9 @@
 
 #include <mutex>
 
-#include <mtca4u/DeviceBackendImpl.h>
+#include <ChimeraTK/DeviceBackendImpl.h>
 
-namespace mtca4u {
+namespace ChimeraTK {
 
   /** Backend to access DOOCS control system servers.
    *

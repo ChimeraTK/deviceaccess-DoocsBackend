@@ -10,12 +10,12 @@
 #define BOOST_TEST_NO_MAIN      // main function is define in DOOCS
 #include <boost/test/included/unit_test.hpp>
 
-#include <mtca4u/Device.h>
-#include <mtca4u/TransferGroup.h>
+#include <ChimeraTK/Device.h>
+#include <ChimeraTK/TransferGroup.h>
 #include <doocs-server-test-helper/doocsServerTestHelper.h>
 
 using namespace boost::unit_test_framework;
-using namespace mtca4u;
+using namespace ChimeraTK;
 
 /**********************************************************************************************************************/
 
@@ -92,7 +92,7 @@ static TestLauncher testLauncher;
 /**********************************************************************************************************************/
 
 test_suite* myInit( int /*argc*/, char* /*argv*/ [] ) {
-    return NULL;
+    return nullptr;
 }
 
 /**********************************************************************************************************************/
@@ -126,7 +126,7 @@ void DoocsBackendTest::testRoutine() {     // version to run the unit and integr
 void DoocsBackendTest::testScalarInt() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   BOOST_CHECK( device.isOpened() == false );
   device.open("DoocsServer1");
@@ -216,7 +216,7 @@ void DoocsBackendTest::testScalarInt() {
 void DoocsBackendTest::testScalarFloat() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
@@ -303,7 +303,7 @@ void DoocsBackendTest::testScalarFloat() {
 void DoocsBackendTest::testScalarDouble() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
@@ -390,7 +390,7 @@ void DoocsBackendTest::testScalarDouble() {
 void DoocsBackendTest::testString() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
@@ -420,7 +420,7 @@ void DoocsBackendTest::testString() {
 void DoocsBackendTest::testArrayInt() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
@@ -472,7 +472,7 @@ void DoocsBackendTest::testArrayInt() {
 void DoocsBackendTest::testArrayShort() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
@@ -507,7 +507,7 @@ void DoocsBackendTest::testArrayShort() {
 void DoocsBackendTest::testArrayLong() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
@@ -542,7 +542,7 @@ void DoocsBackendTest::testArrayLong() {
 void DoocsBackendTest::testArrayFloat() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
@@ -576,7 +576,7 @@ void DoocsBackendTest::testArrayFloat() {
 void DoocsBackendTest::testArrayDouble() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
@@ -628,7 +628,7 @@ void DoocsBackendTest::testArrayDouble() {
 void DoocsBackendTest::testSpectrum() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
@@ -647,7 +647,7 @@ void DoocsBackendTest::testSpectrum() {
 void DoocsBackendTest::testBitAndStatus() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
@@ -704,7 +704,7 @@ void DoocsBackendTest::testBitAndStatus() {
 void DoocsBackendTest::testPartialAccess() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
@@ -816,54 +816,39 @@ void DoocsBackendTest::testPartialAccess() {
 void DoocsBackendTest::testExceptions() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
   // unsupported data type
-  try {
-    device.getTwoDRegisterAccessor<int>("MYDUMMY/UNSUPPORTED_DATA_TYPE");     // D_iiii
-    BOOST_ERROR("Exception expected.");
-  }
-  catch(DeviceException &ex) {
-    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
-  }
+  BOOST_CHECK_THROW(
+    device.getTwoDRegisterAccessor<int>("MYDUMMY/UNSUPPORTED_DATA_TYPE"),     // D_iiii
+    ChimeraTK::logic_error
+  );
 
   // non-existing DOOCS property
-  try {
-    device.getTwoDRegisterAccessor<int>("MYDUMMY/NOT_EXISTING");
-    BOOST_ERROR("Exception expected.");
-  }
-  catch(DeviceException &ex) {
-    BOOST_CHECK(ex.getID() == DeviceException::CANNOT_OPEN_DEVICEBACKEND);
-  }
+  BOOST_CHECK_THROW(
+    device.getTwoDRegisterAccessor<int>("MYDUMMY/NOT_EXISTING"),
+    ChimeraTK::runtime_error
+  );
 
   // read string with non-string user type
-  try {
-    device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_STRING");
-    BOOST_ERROR("Exception expected.");
-  }
-  catch(DeviceException &ex) {
-    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
-  }
+  BOOST_CHECK_THROW(
+    device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_STRING"),
+    ChimeraTK::logic_error
+  );
 
   // access too many elements (double register)
-  try {
-    device.getOneDRegisterAccessor<float>("MYDUMMY/SOME_DOUBLE_ARRAY", 10, 1);
-    BOOST_ERROR("Exception expected.");
-  }
-  catch(DeviceException &ex) {
-    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
-  }
+  BOOST_CHECK_THROW(
+    device.getOneDRegisterAccessor<float>("MYDUMMY/SOME_DOUBLE_ARRAY", 10, 1),
+    ChimeraTK::logic_error
+  );
 
   // access too many elements (int register)
-  try {
-    device.getOneDRegisterAccessor<float>("MYDUMMY/SOME_INT_ARRAY", 100, 1);
-    BOOST_ERROR("Exception expected.");
-  }
-  catch(DeviceException &ex) {
-    BOOST_CHECK(ex.getID() == DeviceException::WRONG_PARAMETER);
-  }
+  BOOST_CHECK_THROW(
+    device.getOneDRegisterAccessor<float>("MYDUMMY/SOME_INT_ARRAY", 100, 1),
+    ChimeraTK::logic_error
+  );
 
   device.close();
 
@@ -874,7 +859,7 @@ void DoocsBackendTest::testExceptions() {
 void DoocsBackendTest::testCatalogue() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer2");
 
@@ -971,7 +956,7 @@ void DoocsBackendTest::testCatalogue() {
 void DoocsBackendTest::testOther() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-  mtca4u::Device device;
+  ChimeraTK::Device device;
 
   device.open("DoocsServer1");
 
