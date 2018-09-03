@@ -23,7 +23,8 @@ class eq_dummy  : public EqFct {
     D_doublearray   prop_someDoubleArray;
 
     D_spectrum      prop_someSpectrum;
-    D_iiii          prop_unsupportedDataType;
+    D_iiii          prop_someIIII;
+    D_ifff          prop_unsupportedDataType;
 
     D_int           prop_someZMQInt;
 

@@ -32,6 +32,7 @@ class DoocsBackendTest {
     void testArrayLong();
     void testArrayFloat();
     void testArrayDouble();
+    void testIIII();
     void testSpectrum();
     void testBitAndStatus();
     void testPartialAccess();
@@ -56,6 +57,7 @@ class DoocsBackendTestSuite : public test_suite {
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayLong, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayFloat, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayDouble, doocsBackendTest) );
+      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testIIII, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testSpectrum, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testBitAndStatus, doocsBackendTest) );
       add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testPartialAccess, doocsBackendTest) );
@@ -644,6 +646,58 @@ void DoocsBackendTest::testSpectrum() {
 
 /**********************************************************************************************************************/
 
+void DoocsBackendTest::testIIII() {
+
+  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+  ChimeraTK::Device device;
+
+  device.open("DoocsServer1");
+
+  TwoDRegisterAccessor<int> acc_someArray(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_IIII"));
+  BOOST_CHECK( acc_someArray.getNChannels() == 1 );
+  BOOST_CHECK( acc_someArray.getNElementsPerChannel() == 4 );
+  acc_someArray.read();
+  for(int i=0; i<4; i++) BOOST_CHECK(acc_someArray[0][i] == 10 + i);
+
+  std::vector<int> vals(4);
+  for(int i=0; i<4; i++) vals[i] = -55*i;
+  DoocsServerTestHelper::doocsSetIIII("//MYDUMMY/SOME_IIII", vals);
+
+  for(int i=0; i<4; i++) BOOST_CHECK(acc_someArray[0][i] == 10 + i);
+  acc_someArray.read();
+  for(int i=0; i<4; i++) BOOST_CHECK(acc_someArray[0][i] == -55*i);
+
+  for(int i=0; i<4; i++) acc_someArray[0][i] = i-21;
+  vals = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_IIII");
+  for(int i=0; i<4; i++) BOOST_CHECK(vals[i] == -55*i);
+  acc_someArray.write();
+  vals = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_IIII");
+  for(int i=0; i<4; i++) BOOST_CHECK(vals[i] == i-21);
+
+  // access via double
+  TwoDRegisterAccessor<double> acc_someArrayAsDouble(device.getTwoDRegisterAccessor<double>("MYDUMMY/SOME_IIII"));
+  acc_someArrayAsDouble.read();
+  for(int i=0; i<4; i++) BOOST_CHECK_CLOSE( acc_someArrayAsDouble[0][i], i-21, 0.00001 );
+  for(int i=0; i<4; i++) acc_someArrayAsDouble[0][i] = 2.4*i;
+  acc_someArrayAsDouble.write();
+  vals = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_IIII");
+  for(int i=0; i<4; i++) BOOST_CHECK_CLOSE(vals[i], round(2.4*i), 0.00001 );
+
+  // access via string
+  TwoDRegisterAccessor<std::string> acc_someArrayAsString(device.getTwoDRegisterAccessor<std::string>("MYDUMMY/SOME_IIII"));
+  acc_someArrayAsString.read();
+  for(int i=0; i<4; i++) BOOST_CHECK_CLOSE( std::stod(acc_someArrayAsString[0][i]),round(2.4*i), 0.00001 );
+  for(int i=0; i<4; i++) acc_someArrayAsString[0][i] = std::to_string(3*i);
+  acc_someArrayAsString.write();
+  vals = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_IIII");
+  for(int i=0; i<4; i++) BOOST_CHECK(vals[i] == 3*i);
+
+  device.close();
+
+}
+
+/**********************************************************************************************************************/
+
 void DoocsBackendTest::testBitAndStatus() {
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
@@ -822,7 +876,7 @@ void DoocsBackendTest::testExceptions() {
 
   // unsupported data type
   BOOST_CHECK_THROW(
-    device.getTwoDRegisterAccessor<int>("MYDUMMY/UNSUPPORTED_DATA_TYPE"),     // D_iiii
+    device.getTwoDRegisterAccessor<int>("MYDUMMY/UNSUPPORTED_DATA_TYPE"),     // D_fiii
     ChimeraTK::logic_error
   );
 
@@ -920,6 +974,12 @@ void DoocsBackendTest::testCatalogue() {
   BOOST_CHECK(r6->getNumberOfChannels() == 1);
   BOOST_CHECK(r6->getNumberOfDimensions() == 0);
 
+  auto r7 = catalogue.getRegister("SOME_IIII");
+  BOOST_CHECK(r7->getRegisterName() == "SOME_IIII");
+  BOOST_CHECK(r7->getNumberOfElements() == 4);
+  BOOST_CHECK(r7->getNumberOfChannels() == 1);
+  BOOST_CHECK(r7->getNumberOfDimensions() == 1);
+
   device.close();
 
   // quick check with the other level (location is included in the register name)
@@ -935,17 +995,17 @@ void DoocsBackendTest::testCatalogue() {
   BOOST_CHECK( catalogue2.hasRegister("DUMMY._SVR/SVR.BPN") );
 
   // check the properties of some registers
-  auto r7 = catalogue2.getRegister("MYDUMMY/SOME_INT");
-  BOOST_CHECK(r7->getRegisterName() == "MYDUMMY/SOME_INT");
-  BOOST_CHECK(r7->getNumberOfElements() == 1);
-  BOOST_CHECK(r7->getNumberOfChannels() == 1);
-  BOOST_CHECK(r7->getNumberOfDimensions() == 0);
-
-  auto r8 = catalogue2.getRegister("DUMMY._SVR/SVR.BPN");
-  BOOST_CHECK(r8->getRegisterName() == "DUMMY._SVR/SVR.BPN");
+  auto r8 = catalogue2.getRegister("MYDUMMY/SOME_INT");
+  BOOST_CHECK(r8->getRegisterName() == "MYDUMMY/SOME_INT");
   BOOST_CHECK(r8->getNumberOfElements() == 1);
   BOOST_CHECK(r8->getNumberOfChannels() == 1);
   BOOST_CHECK(r8->getNumberOfDimensions() == 0);
+
+  auto r9 = catalogue2.getRegister("DUMMY._SVR/SVR.BPN");
+  BOOST_CHECK(r9->getRegisterName() == "DUMMY._SVR/SVR.BPN");
+  BOOST_CHECK(r9->getNumberOfElements() == 1);
+  BOOST_CHECK(r9->getNumberOfChannels() == 1);
+  BOOST_CHECK(r9->getNumberOfDimensions() == 0);
 
   device.close();
 

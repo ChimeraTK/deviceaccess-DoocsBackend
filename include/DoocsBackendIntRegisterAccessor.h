@@ -51,7 +51,8 @@ namespace ChimeraTK {
       // check data type
       if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_INT &&
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_BOOL &&
-          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_INT &&
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_INT &&              
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_IIII &&
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_BOOL &&
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_SHORT   ) {
         throw ChimeraTK::logic_error("DOOCS data type not supported by DoocsBackendIntRegisterAccessor.");    // LCOV_EXCL_LINE (already prevented in the Backend)
