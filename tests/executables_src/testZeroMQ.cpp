@@ -84,11 +84,11 @@ void DoocsBackendTest::testRoutine() {     // version to run the unit and integr
   // run the tests
   framework::run();
 
-  // create report and exit with exit code
+  // create report and exit with exit code. Note this ignores the runtime configuration "--result_code" as it always
+  // sets the result code from the test result. The interface for determining the runtime configuration changed in
+  // newer boost versions, which makes it difficult to obey it at this point.
   results_reporter::make_report();
-  int result = ( runtime_config::no_result_code()
-                      ? boost::exit_success
-                      : results_collector.results( framework::master_test_suite().p_id ).result_code() );
+  int result = results_collector.results( framework::master_test_suite().p_id ).result_code();
   exit(result);
 
 }
