@@ -7,6 +7,7 @@
 
 #include <thread>
 
+#define BOOST_TEST_ALTERNATIVE_INIT_API
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_NO_MAIN      // main function is define in DOOCS
 #include <boost/test/included/unit_test.hpp>
