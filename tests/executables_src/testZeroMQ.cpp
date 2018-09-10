@@ -7,6 +7,7 @@
 
 #include <thread>
 
+#define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_NO_MAIN      // main function is define in DOOCS
 #include <boost/test/included/unit_test.hpp>
 
@@ -63,12 +64,6 @@ static TestLauncher testLauncher;
 
 /**********************************************************************************************************************/
 
-test_suite* myInit( int /*argc*/, char* /*argv*/ [] ) {
-    return NULL;
-}
-
-/**********************************************************************************************************************/
-
 void DoocsBackendTest::testRoutine() {     // version to run the unit and integration tests
 
   // run update once to make sure the server is up and running
@@ -77,7 +72,7 @@ void DoocsBackendTest::testRoutine() {     // version to run the unit and integr
   // initialise BOOST test suite
   extern char **svr_argv;
   extern int svr_argc;
-  framework::init(&myInit,svr_argc,svr_argv);
+  framework::init([]{return true;},svr_argc,svr_argv);
   framework::master_test_suite().p_name.value = "DoocsBackend test suite";
   framework::master_test_suite().add( new DoocsBackendTestSuite() );
 
