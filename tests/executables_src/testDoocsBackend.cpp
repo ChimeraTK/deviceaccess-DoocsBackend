@@ -7,9 +7,7 @@
 
 #include <thread>
 
-#define BOOST_TEST_ALTERNATIVE_INIT_API
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_NO_MAIN      // main function is define in DOOCS
+#define BOOST_TEST_MODULE testDoocsBackend
 #include <boost/test/included/unit_test.hpp>
 
 #include <ChimeraTK/Device.h>
@@ -21,107 +19,27 @@ using namespace ChimeraTK;
 
 /**********************************************************************************************************************/
 
-class DoocsBackendTest {
-  public:
-    void testRoutine();
+extern int eq_server(int, char **);
 
-    void testScalarInt();
-    void testScalarFloat();
-    void testScalarDouble();
-    void testString();
-    void testArrayInt();
-    void testArrayShort();
-    void testArrayLong();
-    void testArrayFloat();
-    void testArrayDouble();
-    void testIIII();
-    void testSpectrum();
-    void testBitAndStatus();
-    void testPartialAccess();
-    void testExceptions();
-    void testCatalogue();
-    void testOther();
-};
+struct DoocsLauncher {
+    DoocsLauncher()
+    : doocsServerThread( eq_server,
+                         boost::unit_test::framework::master_test_suite().argc,
+                         boost::unit_test::framework::master_test_suite().argv )
+    {
+      doocsServerThread.detach();
+    }
+    std::thread doocsServerThread;
 
-/**********************************************************************************************************************/
-
-class DoocsBackendTestSuite : public test_suite {
-  public:
-    DoocsBackendTestSuite() : test_suite("DoocsBackend test suite") {
-      boost::shared_ptr<DoocsBackendTest> doocsBackendTest(new DoocsBackendTest);
-
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarInt, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarFloat, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testScalarDouble, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testString, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayInt, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayShort, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayLong, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayFloat, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testArrayDouble, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testIIII, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testSpectrum, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testBitAndStatus, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testPartialAccess, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testExceptions, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testCatalogue, doocsBackendTest) );
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testOther, doocsBackendTest) );
+    static void launchIfNotYetLaunched() {
+      static DoocsLauncher launcher;
     }
 };
 
 /**********************************************************************************************************************/
 
-// test lanucher class, constructor will be called on start of the server
-class TestLauncher {
-  public:
-    TestLauncher() {
-
-      // start the test thread
-      DoocsBackendTest *test = new DoocsBackendTest();
-      serverTest = boost::shared_ptr<DoocsBackendTest>(test);
-      theThread = std::thread(&DoocsBackendTest::testRoutine, test);
-      theThread.detach();
-
-    }
-
-    /// server test object
-    boost::shared_ptr<DoocsBackendTest> serverTest;
-
-    /// thread running the test routine resp. controlling the timing
-    std::thread theThread;
-
-};
-static TestLauncher testLauncher;
-
-/**********************************************************************************************************************/
-
-void DoocsBackendTest::testRoutine() {     // version to run the unit and integration tests
-
-  // run update once to make sure the server is up and running
-  DoocsServerTestHelper::runUpdate();
-
-  // initialise BOOST test suite
-  extern char **svr_argv;
-  extern int svr_argc;
-  framework::init([]{return true;},svr_argc,svr_argv);
-  framework::master_test_suite().p_name.value = "DoocsBackend test suite";
-  framework::master_test_suite().add( new DoocsBackendTestSuite() );
-
-  // run the tests
-  framework::run();
-
-  // create report and exit with exit code. Note this ignores the runtime configuration "--result_code" as it always
-  // sets the result code from the test result. The interface for determining the runtime configuration changed in
-  // newer boost versions, which makes it difficult to obey it at this point.
-  results_reporter::make_report();
-  int result = results_collector.results( framework::master_test_suite().p_id ).result_code();
-  exit(result);
-
-}
-
-/**********************************************************************************************************************/
-
-void DoocsBackendTest::testScalarInt() {
+BOOST_AUTO_TEST_CASE( testScalarInt ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -211,7 +129,8 @@ void DoocsBackendTest::testScalarInt() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testScalarFloat() {
+BOOST_AUTO_TEST_CASE( testScalarFloat ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -298,7 +217,8 @@ void DoocsBackendTest::testScalarFloat() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testScalarDouble() {
+BOOST_AUTO_TEST_CASE( testScalarDouble ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -385,7 +305,8 @@ void DoocsBackendTest::testScalarDouble() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testString() {
+BOOST_AUTO_TEST_CASE( testString ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -415,7 +336,8 @@ void DoocsBackendTest::testString() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testArrayInt() {
+BOOST_AUTO_TEST_CASE( testArrayInt ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -467,7 +389,8 @@ void DoocsBackendTest::testArrayInt() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testArrayShort() {
+BOOST_AUTO_TEST_CASE( testArrayShort ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -502,7 +425,8 @@ void DoocsBackendTest::testArrayShort() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testArrayLong() {
+BOOST_AUTO_TEST_CASE( testArrayLong ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -537,7 +461,8 @@ void DoocsBackendTest::testArrayLong() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testArrayFloat() {
+BOOST_AUTO_TEST_CASE( testArrayFloat ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -571,7 +496,8 @@ void DoocsBackendTest::testArrayFloat() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testArrayDouble() {
+BOOST_AUTO_TEST_CASE( testArrayDouble ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -623,7 +549,8 @@ void DoocsBackendTest::testArrayDouble() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testSpectrum() {
+BOOST_AUTO_TEST_CASE( testSpectrum ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -642,7 +569,8 @@ void DoocsBackendTest::testSpectrum() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testIIII() {
+BOOST_AUTO_TEST_CASE( testIIII ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -694,7 +622,8 @@ void DoocsBackendTest::testIIII() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testBitAndStatus() {
+BOOST_AUTO_TEST_CASE( testBitAndStatus ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -751,7 +680,8 @@ void DoocsBackendTest::testBitAndStatus() {
 }
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testPartialAccess() {
+BOOST_AUTO_TEST_CASE( testPartialAccess ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -863,7 +793,8 @@ void DoocsBackendTest::testPartialAccess() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testExceptions() {
+BOOST_AUTO_TEST_CASE( testExceptions ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -906,7 +837,8 @@ void DoocsBackendTest::testExceptions() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testCatalogue() {
+BOOST_AUTO_TEST_CASE( testCatalogue ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
@@ -1009,7 +941,8 @@ void DoocsBackendTest::testCatalogue() {
 
 /**********************************************************************************************************************/
 
-void DoocsBackendTest::testOther() {
+BOOST_AUTO_TEST_CASE( testOther ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;

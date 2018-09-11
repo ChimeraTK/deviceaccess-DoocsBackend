@@ -7,9 +7,7 @@
 
 #include <thread>
 
-#define BOOST_TEST_ALTERNATIVE_INIT_API
-#define BOOST_TEST_DYN_LINK
-#define BOOST_TEST_NO_MAIN      // main function is define in DOOCS
+#define BOOST_TEST_MODULE testZeroMQ
 #include <boost/test/included/unit_test.hpp>
 
 #include <ChimeraTK/Device.h>
@@ -21,77 +19,27 @@ using namespace ChimeraTK;
 
 /**********************************************************************************************************************/
 
-class DoocsBackendTest {
-  public:
-    void testRoutine();
+extern int eq_server(int, char **);
 
-    void testZeroMQ();
-};
+struct DoocsLauncher {
+    DoocsLauncher()
+    : doocsServerThread( eq_server,
+                         boost::unit_test::framework::master_test_suite().argc,
+                         boost::unit_test::framework::master_test_suite().argv )
+    {
+      doocsServerThread.detach();
+    }
+    std::thread doocsServerThread;
 
-/**********************************************************************************************************************/
-
-class DoocsBackendTestSuite : public test_suite {
-  public:
-    DoocsBackendTestSuite() : test_suite("DoocsBackend test suite") {
-      boost::shared_ptr<DoocsBackendTest> doocsBackendTest(new DoocsBackendTest);
-
-      add( BOOST_CLASS_TEST_CASE(&DoocsBackendTest::testZeroMQ, doocsBackendTest) );
+    static void launchIfNotYetLaunched() {
+      static DoocsLauncher launcher;
     }
 };
 
 /**********************************************************************************************************************/
 
-// test lanucher class, constructor will be called on start of the server
-class TestLauncher {
-  public:
-    TestLauncher() {
-
-      // start the test thread
-      DoocsBackendTest *test = new DoocsBackendTest();
-      serverTest = boost::shared_ptr<DoocsBackendTest>(test);
-      theThread = std::thread(&DoocsBackendTest::testRoutine, test);
-      theThread.detach();
-
-    }
-
-    /// server test object
-    boost::shared_ptr<DoocsBackendTest> serverTest;
-
-    /// thread running the test routine resp. controlling the timing
-    std::thread theThread;
-
-};
-static TestLauncher testLauncher;
-
-/**********************************************************************************************************************/
-
-void DoocsBackendTest::testRoutine() {     // version to run the unit and integration tests
-
-  // run update once to make sure the server is up and running
-  DoocsServerTestHelper::runUpdate();
-
-  // initialise BOOST test suite
-  extern char **svr_argv;
-  extern int svr_argc;
-  framework::init([]{return true;},svr_argc,svr_argv);
-  framework::master_test_suite().p_name.value = "DoocsBackend test suite";
-  framework::master_test_suite().add( new DoocsBackendTestSuite() );
-
-  // run the tests
-  framework::run();
-
-  // create report and exit with exit code. Note this ignores the runtime configuration "--result_code" as it always
-  // sets the result code from the test result. The interface for determining the runtime configuration changed in
-  // newer boost versions, which makes it difficult to obey it at this point.
-  results_reporter::make_report();
-  int result = results_collector.results( framework::master_test_suite().p_id ).result_code();
-  exit(result);
-
-}
-
-/**********************************************************************************************************************/
-
-void DoocsBackendTest::testZeroMQ() {
+BOOST_AUTO_TEST_CASE( testZeroMQ ) {
+  DoocsLauncher::launchIfNotYetLaunched();
 
   BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
