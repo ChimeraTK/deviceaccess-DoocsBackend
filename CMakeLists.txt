@@ -69,7 +69,7 @@ add_library(${PROJECT_NAME} SHARED ${library_sources} )
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_FULL_LIBRARY_VERSION} SOVERSION ${${PROJECT_NAME}_SOVERSION})
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "${mtca4u-deviceaccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_FLAGS "-Wl,-rpath=${DOOCS_DIR},--enable-new-dtags")
-target_link_libraries(${PROJECT_NAME} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES} ${Boost_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${mtca4u-deviceaccess_LIBRARIES} ${DOOCS_LIBRARIES})
 
 #configure a header file which contains the version information for use in C++
 #configure_file(cmake/version.h.in "${PROJECT_BINARY_DIR}/version.h" @ONLY)
