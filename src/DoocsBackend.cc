@@ -6,6 +6,7 @@
  */
 
 #include <algorithm>
+#include <boost/algorithm/string.hpp>
 
 #include <ChimeraTK/BackendFactory.h>
 #include <ChimeraTK/DeviceAccessVersion.h>
@@ -64,7 +65,7 @@ namespace ChimeraTK {
 
   DoocsBackend::BackendRegisterer::BackendRegisterer() {
     std::cout << "DoocsBackend::BackendRegisterer: registering backend type doocs" << std::endl;
-    ChimeraTK::BackendFactory::getInstance().registerBackendType("doocs","",&DoocsBackend::createInstance, CHIMERATK_DEVICEACCESS_VERSION);
+    ChimeraTK::BackendFactory::getInstance().registerBackendType("doocs",&DoocsBackend::createInstance, {"facility","device","location"});
   }
 
   /********************************************************************************************************************/
@@ -74,7 +75,7 @@ namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
-  DoocsBackend::DoocsBackend(const RegisterPath &serverAddress)
+  DoocsBackend::DoocsBackend(const std::string &serverAddress)
   : _serverAddress(serverAddress)
   {
     FILL_VIRTUAL_FUNCTION_TEMPLATE_VTABLE(getRegisterAccessor_impl);
@@ -82,21 +83,19 @@ namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
-  boost::shared_ptr<DeviceBackend> DoocsBackend::createInstance(std::string /*host*/,
-      std::string /*instance*/, std::list<std::string> parameters, std::string /*mapFileName*/) {
+  boost::shared_ptr<DeviceBackend> DoocsBackend::createInstance(std::string address, std::map<std::string,std::string> parameters) {
 
-    // check presense of required parameters
-    if(parameters.size() > 3) {
-      throw ChimeraTK::logic_error("DoocsBackend: The SDM URI has too many parameters: only FACILITY, DEVICE and "
-                                   "LOCATION can be specified.");
+    // if address is empty, build it from parameters (for compatibility with SDM)
+    if(address.empty()) {
+      RegisterPath serverAddress;
+      serverAddress /= parameters["facility"];
+      serverAddress /= parameters["device"];
+      serverAddress /= parameters["location"];
+      address = std::string(serverAddress).substr(1);
     }
 
-    // form server address
-    RegisterPath serverAddress;
-    for(auto &param : parameters) serverAddress /= param;
-
     // create and return the backend
-    return boost::shared_ptr<DeviceBackend>(new DoocsBackend(serverAddress));
+    return boost::shared_ptr<DeviceBackend>(new DoocsBackend(address));
   }
 
   /********************************************************************************************************************/
@@ -132,7 +131,7 @@ namespace ChimeraTK {
         // this is a property: create RegisterInfo entry and set its name
         boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
         std::string fqn = fixedComponents+"/"+name;
-        info->name = fqn.substr(std::string(_serverAddress).length()-1);
+        info->name = fqn.substr(std::string(_serverAddress).length());
 
         // read property once to determine its length and data type
         ///@todo Is there a more efficient way to do this?
@@ -200,10 +199,15 @@ namespace ChimeraTK {
       // Fill the catalogue:
       // first, count number of elements in address part given in DMAP file to determine how many components we have to
       // iterate over
-      std::string sadr = std::string(_serverAddress).substr(1);        // strip leading sla
-      auto nSlashes = std::count(sadr.begin(), sadr.end(), '/');
+      size_t nSlashes;
+      if(!boost::starts_with(_serverAddress, "doocs://")) {
+        nSlashes = std::count(_serverAddress.begin(), _serverAddress.end(), '/');
+      }
+      else{
+        nSlashes = std::count(_serverAddress.begin(), _serverAddress.end(), '/') - 3;
+      }
       // next, iteratively call the function to fill the catalogue
-      fillCatalogue(sadr, nSlashes);
+      fillCatalogue(_serverAddress, nSlashes);
       catalogueFilled = true;
     }
   }
@@ -229,13 +233,13 @@ namespace ChimeraTK {
       const RegisterPath &registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags) {
 
     NDRegisterAccessor<UserType> *p;
-    RegisterPath path = _serverAddress/registerPathName;
+    std::string path = _serverAddress+registerPathName;
 
     // read property once
     EqAdr ea;
     EqCall eq;
     EqData src,dst;
-    ea.adr(std::string(path).substr(1).c_str());        // strip leading slash
+    ea.adr(std::string(path).c_str());
     int rc = eq.get(&ea, &src, &dst);
     if(rc) {
       throw ChimeraTK::runtime_error(std::string("Cannot open DOOCS property: ")+dst.get_string());

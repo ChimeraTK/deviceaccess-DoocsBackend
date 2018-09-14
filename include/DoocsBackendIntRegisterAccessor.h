@@ -25,7 +25,7 @@ namespace ChimeraTK {
 
     protected:
 
-      DoocsBackendIntRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
+      DoocsBackendIntRegisterAccessor(const std::string &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags);
 
       void doPostRead() override;
@@ -42,7 +42,7 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendIntRegisterAccessor<UserType>::DoocsBackendIntRegisterAccessor(const RegisterPath &path,
+  DoocsBackendIntRegisterAccessor<UserType>::DoocsBackendIntRegisterAccessor(const std::string &path,
       size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags),
     fixedPointConverter(path)
@@ -51,7 +51,7 @@ namespace ChimeraTK {
       // check data type
       if( DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_INT &&
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_BOOL &&
-          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_INT &&              
+          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_INT &&
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_IIII &&
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_BOOL &&
           DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_SHORT   ) {

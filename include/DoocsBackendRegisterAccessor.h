@@ -63,7 +63,7 @@ namespace ChimeraTK {
 
     protected:
 
-      DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
+      DoocsBackendRegisterAccessor(const std::string &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags, bool allocateBuffers = true);
 
       bool mayReplaceOther(const boost::shared_ptr<TransferElement const> &other) const override {
@@ -86,7 +86,7 @@ namespace ChimeraTK {
       }
 
       /// register path
-      RegisterPath _path;
+      std::string _path;
 
       /// DOOCS address structure
       EqAdr ea;
@@ -149,7 +149,7 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const RegisterPath &path, size_t numberOfWords,
+  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const std::string &path, size_t numberOfWords,
       size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
   : NDRegisterAccessor<UserType>(path),
     _path(path),
@@ -161,7 +161,7 @@ namespace ChimeraTK {
       flags.checkForUnknownFlags({AccessMode::wait_for_new_data});
 
       // set address
-      ea.adr(std::string(path).substr(1).c_str());        // strip leading slash
+      ea.adr(std::string(path).c_str());
 
       // try to read data, to check connectivity and to obtain size of the register
       doReadTransfer();

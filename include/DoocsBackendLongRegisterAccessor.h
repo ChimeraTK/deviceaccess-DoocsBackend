@@ -25,7 +25,7 @@ namespace ChimeraTK {
 
     protected:
 
-      DoocsBackendLongRegisterAccessor(const RegisterPath &path, size_t numberOfWords, size_t wordOffsetInRegister,
+      DoocsBackendLongRegisterAccessor(const std::string &path, size_t numberOfWords, size_t wordOffsetInRegister,
           AccessModeFlags flags);
 
       void doPostRead() override;
@@ -42,7 +42,7 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendLongRegisterAccessor<UserType>::DoocsBackendLongRegisterAccessor(const RegisterPath &path,
+  DoocsBackendLongRegisterAccessor<UserType>::DoocsBackendLongRegisterAccessor(const std::string &path,
       size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags),
     fixedPointConverter(path)

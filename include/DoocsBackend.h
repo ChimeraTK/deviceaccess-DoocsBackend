@@ -38,7 +38,7 @@ namespace ChimeraTK {
 
     protected:
 
-      DoocsBackend(const RegisterPath &serverAddress);
+      DoocsBackend(const std::string &serverAddress);
 
       void fillCatalogue() const;
 
@@ -54,8 +54,7 @@ namespace ChimeraTK {
         return std::string("DOOCS server address: ") + _serverAddress;
       }
 
-      static boost::shared_ptr<DeviceBackend> createInstance(std::string host, std::string instance,
-          std::list<std::string> parameters, std::string mapFileName);
+      static boost::shared_ptr<DeviceBackend> createInstance(std::string address, std::map<std::string,std::string> parameters);
 
       template<typename UserType>
       boost::shared_ptr< NDRegisterAccessor<UserType> > getRegisterAccessor_impl(
@@ -63,7 +62,7 @@ namespace ChimeraTK {
       DEFINE_VIRTUAL_FUNCTION_TEMPLATE_VTABLE_FILLER( DoocsBackend, getRegisterAccessor_impl, 4);
 
       /** DOOCS address component for the server (FACILITY/DEVICE) */
-      RegisterPath _serverAddress;
+      std::string _serverAddress;
 
       /** We need to make the catalogue mutable, since we fill it within getRegisterCatalogue() */
       mutable RegisterCatalogue _catalogue_mutable;
