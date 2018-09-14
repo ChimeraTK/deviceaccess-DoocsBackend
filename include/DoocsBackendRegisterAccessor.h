@@ -254,7 +254,6 @@ namespace ChimeraTK {
       while(true) {
         // wait until new data has been received
         bool gotData = notifications.pop(dst);
-        std::cout << "doReadTransferLatest " << gotData << std::endl;
         if(!gotData) return false;
         // check for an error
         if(dst.error() != 0) {
@@ -282,10 +281,8 @@ namespace ChimeraTK {
       return true;
     }
     else {
-      std::cout << "doReadTransferLatest before" << std::endl;
       if(notifications.empty()) return false;
       while(notifications.pop(dst));            // remove all elements
-      std::cout << "doReadTransferLatest after" << std::endl;
       return true;
     }
   }
