@@ -7,6 +7,7 @@
 
 #include <thread>
 #include <cstdlib>
+#include <random>
 
 #define BOOST_TEST_MODULE testDoocsBackend
 #include <boost/test/included/unit_test.hpp>

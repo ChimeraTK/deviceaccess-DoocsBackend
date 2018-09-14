@@ -6,6 +6,7 @@
  */
 
 #include <thread>
+#include <random>
 
 #define BOOST_TEST_MODULE testZeroMQ
 #include <boost/test/included/unit_test.hpp>
