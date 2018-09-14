@@ -6,6 +6,7 @@
  */
 
 #include <thread>
+#include <cstdlib>
 
 #define BOOST_TEST_MODULE testDoocsBackend
 #include <boost/test/included/unit_test.hpp>
@@ -22,30 +23,46 @@ using namespace ChimeraTK;
 extern int eq_server(int, char **);
 
 struct DoocsLauncher {
-    DoocsLauncher()
-    : doocsServerThread( eq_server,
-                         boost::unit_test::framework::master_test_suite().argc,
-                         boost::unit_test::framework::master_test_suite().argv )
-    {
-      doocsServerThread.detach();
+    DoocsLauncher() {
+      // choose random RPC number
+      std::random_device rd;
+      std::uniform_int_distribution<int> dist(620000000, 999999999);
+      rpc_no = std::to_string(dist(rd));
+      // update config file with the RPC number
+      std::string command = "sed -i testDoocsBackend.conf -e 's/^SVR.RPC_NUMBER:.*$/SVR.RPC_NUMBER: "+rpc_no+"/'";
+      std::system(command.c_str());
+      // start the server
+      std::thread( eq_server,
+                   boost::unit_test::framework::master_test_suite().argc,
+                   boost::unit_test::framework::master_test_suite().argv ).detach();
+      // set CDDs for the two doocs addresses used in the test
+      DoocsServer1 = "(doocs:doocs://localhost:"+rpc_no+"/F/D)";
+      DoocsServer2 = "(doocs:doocs://localhost:"+rpc_no+"/F/D/MYDUMMY)";
+      // wait until server has started
+      DoocsServerTestHelper::runUpdate();
     }
-    std::thread doocsServerThread;
 
     static void launchIfNotYetLaunched() {
       static DoocsLauncher launcher;
     }
+
+    static std::string rpc_no;
+    static std::string DoocsServer1;
+    static std::string DoocsServer2;
 };
+std::string DoocsLauncher::rpc_no;
+std::string DoocsLauncher::DoocsServer1;
+std::string DoocsLauncher::DoocsServer2;
 
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE( testScalarInt ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
 
   BOOST_CHECK( device.isOpened() == false );
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
   BOOST_CHECK( device.isOpened() == true );
 
   TwoDRegisterAccessor<int32_t> acc_someInt_as_int(device.getTwoDRegisterAccessor<int32_t>("MYDUMMY/SOME_INT"));
@@ -132,10 +149,8 @@ BOOST_AUTO_TEST_CASE( testScalarInt ) {
 BOOST_AUTO_TEST_CASE( testScalarFloat ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   TwoDRegisterAccessor<float> acc_someFloat_as_float(device.getTwoDRegisterAccessor<float>("MYDUMMY/SOME_FLOAT"));
   BOOST_CHECK( acc_someFloat_as_float.getNChannels() == 1 );
@@ -220,10 +235,8 @@ BOOST_AUTO_TEST_CASE( testScalarFloat ) {
 BOOST_AUTO_TEST_CASE( testScalarDouble ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   TwoDRegisterAccessor<float> acc_someDouble_as_float(device.getTwoDRegisterAccessor<float>("MYDUMMY/SOME_DOUBLE"));
   BOOST_CHECK( acc_someDouble_as_float.getNChannels() == 1 );
@@ -308,10 +321,8 @@ BOOST_AUTO_TEST_CASE( testScalarDouble ) {
 BOOST_AUTO_TEST_CASE( testString ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   TwoDRegisterAccessor<std::string> acc_someString(device.getTwoDRegisterAccessor<std::string>("MYDUMMY/SOME_STRING"));
   BOOST_CHECK( acc_someString.getNChannels() == 1 );
@@ -339,10 +350,8 @@ BOOST_AUTO_TEST_CASE( testString ) {
 BOOST_AUTO_TEST_CASE( testArrayInt ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   TwoDRegisterAccessor<int> acc_someArray(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_INT_ARRAY"));
   BOOST_CHECK( acc_someArray.getNChannels() == 1 );
@@ -392,10 +401,8 @@ BOOST_AUTO_TEST_CASE( testArrayInt ) {
 BOOST_AUTO_TEST_CASE( testArrayShort ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   TwoDRegisterAccessor<int> acc_someArray(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_SHORT_ARRAY"));
   BOOST_CHECK( acc_someArray.getNChannels() == 1 );
@@ -428,10 +435,8 @@ BOOST_AUTO_TEST_CASE( testArrayShort ) {
 BOOST_AUTO_TEST_CASE( testArrayLong ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   TwoDRegisterAccessor<int> acc_someArray(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_LONG_ARRAY"));
   BOOST_CHECK( acc_someArray.getNChannels() == 1 );
@@ -464,10 +469,8 @@ BOOST_AUTO_TEST_CASE( testArrayLong ) {
 BOOST_AUTO_TEST_CASE( testArrayFloat ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   TwoDRegisterAccessor<float> acc_someArray(device.getTwoDRegisterAccessor<float>("MYDUMMY/SOME_FLOAT_ARRAY"));
   BOOST_CHECK( acc_someArray.getNChannels() == 1 );
@@ -499,10 +502,8 @@ BOOST_AUTO_TEST_CASE( testArrayFloat ) {
 BOOST_AUTO_TEST_CASE( testArrayDouble ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   TwoDRegisterAccessor<double> acc_someArray(device.getTwoDRegisterAccessor<double>("MYDUMMY/SOME_DOUBLE_ARRAY"));
   BOOST_CHECK( acc_someArray.getNChannels() == 1 );
@@ -552,10 +553,8 @@ BOOST_AUTO_TEST_CASE( testArrayDouble ) {
 BOOST_AUTO_TEST_CASE( testSpectrum ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   TwoDRegisterAccessor<float> acc_someArray(device.getTwoDRegisterAccessor<float>("MYDUMMY/SOME_SPECTRUM"));
   BOOST_CHECK( acc_someArray.getNChannels() == 1 );
@@ -572,10 +571,8 @@ BOOST_AUTO_TEST_CASE( testSpectrum ) {
 BOOST_AUTO_TEST_CASE( testIIII ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   TwoDRegisterAccessor<int> acc_someArray(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_IIII"));
   BOOST_CHECK( acc_someArray.getNChannels() == 1 );
@@ -625,10 +622,8 @@ BOOST_AUTO_TEST_CASE( testIIII ) {
 BOOST_AUTO_TEST_CASE( testBitAndStatus ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   TwoDRegisterAccessor<int> acc_someBit(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_BIT"));
   TwoDRegisterAccessor<int> acc_someStatus(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_STATUS"));
@@ -683,10 +678,8 @@ BOOST_AUTO_TEST_CASE( testBitAndStatus ) {
 BOOST_AUTO_TEST_CASE( testPartialAccess ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   // int array, 20 elements, offset of 1
   {
@@ -796,10 +789,8 @@ BOOST_AUTO_TEST_CASE( testPartialAccess ) {
 BOOST_AUTO_TEST_CASE( testExceptions ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   // unsupported data type
   BOOST_CHECK_THROW(
@@ -840,10 +831,8 @@ BOOST_AUTO_TEST_CASE( testExceptions ) {
 BOOST_AUTO_TEST_CASE( testCatalogue ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer2");
+  device.open(DoocsLauncher::DoocsServer2);
 
   auto catalogue = device.getRegisterCatalogue();
 
@@ -911,7 +900,7 @@ BOOST_AUTO_TEST_CASE( testCatalogue ) {
   device.close();
 
   // quick check with the other level (location is included in the register name)
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   auto catalogue2 = device.getRegisterCatalogue();
 
@@ -944,13 +933,11 @@ BOOST_AUTO_TEST_CASE( testCatalogue ) {
 BOOST_AUTO_TEST_CASE( testOther ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
-
-  device.open("DoocsServer1");
+  device.open(DoocsLauncher::DoocsServer1);
 
   // device info string
-  BOOST_CHECK( device.readDeviceInfo() == "DOOCS server address: /TEST.DOOCS/LOCALHOST_610498009" );
+  BOOST_CHECK( device.readDeviceInfo() == "DOOCS server address: doocs://localhost:"+DoocsLauncher::rpc_no+"/F/D" );
 
   // test in TransferGroup
   TwoDRegisterAccessor<int32_t> acc1(device.getTwoDRegisterAccessor<int32_t>("MYDUMMY/SOME_INT"));
@@ -965,6 +952,11 @@ BOOST_AUTO_TEST_CASE( testOther ) {
   BOOST_CHECK_EQUAL(acc2[0][0], 123);
   acc1[0][0] = 42;
 
+  device.close();
+
+  // compatibility with SDM syntax
+  device.open("sdm://./doocs=TEST.DOOCS,NOT_EXISTING,SOME_LOCATION");
+  BOOST_CHECK( device.readDeviceInfo() == "DOOCS server address: TEST.DOOCS/NOT_EXISTING/SOME_LOCATION" );
   device.close();
 
 }

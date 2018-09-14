@@ -22,29 +22,50 @@ using namespace ChimeraTK;
 extern int eq_server(int, char **);
 
 struct DoocsLauncher {
-    DoocsLauncher()
-    : doocsServerThread( eq_server,
-                         boost::unit_test::framework::master_test_suite().argc,
-                         boost::unit_test::framework::master_test_suite().argv )
-    {
-      doocsServerThread.detach();
+    DoocsLauncher() {
+/*    -- this currently does not work due to a bug in DOOCS (copy operation of EqAdr doesn't copy the hostname correctly)
+      // choose random RPC number
+      std::random_device rd;
+      std::uniform_int_distribution<int> dist(620000000, 999999999);
+      rpc_no = std::to_string(dist(rd));
+      // update config file with the RPC number
+      std::string command = "sed -i testZeroMQ.conf -e 's/^SVR.RPC_NUMBER:.*$/SVR.RPC_NUMBER: "+rpc_no+"/'";
+      std::system(command.c_str());
+*/
+      // start the server
+      std::thread( eq_server,
+                   boost::unit_test::framework::master_test_suite().argc,
+                   boost::unit_test::framework::master_test_suite().argv ).detach();
+      // set CDDs for the two doocs addresses used in the test
+      //DoocsServer1 = "(doocs:doocs://localhost:"+rpc_no+"/F/D)";
+      //DoocsServer2 = "(doocs:doocs://localhost:"+rpc_no+"/F/D/MYDUMMY)";
+      BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
+      DoocsServer1 = "DoocsServer1";
+      DoocsServer2 = "DoocsServer2";
+      // wait until server has started
+      DoocsServerTestHelper::runUpdate();
     }
-    std::thread doocsServerThread;
 
     static void launchIfNotYetLaunched() {
       static DoocsLauncher launcher;
     }
+
+    static std::string rpc_no;
+    static std::string DoocsServer1;
+    static std::string DoocsServer2;
 };
+std::string DoocsLauncher::rpc_no;
+std::string DoocsLauncher::DoocsServer1;
+std::string DoocsLauncher::DoocsServer2;
 
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE( testZeroMQ ) {
   DoocsLauncher::launchIfNotYetLaunched();
 
-  BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
   ChimeraTK::Device device;
+  device.open(DoocsLauncher::DoocsServer1);
 
-  device.open("DoocsServer1");
   ScalarRegisterAccessor<int32_t> acc(device.getScalarRegisterAccessor<int32_t>("MYDUMMY/SOME_ZMQINT", 0,
       {AccessMode::wait_for_new_data}));
 
