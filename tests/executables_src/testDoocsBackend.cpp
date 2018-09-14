@@ -31,7 +31,8 @@ struct DoocsLauncher {
       rpc_no = std::to_string(dist(rd));
       // update config file with the RPC number
       std::string command = "sed -i testDoocsBackend.conf -e 's/^SVR.RPC_NUMBER:.*$/SVR.RPC_NUMBER: "+rpc_no+"/'";
-      std::system(command.c_str());
+      auto rc = std::system(command.c_str());
+      (void)rc;
       // start the server
       std::thread( eq_server,
                    boost::unit_test::framework::master_test_suite().argc,
