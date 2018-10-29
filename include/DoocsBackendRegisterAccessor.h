@@ -61,6 +61,15 @@ namespace ChimeraTK {
 
       TransferFuture doReadTransferAsync();
 
+      void interrupt() override {
+        try {
+          throw boost::thread_interrupted();
+        }
+        catch(boost::thread_interrupted&) {
+          notifications.push_exception(std::current_exception());
+        }
+      }
+
     protected:
 
       DoocsBackendRegisterAccessor(const std::string &path, size_t numberOfWords, size_t wordOffsetInRegister,
