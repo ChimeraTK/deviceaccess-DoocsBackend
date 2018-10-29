@@ -109,20 +109,45 @@ BOOST_AUTO_TEST_CASE( testZeroMQ ) {
   BOOST_CHECK( acc == 5 );
 
   // test if read really blocks when having no update in the queue
-  std::atomic<bool> readFinished(false);
-  std::promise<void> prom;
-  std::future<void> fut = prom.get_future();
-  std::thread readAsync( [&acc, &prom, &readFinished]() {
-    acc.read();
-    prom.set_value();
-    readFinished = true;
-  } );
-  fut.wait_for(std::chrono::milliseconds(500));
-  BOOST_CHECK( readFinished == false );
-  DoocsServerTestHelper::runUpdate();
-  fut.wait_for(std::chrono::milliseconds(500));
-  BOOST_CHECK( readFinished == true );
-  readAsync.join();
+  {
+    std::atomic<bool> readFinished(false);
+    std::promise<void> prom;
+    std::future<void> fut = prom.get_future();
+    std::thread readAsync( [&acc, &prom, &readFinished]() {
+      acc.read();
+      readFinished = true;
+      prom.set_value();
+    } );
+    fut.wait_for(std::chrono::milliseconds(500));
+    BOOST_CHECK( readFinished == false );
+    DoocsServerTestHelper::runUpdate();
+    fut.wait_for(std::chrono::milliseconds(500));
+    BOOST_CHECK( readFinished == true );
+    readAsync.join();
+  }
+
+  // test shutdown procedure
+  {
+    std::atomic<bool> threadInterrupted(false);
+    std::promise<void> prom;
+    std::future<void> fut = prom.get_future();
+    std::thread readAsync( [&acc, &prom, &threadInterrupted]() {
+      try {
+        acc.read();
+      }
+      catch(boost::thread_interrupted&) {
+        // should end up here!
+        threadInterrupted = true;
+        prom.set_value();
+      }
+    } );
+    fut.wait_for(std::chrono::milliseconds(500));
+    BOOST_CHECK( threadInterrupted == false );
+    acc.getHighLevelImplElement()->interrupt();
+    fut.wait_for(std::chrono::milliseconds(500));
+    BOOST_CHECK( threadInterrupted == true );
+    readAsync.join();
+  }
 
   device.close();
 }
