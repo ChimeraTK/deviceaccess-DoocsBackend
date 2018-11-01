@@ -215,7 +215,7 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   const RegisterCatalogue& DoocsBackend::getRegisterCatalogue() const {
-    fillCatalogue();
+    if(_opened) fillCatalogue();
     catalogueObtained = true;
     return _catalogue_mutable;
   }
