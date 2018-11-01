@@ -1,13 +1,5 @@
-/*
- * DoocsBackendRegisterAccessor.h
- *
- *  Created on: May 3, 2016
- *      Author: Martin Hierholzer
- */
-
 #ifndef MTCA4U_DOOCS_BACKEND_REGISTER_ACCESSOR_H
 #define MTCA4U_DOOCS_BACKEND_REGISTER_ACCESSOR_H
-
 #include <mutex>
 #include <type_traits>
 #include <condition_variable>
@@ -36,6 +28,9 @@ namespace ChimeraTK {
        * constructors before throwing an exception.
        */
       void shutdown() {
+          if (useZMQ) {
+              dmsg_detach(&ea, tag);
+          }
         if(readAsyncThread.joinable()) {
           readAsyncThread.interrupt();
           readAsyncThread.join();
@@ -105,6 +100,9 @@ namespace ChimeraTK {
 
       /// DOOCS data structures
       EqData src,dst;
+
+      /// cached dmsg tag needed for cleanup
+      dmsg_t tag;
 
       /// flag if the DOOCS data type is an array or not
       bool isArray;
@@ -225,7 +223,7 @@ namespace ChimeraTK {
         futureCreated = true;
 
         // subscribe to property
-        int err = dmsg_attach(&ea, &dst, (void*)this, &zmq_callback);
+        int err = dmsg_attach(&ea, &dst, (void*)this, &zmq_callback, &tag);
         if(err) {
           throw ChimeraTK::runtime_error(std::string("Cannot subscribe to DOOCS property via ZeroMQ: ")+dst.get_string());
         }
