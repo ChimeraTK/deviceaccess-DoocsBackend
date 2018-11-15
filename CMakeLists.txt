@@ -43,7 +43,7 @@ foreach( testExecutableSrcFile ${testExecutables})
   # each test includes a DOOCS server
   add_executable(${excutableName} ${testExecutableSrcFile} ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/doocsDummy_rpc_server.cc ${CMAKE_SOURCE_DIR}/tests/DoocsDummyServer/eq_dummy.cc)
   set_target_properties(${excutableName} PROPERTIES COMPILE_FLAGS "${ChimeraTK-DeviceAccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
-  set_target_properties(${excutableName} PROPERTIES LINK_FLAGS "${DOOCS_LINKER_FLAGS}")
+  set_target_properties(${excutableName} PROPERTIES LINK_FLAGS "${DOOCS_LINKER_FLAGS} ${doocs-server-test-helper_LINKER_FLAGS} ${ChimeraTK-DeviceAccess_LINKER_FLAGS}")
   target_link_libraries(${excutableName} ${doocs-server-test-helper_LIBRARIES} ${ChimeraTK-DeviceAccess_LIBRARIES} ${DOOCS_LIBRARIES} ${PROJECT_NAME})
   add_test(${excutableName} ${excutableName})
   # copy config file
@@ -68,7 +68,7 @@ ENDIF(CMAKE_BUILD_TYPE STREQUAL "Debug")
 add_library(${PROJECT_NAME} SHARED ${library_sources} )
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_FULL_LIBRARY_VERSION} SOVERSION ${${PROJECT_NAME}_SOVERSION})
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "${ChimeraTK-DeviceAccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
-set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_FLAGS "-Wl,-rpath=${DOOCS_DIR},--enable-new-dtags")
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_FLAGS "${DOOCS_LINKER_FLAGS} ${ChimeraTK-DeviceAccess_LINKER_FLAGS}")
 target_link_libraries(${PROJECT_NAME} ${ChimeraTK-DeviceAccess_LIBRARIES} ${DOOCS_LIBRARIES})
 
 #configure a header file which contains the version information for use in C++
