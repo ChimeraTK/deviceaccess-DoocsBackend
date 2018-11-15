@@ -24,7 +24,6 @@ extern int eq_server(int, char **);
 
 struct DoocsLauncher {
     DoocsLauncher() {
-/*    -- this currently does not work due to a bug in DOOCS (copy operation of EqAdr doesn't copy the hostname correctly)
       // choose random RPC number
       std::random_device rd;
       std::uniform_int_distribution<int> dist(620000000, 999999999);
@@ -33,17 +32,14 @@ struct DoocsLauncher {
       std::string command = "sed -i testZeroMQ.conf -e 's/^SVR.RPC_NUMBER:.*$/SVR.RPC_NUMBER: "+rpc_no+"/'";
       auto rc = std::system(command.c_str());
       (void)rc;
-*/
+
       // start the server
       std::thread( eq_server,
                    boost::unit_test::framework::master_test_suite().argc,
                    boost::unit_test::framework::master_test_suite().argv ).detach();
       // set CDDs for the two doocs addresses used in the test
-      //DoocsServer1 = "(doocs:doocs://localhost:"+rpc_no+"/F/D)";
-      //DoocsServer2 = "(doocs:doocs://localhost:"+rpc_no+"/F/D/MYDUMMY)";
-      BackendFactory::getInstance().setDMapFilePath("dummies.dmap");
-      DoocsServer1 = "DoocsServer1";
-      DoocsServer2 = "DoocsServer2";
+      DoocsServer1 = "(doocs:doocs://localhost:"+rpc_no+"/F/D)";
+      DoocsServer2 = "(doocs:doocs://localhost:"+rpc_no+"/F/D/MYDUMMY)";
       // wait until server has started
       DoocsServerTestHelper::runUpdate();
     }
