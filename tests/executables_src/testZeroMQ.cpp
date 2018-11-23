@@ -15,6 +15,8 @@
 #include <ChimeraTK/TransferGroup.h>
 #include <doocs-server-test-helper/doocsServerTestHelper.h>
 
+#include <eq_client.h>
+
 using namespace boost::unit_test_framework;
 using namespace ChimeraTK;
 
@@ -40,8 +42,13 @@ struct DoocsLauncher {
       // set CDDs for the two doocs addresses used in the test
       DoocsServer1 = "(doocs:doocs://localhost:"+rpc_no+"/F/D)";
       DoocsServer2 = "(doocs:doocs://localhost:"+rpc_no+"/F/D/MYDUMMY)";
-      // wait until server has started
+      // wait until server has started (both the update thread and the rpc thread)
       DoocsServerTestHelper::runUpdate();
+      EqCall eq;
+      EqAdr ea;
+      EqData src,dst;
+      ea.adr("doocs://localhost:"+rpc_no+"/F/D/MYDUMMY/SOME_ZMQINT");
+      while(eq.get(&ea,&src,&dst)) usleep(100000);
     }
 
     static void launchIfNotYetLaunched() {
