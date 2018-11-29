@@ -38,7 +38,7 @@ namespace {
   class DoocsBackendRegisterInfo : public ChimeraTK::RegisterInfo {
     public:
 
-      virtual ~DoocsBackendRegisterInfo() {}
+      ~DoocsBackendRegisterInfo() override {}
 
       ChimeraTK::RegisterPath getRegisterName() const override { return name; }
 
@@ -47,6 +47,12 @@ namespace {
       unsigned int getNumberOfChannels() const override { return 1; }
 
       unsigned int getNumberOfDimensions() const override { return length > 1 ? 1 : 0; }
+
+      bool isReadable() const override { return true; }
+
+      bool isWriteable() const override { return true; }    /// @todo fixme: return true for read-only properties
+
+      ChimeraTK::AccessModeFlags getSupportedAccessModes() const override { return {}; }  /// @todo can we determine if zeromq can be used?
 
       const ChimeraTK::RegisterInfo::DataDescriptor& getDataDescriptor() const override { return dataDescriptor; }
 
