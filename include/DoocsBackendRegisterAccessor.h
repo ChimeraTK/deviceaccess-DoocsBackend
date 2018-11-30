@@ -265,7 +265,8 @@ namespace ChimeraTK {
         // check for an error
         if(dst.error() != 0) {
           // try obtaining data through RPC call instead to verify error
-          int rc = eq.get(&ea, &src, &dst);
+          EqData tmp;
+          int rc = eq.get(&ea, &tmp, &dst);
           // if again error received, throw exception
           if(rc) {
             throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ")+dst.get_string());
@@ -301,7 +302,8 @@ namespace ChimeraTK {
     boost::this_thread::interruption_point();
     if(!useZMQ) {
       // read data
-      int rc = eq.get(&ea, &src, &dst);
+      EqData tmp;
+      int rc = eq.get(&ea, &tmp, &dst);
       // check error
       if(rc) {
         throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ")+dst.get_string());
@@ -315,7 +317,8 @@ namespace ChimeraTK {
         // check for an error
         if(dst.error() != 0) {
           // try obtaining data through RPC call instead to verify error
-          int rc = eq.get(&ea, &src, &dst);
+          EqData tmp;
+          int rc = eq.get(&ea, &tmp, &dst);
           // if again error received, throw exception
           if(rc) {
             throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ")+dst.get_string());
