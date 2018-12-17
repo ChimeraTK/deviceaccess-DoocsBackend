@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE( testZeroMQ ) {
 
   usleep(100000);
   BOOST_CHECK( acc.readNonBlocking() == true );
-  BOOST_CHECK( acc == 2 );
+  BOOST_CHECK_EQUAL( acc, 2 );
   BOOST_CHECK( acc.readNonBlocking() == false );
 
   usleep(100000);
@@ -105,11 +105,11 @@ BOOST_AUTO_TEST_CASE( testZeroMQ ) {
   usleep(100000);
 
   acc.read();
-  BOOST_CHECK( acc == 3 );
+  BOOST_CHECK_EQUAL( acc, 3 );
   BOOST_CHECK( acc.readNonBlocking() == true );
-  BOOST_CHECK( acc == 4 );
+  BOOST_CHECK_EQUAL( acc, 4 );
   acc.read();
-  BOOST_CHECK( acc == 5 );
+  BOOST_CHECK_EQUAL( acc, 5 );
 
   // test if read really blocks when having no update in the queue
   {
