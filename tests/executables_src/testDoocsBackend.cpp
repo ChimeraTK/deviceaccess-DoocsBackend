@@ -83,13 +83,17 @@ BOOST_AUTO_TEST_CASE( testScalarInt ) {
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",120);
 
   BOOST_CHECK( acc_someInt_as_int[0][0] == 42 );
+  auto oldVersion = acc_someInt_as_int.getVersionNumber();
   acc_someInt_as_int.read();
   BOOST_CHECK( acc_someInt_as_int[0][0] == 120 );
+  BOOST_CHECK( acc_someInt_as_int.getVersionNumber() > oldVersion );
 
   acc_someInt_as_int[0][0] = 1234;
   BOOST_CHECK( DoocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 120 );
-  acc_someInt_as_int.write();
+  VersionNumber nextVersion;
+  acc_someInt_as_int.write(nextVersion);
   BOOST_CHECK( DoocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 1234 );
+  BOOST_CHECK( acc_someInt_as_int.getVersionNumber() == nextVersion );
 
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT",42);
 
@@ -170,13 +174,17 @@ BOOST_AUTO_TEST_CASE( testScalarFloat ) {
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT",123.456);
 
   BOOST_CHECK_CLOSE( acc_someFloat_as_float[0][0], 3.1415, 0.00001 );
+  auto oldVersion = acc_someFloat_as_float.getVersionNumber();
   acc_someFloat_as_float.read();
   BOOST_CHECK_CLOSE( acc_someFloat_as_float[0][0], 123.456, 0.00001 );
+  BOOST_CHECK( acc_someFloat_as_float.getVersionNumber() > oldVersion );
 
   acc_someFloat_as_float[0][0] = 666.333;
   BOOST_CHECK_CLOSE( DoocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 123.456, 0.00001 );
-  acc_someFloat_as_float.write();
+  VersionNumber nextVersion;
+  acc_someFloat_as_float.write(nextVersion);
   BOOST_CHECK_CLOSE( DoocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_FLOAT"), 666.333, 0.00001 );
+  BOOST_CHECK( acc_someFloat_as_float.getVersionNumber() == nextVersion );
 
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_FLOAT",3.1415);
 
@@ -256,13 +264,17 @@ BOOST_AUTO_TEST_CASE( testScalarDouble ) {
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_DOUBLE",123.456);
 
   BOOST_CHECK_CLOSE( acc_someDouble_as_float[0][0], 2.8, 0.00001 );
+  auto oldVersion = acc_someDouble_as_float.getVersionNumber();
   acc_someDouble_as_float.read();
   BOOST_CHECK_CLOSE( acc_someDouble_as_float[0][0], 123.456, 0.00001 );
+  BOOST_CHECK( acc_someDouble_as_float.getVersionNumber() > oldVersion );
 
   acc_someDouble_as_float[0][0] = 666.333;
   BOOST_CHECK_CLOSE( DoocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_DOUBLE"), 123.456, 0.00001 );
-  acc_someDouble_as_float.write();
+  VersionNumber nextVersion;
+  acc_someDouble_as_float.write(nextVersion);
   BOOST_CHECK_CLOSE( DoocsServerTestHelper::doocsGet<float>("//MYDUMMY/SOME_DOUBLE"), 666.333, 0.00001 );
+  BOOST_CHECK( acc_someDouble_as_float.getVersionNumber() == nextVersion );
 
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_DOUBLE",3.1415);
 
@@ -336,8 +348,10 @@ BOOST_AUTO_TEST_CASE( testString ) {
   TwoDRegisterAccessor<std::string> acc_someString(device.getTwoDRegisterAccessor<std::string>("MYDUMMY/SOME_STRING"));
   BOOST_CHECK( acc_someString.getNChannels() == 1 );
   BOOST_CHECK( acc_someString.getNElementsPerChannel() == 1 );
+  auto oldVersion = acc_someString.getVersionNumber();
   acc_someString.read();
   BOOST_CHECK(acc_someString[0][0] == "The quick brown fox jumps over the lazy dog.");
+  BOOST_CHECK( acc_someString.getVersionNumber() > oldVersion );
 
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_STRING","Something else.");
 
@@ -347,8 +361,10 @@ BOOST_AUTO_TEST_CASE( testString ) {
 
   acc_someString[0][0] = "Even different!";
   BOOST_CHECK( DoocsServerTestHelper::doocsGet<string>("//MYDUMMY/SOME_STRING") == "Something else." );
-  acc_someString.write();
+  VersionNumber nextVersion;
+  acc_someString.write(nextVersion);
   BOOST_CHECK( DoocsServerTestHelper::doocsGet<string>("//MYDUMMY/SOME_STRING") == "Even different!" );
+  BOOST_CHECK( acc_someString.getVersionNumber() == nextVersion );
 
   device.close();
 
@@ -373,15 +389,19 @@ BOOST_AUTO_TEST_CASE( testArrayInt ) {
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT_ARRAY", vals);
 
   for(int i=0; i<42; i++) BOOST_CHECK(acc_someArray[0][i] == 3*i+120);
+  auto oldVersion = acc_someArray.getVersionNumber();
   acc_someArray.read();
   for(int i=0; i<42; i++) BOOST_CHECK(acc_someArray[0][i] == -55*i);
+  BOOST_CHECK( acc_someArray.getVersionNumber() > oldVersion );
 
   for(int i=0; i<42; i++) acc_someArray[0][i] = i-21;
   vals = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_INT_ARRAY");
   for(int i=0; i<42; i++) BOOST_CHECK(vals[i] == -55*i);
-  acc_someArray.write();
+  VersionNumber nextVersion;
+  acc_someArray.write(nextVersion);
   vals = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_INT_ARRAY");
   for(int i=0; i<42; i++) BOOST_CHECK(vals[i] == i-21);
+  BOOST_CHECK( acc_someArray.getVersionNumber() == nextVersion );
 
   // access via double
   TwoDRegisterAccessor<double> acc_someArrayAsDouble(device.getTwoDRegisterAccessor<double>("MYDUMMY/SOME_INT_ARRAY"));
@@ -424,16 +444,20 @@ BOOST_AUTO_TEST_CASE( testArrayShort ) {
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_SHORT_ARRAY", vals);
 
   for(int i=0; i<5; i++) BOOST_CHECK(acc_someArray[0][i] == 10+i);
+  auto oldVersion = acc_someArray.getVersionNumber();
   acc_someArray.read();
   for(int i=0; i<5; i++) BOOST_CHECK(acc_someArray[0][i] == -55*i);
+  BOOST_CHECK( acc_someArray.getVersionNumber() > oldVersion );
 
   std::vector<int> vals2(5);
   for(int i=0; i<5; i++) acc_someArray[0][i] = i-21;
   vals2 = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_SHORT_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK(vals2[i] == -55*i);
-  acc_someArray.write();
+  VersionNumber nextVersion;
+  acc_someArray.write(nextVersion);
   vals2 = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_SHORT_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK(vals2[i] == i-21);
+  BOOST_CHECK( acc_someArray.getVersionNumber() == nextVersion );
 
   device.close();
 
@@ -458,16 +482,20 @@ BOOST_AUTO_TEST_CASE( testArrayLong ) {
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_LONG_ARRAY", vals);
 
   for(int i=0; i<5; i++) BOOST_CHECK(acc_someArray[0][i] == 10+i);
+  auto oldVersion = acc_someArray.getVersionNumber();
   acc_someArray.read();
   for(int i=0; i<5; i++) BOOST_CHECK(acc_someArray[0][i] == -55*i);
+  BOOST_CHECK( acc_someArray.getVersionNumber() > oldVersion );
 
   std::vector<int> vals2(5);
   for(int i=0; i<5; i++) acc_someArray[0][i] = i-21;
   vals2 = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_LONG_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK(vals2[i] == -55*i);
-  acc_someArray.write();
+  VersionNumber nextVersion;
+  acc_someArray.write(nextVersion);
   vals2 = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_LONG_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK(vals2[i] == i-21);
+  BOOST_CHECK( acc_someArray.getVersionNumber() == nextVersion );
 
   device.close();
 
@@ -484,8 +512,10 @@ BOOST_AUTO_TEST_CASE( testArrayFloat ) {
   TwoDRegisterAccessor<float> acc_someArray(device.getTwoDRegisterAccessor<float>("MYDUMMY/SOME_FLOAT_ARRAY"));
   BOOST_CHECK( acc_someArray.getNChannels() == 1 );
   BOOST_CHECK( acc_someArray.getNElementsPerChannel() == 5 );
+  auto oldVersion = acc_someArray.getVersionNumber();
   acc_someArray.read();
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(acc_someArray[0][i], i/1000., 0.00001);
+  BOOST_CHECK( acc_someArray.getVersionNumber() > oldVersion );
 
   std::vector<float> vals(5);
   for(int i=0; i<5; i++) vals[i] = -3.14159265*i;
@@ -498,9 +528,11 @@ BOOST_AUTO_TEST_CASE( testArrayFloat ) {
   for(int i=0; i<5; i++) acc_someArray[0][i] = 2./(i+0.01);
   vals = DoocsServerTestHelper::doocsGetArray<float>("//MYDUMMY/SOME_FLOAT_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], -3.14159265*i, 0.00001);
-  acc_someArray.write();
+  VersionNumber nextVersion;
+  acc_someArray.write(nextVersion);
   vals = DoocsServerTestHelper::doocsGetArray<float>("//MYDUMMY/SOME_FLOAT_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], 2./(i+0.01), 0.00001);
+  BOOST_CHECK( acc_someArray.getVersionNumber() == nextVersion );
 
   device.close();
 
@@ -517,8 +549,10 @@ BOOST_AUTO_TEST_CASE( testArrayDouble ) {
   TwoDRegisterAccessor<double> acc_someArray(device.getTwoDRegisterAccessor<double>("MYDUMMY/SOME_DOUBLE_ARRAY"));
   BOOST_CHECK( acc_someArray.getNChannels() == 1 );
   BOOST_CHECK( acc_someArray.getNElementsPerChannel() == 5 );
+  auto oldVersion = acc_someArray.getVersionNumber();
   acc_someArray.read();
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(acc_someArray[0][i], i/333., 0.00001);
+  BOOST_CHECK( acc_someArray.getVersionNumber() > oldVersion );
 
   std::vector<double> vals(5);
   for(int i=0; i<5; i++) vals[i] = -3.14159265*i;
@@ -531,9 +565,11 @@ BOOST_AUTO_TEST_CASE( testArrayDouble ) {
   for(int i=0; i<5; i++) acc_someArray[0][i] = 2./(i+0.01);
   vals = DoocsServerTestHelper::doocsGetArray<double>("//MYDUMMY/SOME_DOUBLE_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], -3.14159265*i, 0.00001);
-  acc_someArray.write();
+  VersionNumber nextVersion;
+  acc_someArray.write(nextVersion);
   vals = DoocsServerTestHelper::doocsGetArray<double>("//MYDUMMY/SOME_DOUBLE_ARRAY");
   for(int i=0; i<5; i++) BOOST_CHECK_CLOSE(vals[i], 2./(i+0.01), 0.00001);
+  BOOST_CHECK( acc_someArray.getVersionNumber() == nextVersion );
 
   // access via int
   TwoDRegisterAccessor<int> acc_someArrayAsInt(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_DOUBLE_ARRAY"));
@@ -568,8 +604,10 @@ BOOST_AUTO_TEST_CASE( testSpectrum ) {
   TwoDRegisterAccessor<float> acc_someArray(device.getTwoDRegisterAccessor<float>("MYDUMMY/SOME_SPECTRUM"));
   BOOST_CHECK( acc_someArray.getNChannels() == 1 );
   BOOST_CHECK( acc_someArray.getNElementsPerChannel() == 100 );
+  auto oldVersion = acc_someArray.getVersionNumber();
   acc_someArray.read();
   for(int i=0; i<100; i++) BOOST_CHECK_CLOSE(acc_someArray[0][i], i/42., 0.00001);
+  BOOST_CHECK( acc_someArray.getVersionNumber() > oldVersion );
 
   device.close();
 
@@ -594,15 +632,19 @@ BOOST_AUTO_TEST_CASE( testIIII ) {
   DoocsServerTestHelper::doocsSetIIII("//MYDUMMY/SOME_IIII", vals);
 
   for(int i=0; i<4; i++) BOOST_CHECK(acc_someArray[0][i] == 10 + i);
+  auto oldVersion = acc_someArray.getVersionNumber();
   acc_someArray.read();
   for(int i=0; i<4; i++) BOOST_CHECK(acc_someArray[0][i] == -55*i);
+  BOOST_CHECK( acc_someArray.getVersionNumber() > oldVersion );
 
   for(int i=0; i<4; i++) acc_someArray[0][i] = i-21;
   vals = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_IIII");
   for(int i=0; i<4; i++) BOOST_CHECK(vals[i] == -55*i);
-  acc_someArray.write();
+  VersionNumber nextVersion;
+  acc_someArray.write(nextVersion);
   vals = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_IIII");
   for(int i=0; i<4; i++) BOOST_CHECK(vals[i] == i-21);
+  BOOST_CHECK( acc_someArray.getVersionNumber() == nextVersion );
 
   // access via double
   TwoDRegisterAccessor<double> acc_someArrayAsDouble(device.getTwoDRegisterAccessor<double>("MYDUMMY/SOME_IIII"));
@@ -643,10 +685,14 @@ BOOST_AUTO_TEST_CASE( testBitAndStatus ) {
   BOOST_CHECK( acc_someBit.getNElementsPerChannel() == 1 );
   BOOST_CHECK( acc_someStatus.getNElementsPerChannel() == 1 );
 
+  auto oldVersion = acc_someBit.getVersionNumber();
   acc_someBit.read();
   BOOST_CHECK( acc_someBit[0][0] == 1 );
+  BOOST_CHECK( acc_someBit.getVersionNumber() > oldVersion );
+  oldVersion = acc_someStatus.getVersionNumber();
   acc_someStatus.read();
   BOOST_CHECK( acc_someStatus[0][0] == 3 );
+  BOOST_CHECK( acc_someStatus.getVersionNumber() > oldVersion );
 
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_BIT", 0);
 
@@ -671,13 +717,17 @@ BOOST_AUTO_TEST_CASE( testBitAndStatus ) {
 
   acc_someBit[0][0] = 0;
   BOOST_CHECK( DoocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_STATUS") == 0xFFFF );
-  acc_someBit.write();
+  VersionNumber nextVersion;
+  acc_someBit.write(nextVersion);
   BOOST_CHECK( DoocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_STATUS") == 0xFFFE );
+  BOOST_CHECK( acc_someBit.getVersionNumber() == nextVersion );
 
   acc_someStatus[0][0] = 123;
   BOOST_CHECK( DoocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_STATUS") == 0xFFFE );
-  acc_someStatus.write();
+  nextVersion = {};
+  acc_someStatus.write(nextVersion);
   BOOST_CHECK( DoocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_STATUS") == 123 );
+  BOOST_CHECK( acc_someStatus.getVersionNumber() == nextVersion );
 
   device.close();
 
