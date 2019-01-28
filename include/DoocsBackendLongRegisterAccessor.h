@@ -76,6 +76,7 @@ namespace ChimeraTK {
       UserType val = fixedPointConverter.toCooked<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_long(idx));
       NDRegisterAccessor<UserType>::buffer_2D[0][i] = val;
     }
+    DoocsBackendRegisterAccessor<UserType>::doPostRead();
   }
 
   /**********************************************************************************************************************/

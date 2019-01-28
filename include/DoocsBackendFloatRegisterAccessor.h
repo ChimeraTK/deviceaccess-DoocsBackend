@@ -80,6 +80,7 @@ namespace ChimeraTK {
         NDRegisterAccessor<float>::buffer_2D[0][i] = dst.get_float(idx);
       }
     }
+    DoocsBackendRegisterAccessor<float>::doPostRead();
   }
 
   /**********************************************************************************************************************/
@@ -96,6 +97,7 @@ namespace ChimeraTK {
         NDRegisterAccessor<double>::buffer_2D[0][i] = dst.get_double(idx);
       }
     }
+    DoocsBackendRegisterAccessor<double>::doPostRead();
   }
 
   /**********************************************************************************************************************/
@@ -113,6 +115,7 @@ namespace ChimeraTK {
             DoocsBackendRegisterAccessor<std::string>::dst.get_double(idx));
       }
     }
+    DoocsBackendRegisterAccessor<std::string>::doPostRead();
   }
 
   /**********************************************************************************************************************/
@@ -130,6 +133,7 @@ namespace ChimeraTK {
         NDRegisterAccessor<UserType>::buffer_2D[0][i] = std::round(DoocsBackendRegisterAccessor<UserType>::dst.get_double(idx));
       }
     }
+    DoocsBackendRegisterAccessor<UserType>::doPostRead();
   }
 
   /**********************************************************************************************************************/

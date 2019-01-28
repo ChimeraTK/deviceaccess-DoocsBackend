@@ -44,9 +44,14 @@ namespace ChimeraTK {
 
       bool doReadTransferLatest() override;
 
-      bool doWriteTransfer(ChimeraTK::VersionNumber /*versionNumber*/={}) override {
+      bool doWriteTransfer(ChimeraTK::VersionNumber versionNumber={}) override {
         write_internal();
+        currentVersion = versionNumber;
         return false;
+      }
+
+      void doPostRead() override {
+        currentVersion = {};
       }
 
       AccessModeFlags getAccessModeFlags() const override {
@@ -64,6 +69,8 @@ namespace ChimeraTK {
           notifications.push_exception(std::current_exception());
         }
       }
+
+      ChimeraTK::VersionNumber getVersionNumber() const override { return currentVersion; }
 
     protected:
 
@@ -150,6 +157,8 @@ namespace ChimeraTK {
       }
 
       void replaceTransferElement(boost::shared_ptr<TransferElement> /*newElement*/) override {} // LCOV_EXCL_LINE
+
+      ChimeraTK::VersionNumber currentVersion;
 
   };
 

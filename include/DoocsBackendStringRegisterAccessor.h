@@ -79,6 +79,7 @@ namespace ChimeraTK {
   void DoocsBackendStringRegisterAccessor<std::string>::doPostRead() {
     // copy data into our buffer
     NDRegisterAccessor<std::string>::buffer_2D[0][0] = DoocsBackendRegisterAccessor<std::string>::dst.get_string();
+    DoocsBackendRegisterAccessor<std::string>::doPostRead();
   }
 
   /**********************************************************************************************************************/

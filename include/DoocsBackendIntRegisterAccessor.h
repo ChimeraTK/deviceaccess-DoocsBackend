@@ -87,6 +87,7 @@ namespace ChimeraTK {
         NDRegisterAccessor<UserType>::buffer_2D[0][i] = val;
       }
     }
+    DoocsBackendRegisterAccessor<UserType>::doPostRead();
   }
 
   /**********************************************************************************************************************/
