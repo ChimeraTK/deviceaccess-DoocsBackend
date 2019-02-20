@@ -71,24 +71,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "${ChimeraTK-Devi
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_FLAGS "${DOOCS_LINKER_FLAGS} ${ChimeraTK-DeviceAccess_LINKER_FLAGS}")
 target_link_libraries(${PROJECT_NAME} ${ChimeraTK-DeviceAccess_LIBRARIES} ${DOOCS_LIBRARIES})
 
-#configure a header file which contains the version information for use in C++
-#configure_file(cmake/version.h.in "${PROJECT_BINARY_DIR}/version.h" @ONLY)
-
-# add a target to generate API documentation with Doxygen
-find_package(Doxygen)
-if(DOXYGEN_FOUND)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Doxyfile.in.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.in @ONLY)
-  configure_file(${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
-  add_custom_target(doc ALL
-    ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "Generating API documentation with Doxygen" VERBATIM
-    )
-  install(DIRECTORY ${CMAKE_BINARY_DIR}/doc DESTINATION .)
-else(DOXYGEN_FOUND)
-  message("Doxygen not found, documentation will not be build.")
-endif(DOXYGEN_FOUND)
-
+# Enable documentation
+include(cmake/enable_doxygen_documentation.cmake)
 
 #Install the library and the executables
 install(TARGETS ${PROJECT_NAME}
