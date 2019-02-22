@@ -4,7 +4,7 @@
 
 #include "eq_dummy.h"
 
-const char *object_name = "dummy_server";
+const char* object_name = "dummy_server";
 
 void eq_init_prolog() {
   std::ostringstream os;
@@ -15,14 +15,14 @@ void eq_init_prolog() {
 
 void eq_init_epilog() {}
 
-#define NEW_LOCATION(loc_class)                                                \
-  case loc_class::fctCode:                                                     \
-    eqn = new loc_class();                                                     \
+#define NEW_LOCATION(loc_class)                                                                                        \
+  case loc_class::fctCode:                                                                                             \
+    eqn = new loc_class();                                                                                             \
     break;
 
-EqFct *eq_create(int eq_code, void *) {
-  EqFct *eqn = NULL;
-  switch (eq_code) { NEW_LOCATION(eq_dummy); }
+EqFct* eq_create(int eq_code, void*) {
+  EqFct* eqn = NULL;
+  switch(eq_code) { NEW_LOCATION(eq_dummy); }
   return eqn;
 }
 

@@ -5,7 +5,7 @@
 #include <eq_fct.h>
 
 class eq_dummy : public EqFct {
-public:
+ public:
   eq_dummy();
   virtual ~eq_dummy();
 

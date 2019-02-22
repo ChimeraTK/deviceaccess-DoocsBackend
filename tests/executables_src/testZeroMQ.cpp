@@ -22,7 +22,7 @@ using namespace ChimeraTK;
 
 /**********************************************************************************************************************/
 
-extern int eq_server(int, char **);
+extern int eq_server(int, char**);
 
 struct DoocsLauncher {
   DoocsLauncher() {
@@ -31,16 +31,14 @@ struct DoocsLauncher {
     std::uniform_int_distribution<int> dist(620000000, 999999999);
     rpc_no = std::to_string(dist(rd));
     // update config file with the RPC number
-    std::string command =
-        "sed -i testZeroMQ.conf -e 's/^SVR.RPC_NUMBER:.*$/SVR.RPC_NUMBER: " +
-        rpc_no + "/'";
+    std::string command = "sed -i testZeroMQ.conf -e 's/^SVR.RPC_NUMBER:.*$/SVR.RPC_NUMBER: " + rpc_no + "/'";
     auto rc = std::system(command.c_str());
     (void)rc;
 
     // start the server
     std::thread(eq_server,
-                boost::unit_test::framework::master_test_suite().argc,
-                boost::unit_test::framework::master_test_suite().argv)
+        boost::unit_test::framework::master_test_suite().argc,
+        boost::unit_test::framework::master_test_suite().argv)
         .detach();
     // set CDDs for the two doocs addresses used in the test
     DoocsServer1 = "(doocs:doocs://localhost:" + rpc_no + "/F/D)";
@@ -51,8 +49,7 @@ struct DoocsLauncher {
     EqAdr ea;
     EqData src, dst;
     ea.adr("doocs://localhost:" + rpc_no + "/F/D/MYDUMMY/SOME_ZMQINT");
-    while (eq.get(&ea, &src, &dst))
-      usleep(100000);
+    while(eq.get(&ea, &src, &dst)) usleep(100000);
   }
 
   static void launchIfNotYetLaunched() { static DoocsLauncher launcher; }
@@ -73,14 +70,14 @@ BOOST_AUTO_TEST_CASE(testZeroMQ) {
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
-  ScalarRegisterAccessor<int32_t> acc(device.getScalarRegisterAccessor<int32_t>(
-      "MYDUMMY/SOME_ZMQINT", 0, {AccessMode::wait_for_new_data}));
+  ScalarRegisterAccessor<int32_t> acc(
+      device.getScalarRegisterAccessor<int32_t>("MYDUMMY/SOME_ZMQINT", 0, {AccessMode::wait_for_new_data}));
 
   BOOST_CHECK(acc.readNonBlocking() == false);
 
   // send updates until the ZMQ interface is initialised (this is done in the
   // background unfortunately)
-  while (acc.readNonBlocking() == false) {
+  while(acc.readNonBlocking() == false) {
     DoocsServerTestHelper::runUpdate();
   }
   // empty the queue
@@ -140,7 +137,8 @@ BOOST_AUTO_TEST_CASE(testZeroMQ) {
     std::thread readAsync([&acc, &prom, &threadInterrupted]() {
       try {
         acc.read();
-      } catch (boost::thread_interrupted &) {
+      }
+      catch(boost::thread_interrupted&) {
         // should end up here!
         threadInterrupted = true;
         prom.set_value();

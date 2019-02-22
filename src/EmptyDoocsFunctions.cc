@@ -22,4 +22,6 @@ void eq_init_prolog() {}
 
 void eq_init_epilog() {}
 
-EqFct *eq_create(int, void *) { return nullptr; }
+EqFct* eq_create(int, void*) {
+  return nullptr;
+}
