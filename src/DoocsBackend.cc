@@ -22,11 +22,14 @@
 const char* object_name = "DoocsBackend";
 
 extern "C" {
-void ChimeraTK_DeviceAccess_RegisterBackends() {
-  std::cout << "ChimeraTK_DeviceAccess_RegisterBackends(): registering backend type doocs" << std::endl;
-  ChimeraTK::BackendFactory::getInstance().registerBackendType(
-      "doocs", &ChimeraTK::DoocsBackend::createInstance, {"facility", "device", "location"});
+boost::shared_ptr<ChimeraTK::DeviceBackend> ChimeraTK_DeviceAccess_createBackend(
+    std::string address, std::map<std::string, std::string> parameters) {
+  return ChimeraTK::DoocsBackend::createInstance(address, parameters);
 }
+
+std::vector<std::string> ChimeraTK_DeviceAccess_sdmParameterNames{"facility", "device", "location"};
+
+std::string ChimeraTK_DeviceAccess_version{CHIMERATK_DEVICEACCESS_VERSION};
 }
 
 /**
