@@ -54,10 +54,11 @@ namespace ChimeraTK {
 
     std::string readDeviceInfo() override { return std::string("DOOCS server address: ") + _serverAddress; }
 
-    static boost::shared_ptr<DeviceBackend> createInstance(std::string address,
-        std::map<std::string, std::string>
-            parameters);
+   public:
+    static boost::shared_ptr<DeviceBackend> createInstance(
+        std::string address, std::map<std::string, std::string> parameters);
 
+   protected:
     template<typename UserType>
     boost::shared_ptr<NDRegisterAccessor<UserType>> getRegisterAccessor_impl(
         const RegisterPath& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);

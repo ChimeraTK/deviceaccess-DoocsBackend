@@ -21,14 +21,11 @@
 // this is required since we link against the DOOCS libEqServer.so
 const char* object_name = "DoocsBackend";
 
-// You have to define an "extern C" function with this signature. It has to
-// return CHIMERATK_DEVICEACCESS_VERSION for version checking when the library
-// is loaded at run time. This function is used to determine that this is a
-// valid DeviceAcces backend library. Just copy this code, sorry for the boiler
-// plate.
 extern "C" {
-const char* deviceAccessVersionUsedToCompile() {
-  return CHIMERATK_DEVICEACCESS_VERSION;
+void ChimeraTK_DeviceAccess_RegisterBackends() {
+  std::cout << "DoocsBackend::BackendRegisterer: registering backend type doocs" << std::endl;
+  ChimeraTK::BackendFactory::getInstance().registerBackendType(
+      "doocs", &ChimeraTK::DoocsBackend::createInstance, {"facility", "device", "location"});
 }
 }
 
@@ -89,9 +86,8 @@ namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
-  boost::shared_ptr<DeviceBackend> DoocsBackend::createInstance(std::string address,
-      std::map<std::string, std::string>
-          parameters) {
+  boost::shared_ptr<DeviceBackend> DoocsBackend::createInstance(
+      std::string address, std::map<std::string, std::string> parameters) {
     // if address is empty, build it from parameters (for compatibility with SDM)
     if(address.empty()) {
       RegisterPath serverAddress;
@@ -235,10 +231,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   boost::shared_ptr<NDRegisterAccessor<UserType>> DoocsBackend::getRegisterAccessor_impl(
-      const RegisterPath& registerPathName,
-      size_t numberOfWords,
-      size_t wordOffsetInRegister,
-      AccessModeFlags flags) {
+      const RegisterPath& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags) {
     NDRegisterAccessor<UserType>* p;
     std::string path = _serverAddress + registerPathName;
 
