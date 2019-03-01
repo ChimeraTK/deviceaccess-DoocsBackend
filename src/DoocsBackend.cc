@@ -23,7 +23,7 @@ const char* object_name = "DoocsBackend";
 
 extern "C" {
 void ChimeraTK_DeviceAccess_RegisterBackends() {
-  std::cout << "DoocsBackend::BackendRegisterer: registering backend type doocs" << std::endl;
+  std::cout << "ChimeraTK_DeviceAccess_RegisterBackends(): registering backend type doocs" << std::endl;
   ChimeraTK::BackendFactory::getInstance().registerBackendType(
       "doocs", &ChimeraTK::DoocsBackend::createInstance, {"facility", "device", "location"});
 }
