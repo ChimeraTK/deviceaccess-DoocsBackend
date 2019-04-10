@@ -12,6 +12,8 @@
 
 #include <eq_client.h>
 
+#include <ChimeraTK/SupportedUserTypes.h>
+
 #include "DoocsBackendRegisterAccessor.h"
 
 namespace ChimeraTK {
@@ -22,10 +24,8 @@ namespace ChimeraTK {
     virtual ~DoocsBackendLongRegisterAccessor();
 
    protected:
-    DoocsBackendLongRegisterAccessor(const std::string& path,
-        size_t numberOfWords,
-        size_t wordOffsetInRegister,
-        AccessModeFlags flags);
+    DoocsBackendLongRegisterAccessor(
+        const std::string& path, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
 
     void doPostRead() override;
 
@@ -73,7 +73,7 @@ namespace ChimeraTK {
     // copy data into our buffer
     for(size_t i = 0; i < DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
       int idx = i + DoocsBackendRegisterAccessor<UserType>::elementOffset;
-      UserType val = fixedPointConverter.toCooked<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_long(idx));
+      UserType val = intToUserType<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_long(idx));
       NDRegisterAccessor<UserType>::buffer_2D[0][i] = val;
     }
     DoocsBackendRegisterAccessor<UserType>::doPostRead();

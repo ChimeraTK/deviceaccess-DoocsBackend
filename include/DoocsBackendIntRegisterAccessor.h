@@ -12,6 +12,8 @@
 
 #include <eq_client.h>
 
+#include <ChimeraTK/SupportedUserTypes.h>
+
 #include "DoocsBackendRegisterAccessor.h"
 
 namespace ChimeraTK {
@@ -75,13 +77,13 @@ namespace ChimeraTK {
   void DoocsBackendIntRegisterAccessor<UserType>::doPostRead() {
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
-      UserType val = fixedPointConverter.toCooked<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_int());
+      UserType val = intToUserType<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_int());
       NDRegisterAccessor<UserType>::buffer_2D[0][0] = val;
     }
     else {
       for(size_t i = 0; i < DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
         int idx = i + DoocsBackendRegisterAccessor<UserType>::elementOffset;
-        UserType val = fixedPointConverter.toCooked<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_int(idx));
+        UserType val = intToUserType<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_int(idx));
         NDRegisterAccessor<UserType>::buffer_2D[0][i] = val;
       }
     }
