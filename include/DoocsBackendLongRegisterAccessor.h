@@ -73,7 +73,7 @@ namespace ChimeraTK {
     // copy data into our buffer
     for(size_t i = 0; i < DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
       int idx = i + DoocsBackendRegisterAccessor<UserType>::elementOffset;
-      UserType val = intToUserType<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_long(idx));
+      UserType val = numericToUserType<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_long(idx));
       NDRegisterAccessor<UserType>::buffer_2D[0][i] = val;
     }
     DoocsBackendRegisterAccessor<UserType>::doPostRead();
@@ -92,7 +92,7 @@ namespace ChimeraTK {
       }
     }
     for(size_t i = 0; i < DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
-      int32_t raw = fixedPointConverter.toRaw(NDRegisterAccessor<UserType>::buffer_2D[0][i]);
+      int32_t raw = userTypeToNumeric<int32_t>(NDRegisterAccessor<UserType>::buffer_2D[0][i]);
       int idx = i + DoocsBackendRegisterAccessor<UserType>::elementOffset;
       DoocsBackendRegisterAccessor<UserType>::src.set(raw, idx);
     }

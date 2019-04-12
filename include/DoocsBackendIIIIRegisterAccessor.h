@@ -40,8 +40,7 @@ namespace ChimeraTK {
 
       IIII* d = DoocsBackendRegisterAccessor<UserType>::src.get_iiii();
       for(size_t i = 0; i < DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
-        int32_t raw = DoocsBackendIntRegisterAccessor<UserType>::fixedPointConverter.toRaw(
-            NDRegisterAccessor<UserType>::buffer_2D[0][i]);
+        int32_t raw = userTypeToNumeric<int32_t>(NDRegisterAccessor<UserType>::buffer_2D[0][i]);
         int idx = i + DoocsBackendRegisterAccessor<UserType>::elementOffset;
         switch(idx) {
           case 0:
