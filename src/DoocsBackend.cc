@@ -22,6 +22,8 @@
 // this is required since we link against the DOOCS libEqServer.so
 const char* object_name = "DoocsBackend";
 
+namespace ctk = ChimeraTK;
+
 extern "C" {
 boost::shared_ptr<ChimeraTK::DeviceBackend> ChimeraTK_DeviceAccess_createBackend(
     std::string address, std::map<std::string, std::string> parameters) {
@@ -35,10 +37,17 @@ std::string ChimeraTK_DeviceAccess_version{CHIMERATK_DEVICEACCESS_VERSION};
 std::string backend_name = "doocs";
 }
 
+
 /**
  *  RegisterInfo-derived class to be put into the RegisterCatalogue
  */
 namespace {
+
+  static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress);
+
+
+
+
   class DoocsBackendRegisterInfo : public ChimeraTK::RegisterInfo {
    public:
     ~DoocsBackendRegisterInfo() override {}
@@ -64,46 +73,160 @@ namespace {
     ChimeraTK::RegisterInfo::DataDescriptor dataDescriptor;
     ChimeraTK::AccessModeFlags accessModeFlags{};
   };
-} // namespace
 
-namespace ChimeraTK {
+  class CatalogueFetcher {
+  public:
+    CatalogueFetcher(const std::string &serverAddress)
+        : serverAddress_(serverAddress) {}
+    std::unique_ptr<ctk::RegisterCatalogue> fetch();
+  private:
+    std::string serverAddress_;
+    std::unique_ptr<ctk::RegisterCatalogue> catalogue_{};
 
-  /********************************************************************************************************************/
+    void fillCatalogue(std::string fixedComponents, long level) const;
+    static long slashes(const std::string &s);
+    bool checkZmqAvailability(const std::string &fullLocationPath, const std::string &propertyName) const;
+    bool ignorePattern(std::string name, std::string pattern) const;
+  };
 
-  DoocsBackend::BackendRegisterer DoocsBackend::backendRegisterer;
-
-  DoocsBackend::BackendRegisterer::BackendRegisterer() {
-    std::cout << "DoocsBackend::BackendRegisterer: registering backend type doocs" << std::endl;
-    ChimeraTK::BackendFactory::getInstance().registerBackendType(
-        "doocs", &DoocsBackend::createInstance, {"facility", "device", "location"});
+  std::unique_ptr<ctk::RegisterCatalogue> CatalogueFetcher::fetch() {
+    catalogue_ = std::make_unique<ctk::RegisterCatalogue>();
+    auto nSlashes = slashes(serverAddress_);
+    fillCatalogue(serverAddress_, nSlashes);
+    return std::move(catalogue_);
   }
 
-  /********************************************************************************************************************/
-
-  DoocsBackend::DoocsBackend(const std::string& serverAddress) : _serverAddress(serverAddress) {
-    FILL_VIRTUAL_FUNCTION_TEMPLATE_VTABLE(getRegisterAccessor_impl);
-  }
-
-  /********************************************************************************************************************/
-
-  boost::shared_ptr<DeviceBackend> DoocsBackend::createInstance(
-      std::string address, std::map<std::string, std::string> parameters) {
-    // if address is empty, build it from parameters (for compatibility with SDM)
-    if(address.empty()) {
-      RegisterPath serverAddress;
-      serverAddress /= parameters["facility"];
-      serverAddress /= parameters["device"];
-      serverAddress /= parameters["location"];
-      address = std::string(serverAddress).substr(1);
+  void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) const {
+    // obtain list of elements within the given partial address
+    EqAdr ea;
+    EqCall eq;
+    EqData src, propList;
+    ea.adr((fixedComponents + "/*").c_str());
+    int rc = eq.names(&ea, &propList);
+    if (rc) {
+      // if the enumeration failes, maybe the server is not available (but
+      // exists in ENS) -> just ignore this address
+      return;
     }
 
-    // create and return the backend
-    return boost::shared_ptr<DeviceBackend>(new DoocsBackend(address));
+    // iterate over list
+    for(int i = 0; i < propList.array_length(); ++i) {
+      // obtain the name of the element
+      char c[255];
+      propList.get_string_arg(i, c, 255);
+      std::string name = c;
+      name = name.substr(0, name.find_first_of(" ")); // ignore comment which is following the space
+
+      // if we are not yet at the property-level, recursivly call the function
+      // again to resolve the next hierarchy level
+      if (level < 2) {
+        fillCatalogue(fixedComponents + "/" + name, level + 1);
+      } else {
+        // this is a property: create RegisterInfo entry and set its name
+        bool skipRegister = false;
+        for(uint i = 0; i < ctk::SIZE_IGNORE_PATTERNS; i++) {
+          std::string pattern = ctk::IGNORE_PATTERNS[i];
+          if(ignorePattern(name, pattern)) {
+            skipRegister = true;
+            break;
+          }
+        }
+        if(skipRegister) {
+          continue;
+        }
+        boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
+        std::string fqn = fixedComponents + "/" + name;
+        info->name = fqn.substr(std::string(serverAddress_).length());
+
+        // read property once to determine its length and data type
+        ///@todo Is there a more efficient way to do this?
+        EqData dst;
+        ea.adr(fqn.c_str()); // strip leading slash
+        rc = eq.get(&ea, &src, &dst);
+        if (rc) {
+          // if the property is not accessible, ignore it. This happens
+          // frequently e.g. for archiver-related properties
+          continue;
+        }
+
+        if(checkZmqAvailability(fixedComponents, name))
+          info->accessModeFlags.add(ctk::AccessMode::wait_for_new_data);
+
+        info->length = dst.array_length();
+        if (info->length == 0)
+          info->length = 1; // DOOCS reports 0 if not an array
+        if (dst.type() == DATA_TEXT ||
+            dst.type() == DATA_STRING || // in case of strings, DOOCS reports
+                                         // the length of the string
+            dst.type() == DATA_STRING16 || dst.type() == DATA_USTR) {
+          info->length = 1;
+          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+              ChimeraTK::RegisterInfo::FundamentalType::string);
+        } else if (dst.type() == DATA_INT || dst.type() == DATA_A_INT ||
+                   dst.type() == DATA_A_SHORT || dst.type() == DATA_A_LONG ||
+                   dst.type() == DATA_A_BYTE ||
+                   dst.type() == DATA_IIII) { // integral data types
+          size_t digits;
+          if (dst.type() == DATA_A_SHORT) { // 16 bit signed
+            digits = 6;
+          } else if (dst.type() == DATA_A_BYTE) { // 8 bit signed
+            digits = 4;
+          } else if (dst.type() == DATA_A_LONG) { // 64 bit signed
+            digits = 20;
+          } else { // 32 bit signed
+            digits = 11;
+          }
+          if (dst.type() == DATA_IIII)
+            info->length = 4;
+
+          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+              ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true,
+              digits);
+        }
+        else if(dst.type() == DATA_IFFF) {
+          info->name = fqn.substr(std::string(serverAddress_).length()) + "/I";
+          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+              ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, 11); // 32 bit integer
+
+          boost::shared_ptr<DoocsBackendRegisterInfo> infoF1(new DoocsBackendRegisterInfo(*info));
+          infoF1->name = fqn.substr(std::string(serverAddress_).length()) + "/F1";
+          infoF1->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+              ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300); // float
+
+          boost::shared_ptr<DoocsBackendRegisterInfo> infoF2(new DoocsBackendRegisterInfo(*infoF1));
+          infoF2->name = fqn.substr(std::string(serverAddress_).length()) + "/F2";
+
+          boost::shared_ptr<DoocsBackendRegisterInfo> infoF3(new DoocsBackendRegisterInfo(*infoF1));
+          infoF3->name = fqn.substr(std::string(serverAddress_).length()) + "/F3";
+
+          catalogue_->addRegister(infoF1);
+          catalogue_->addRegister(infoF2);
+          catalogue_->addRegister(infoF3);
+          // the info for the integer is added below
+        }
+        else { // floating point data types: always treat like double
+          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+              ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true,
+              320, 300);
+        }
+
+        // add info to catalogue
+        catalogue_->addRegister(info);
+      }
+    }
   }
 
-  /********************************************************************************************************************/
+  long CatalogueFetcher::slashes(const std::string &s) {
+    size_t nSlashes;
+    if (!boost::starts_with(s, "doocs://")) {
+      nSlashes = std::count(s.begin(), s.end(), '/');
+    } else {
+      nSlashes = std::count(s.begin(), s.end(), '/') - 3;
+    }
+    return nSlashes;
+  }
 
-  bool DoocsBackend::checkZmqAvailability(const std::string& fullLocationPath, const std::string& propertyName) {
+  bool CatalogueFetcher::checkZmqAvailability(const std::string& fullLocationPath, const std::string& propertyName) const{
     int rc;
     float f1;
     float f2;
@@ -144,168 +267,83 @@ namespace ChimeraTK {
     else {
       dst.get_ustr(&portp, &f1, &f2, &tm, &sp, 0);
     }
-
     return portp != 0;
   }
 
-  /********************************************************************************************************************/
-
-  bool DoocsBackend::ignorePattern(std::string name, std::string pattern) const {
+  bool CatalogueFetcher::ignorePattern(std::string name, std::string pattern) const {
     return boost::algorithm::ends_with(name, pattern);
   }
 
+  static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress) {
+    return CatalogueFetcher(serverAddress).fetch();
+  }
+} // namespace
+
+namespace ChimeraTK {
+
   /********************************************************************************************************************/
-  void DoocsBackend::fillCatalogue(std::string fixedComponents, long level) const {
-    // obtain list of elements within the given partial address
-    EqAdr ea;
-    EqCall eq;
-    EqData src, propList;
-    ea.adr((fixedComponents + "/*").c_str());
-    int rc = eq.names(&ea, &propList);
-    if(rc) {
-      // if the enumeration failes, maybe the server is not available (but exists
-      // in ENS) -> just ignore this address
-      return;
-    }
 
-    // iterate over list
-    for(int i = 0; i < propList.array_length(); ++i) {
-      // obtain the name of the element
-      char c[255];
-      propList.get_string_arg(i, c, 255);
-      std::string name = c;
-      name = name.substr(0, name.find_first_of(" ")); // ignore comment which is following the space
+  DoocsBackend::BackendRegisterer DoocsBackend::backendRegisterer;
 
-      // if we are not yet at the property-level, recursivly call the function
-      // again to resolve the next hierarchy level
-      if(level < 2) {
-        fillCatalogue(fixedComponents + "/" + name, level + 1);
-      }
-      else {
-        // this is a property: create RegisterInfo entry and set its name
-        bool skipRegister = false;
-        for(uint i = 0; i < SIZE_IGNORE_PATTERNS; i++) {
-          std::string pattern = IGNORE_PATTERNS[i];
-          if(ignorePattern(name, pattern)) {
-            skipRegister = true;
-            break;
-          }
-        }
-        if(skipRegister) {
-          continue;
-        }
-        boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
-        std::string fqn = fixedComponents + "/" + name;
-        info->name = fqn.substr(std::string(_serverAddress).length());
+  DoocsBackend::BackendRegisterer::BackendRegisterer() {
+    std::cout << "DoocsBackend::BackendRegisterer: registering backend type doocs" << std::endl;
+    ChimeraTK::BackendFactory::getInstance().registerBackendType(
+        "doocs", &DoocsBackend::createInstance, {"facility", "device", "location"});
+  }
 
-        // read property once to determine its length and data type
-        ///@todo Is there a more efficient way to do this?
-        EqData dst;
-        ea.adr(fqn.c_str()); // strip leading slash
-        rc = eq.get(&ea, &src, &dst);
-        if(rc) {
-          // if the property is not accessible, ignore it. This happens frequently
-          // e.g. for archiver-related properties
-          continue;
-        }
+  /********************************************************************************************************************/
 
-        if(DoocsBackend::checkZmqAvailability(fixedComponents, name))
-          info->accessModeFlags.add(AccessMode::wait_for_new_data);
+  DoocsBackend::DoocsBackend(const std::string& serverAddress) : _serverAddress(serverAddress) {
+    _catalogueFuture = std::async(std::launch::async, fetchCatalogue, serverAddress);
+    FILL_VIRTUAL_FUNCTION_TEMPLATE_VTABLE(getRegisterAccessor_impl);
 
-        info->length = dst.array_length();
-        if(info->length == 0) info->length = 1;                    // DOOCS reports 0 if not an array
-        if(dst.type() == DATA_TEXT || dst.type() == DATA_STRING || // in case of strings, DOOCS reports the
-                                                                   // length of the string
-            dst.type() == DATA_STRING16 || dst.type() == DATA_USTR) {
-          info->length = 1;
-          info->dataDescriptor =
-              ChimeraTK::RegisterInfo::DataDescriptor(ChimeraTK::RegisterInfo::FundamentalType::string);
-        }
-        else if(dst.type() == DATA_INT || dst.type() == DATA_A_INT || dst.type() == DATA_A_SHORT ||
-            dst.type() == DATA_A_LONG || dst.type() == DATA_A_BYTE || dst.type() == DATA_IIII) { // integral data types
-          size_t digits;
-          if(dst.type() == DATA_A_SHORT) { // 16 bit signed
-            digits = 6;
-          }
-          else if(dst.type() == DATA_A_BYTE) { // 8 bit signed
-            digits = 4;
-          }
-          else if(dst.type() == DATA_A_LONG) { // 64 bit signed
-            digits = 20;
-          }
-          else { // 32 bit signed
-            digits = 11;
-          }
-          if(dst.type() == DATA_IIII) info->length = 4;
 
-          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-              ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, digits);
-        }
-        else if(dst.type() == DATA_IFFF) {
-          info->name = fqn.substr(std::string(_serverAddress).length()) + "/I";
-          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-              ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, 11); // 32 bit integer
+  }
 
-          boost::shared_ptr<DoocsBackendRegisterInfo> infoF1(new DoocsBackendRegisterInfo(*info));
-          infoF1->name = fqn.substr(std::string(_serverAddress).length()) + "/F1";
-          infoF1->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-              ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300); // float
+  /********************************************************************************************************************/
 
-          boost::shared_ptr<DoocsBackendRegisterInfo> infoF2(new DoocsBackendRegisterInfo(*infoF1));
-          infoF2->name = fqn.substr(std::string(_serverAddress).length()) + "/F2";
-
-          boost::shared_ptr<DoocsBackendRegisterInfo> infoF3(new DoocsBackendRegisterInfo(*infoF1));
-          infoF3->name = fqn.substr(std::string(_serverAddress).length()) + "/F3";
-
-          _catalogue_mutable.addRegister(infoF1);
-          _catalogue_mutable.addRegister(infoF2);
-          _catalogue_mutable.addRegister(infoF3);
-          // the info for the integer is added below
-        }
-        else { // floating point data types: always treat like double
-          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-              ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300);
-        }
-
-        // add info to catalogue
-        _catalogue_mutable.addRegister(info);
+  DoocsBackend::~DoocsBackend() {
+    if (_catalogueFuture.valid()) {
+      try {
+        _catalogueFuture.get();
+      } catch (...) {
+        // prevent throwing in destructor (ub if it does);
       }
     }
   }
+
+  /********************************************************************************************************************/
+
+  boost::shared_ptr<DeviceBackend> DoocsBackend::createInstance(
+      std::string address, std::map<std::string, std::string> parameters) {
+    // if address is empty, build it from parameters (for compatibility with SDM)
+    if(address.empty()) {
+      RegisterPath serverAddress;
+      serverAddress /= parameters["facility"];
+      serverAddress /= parameters["device"];
+      serverAddress /= parameters["location"];
+      address = std::string(serverAddress).substr(1);
+    }
+
+    // create and return the backend
+    return boost::shared_ptr<DeviceBackend>(new DoocsBackend(address));
+  }
+
+  /********************************************************************************************************************/
 
   /********************************************************************************************************************/
 
   void DoocsBackend::open() {
     _opened = true;
-    if(catalogueObtained) fillCatalogue();
   }
 
   /********************************************************************************************************************/
 
-  void DoocsBackend::fillCatalogue() const {
-    if(!catalogueFilled && _opened) {
-      // Fill the catalogue:
-      // first, count number of elements in address part given in DMAP file to
-      // determine how many components we have to iterate over
-      size_t nSlashes;
-      if(!boost::starts_with(_serverAddress, "doocs://")) {
-        nSlashes = std::count(_serverAddress.begin(), _serverAddress.end(), '/');
-      }
-      else {
-        nSlashes = std::count(_serverAddress.begin(), _serverAddress.end(), '/') - 3;
-      }
-      // next, iteratively call the function to fill the catalogue
-      fillCatalogue(_serverAddress, nSlashes);
-      catalogueFilled = true;
+  const RegisterCatalogue &DoocsBackend::getRegisterCatalogue() const {
+    if (_catalogueFuture.valid()) {
+      _catalogue_mutable = _catalogueFuture.get();
     }
-  }
-
-  /********************************************************************************************************************/
-
-  const RegisterCatalogue& DoocsBackend::getRegisterCatalogue() const {
-    if(_opened) fillCatalogue();
-    catalogueObtained = true;
-    return _catalogue_mutable;
+    return *_catalogue_mutable;
   }
 
   /********************************************************************************************************************/
