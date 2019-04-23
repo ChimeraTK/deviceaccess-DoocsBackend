@@ -112,9 +112,9 @@ namespace ChimeraTK {
     // obtain list of elements within the given partial address
     EqAdr ea;
     EqCall eq;
-    EqData src, dst;
+    EqData src, propList;
     ea.adr((fixedComponents + "/*").c_str());
-    int rc = eq.names(&ea, &dst);
+    int rc = eq.names(&ea, &propList);
     if(rc) {
       // if the enumeration failes, maybe the server is not available (but exists
       // in ENS) -> just ignore this address
@@ -122,10 +122,10 @@ namespace ChimeraTK {
     }
 
     // iterate over list
-    for(int i = 0; i < dst.array_length(); ++i) {
+    for(int i = 0; i < propList.array_length(); ++i) {
       // obtain the name of the element
       char c[255];
-      dst.get_string_arg(i, c, 255);
+      propList.get_string_arg(i, c, 255);
       std::string name = c;
       name = name.substr(0,
           name.find_first_of(" ")); // ignore comment which is following the space
@@ -143,11 +143,9 @@ namespace ChimeraTK {
 
         // read property once to determine its length and data type
         ///@todo Is there a more efficient way to do this?
-        EqAdr ea;
-        EqCall eq;
-        EqData src, dst;
+        EqData dst;
         ea.adr(fqn.c_str()); // strip leading slash
-        int rc = eq.get(&ea, &src, &dst);
+        rc = eq.get(&ea, &src, &dst);
         if(rc) {
           // if the property is not accessible, ignore it. This happens frequently
           // e.g. for archiver-related properties
