@@ -16,5 +16,7 @@ accessor. The register name is the full property name, extended by "/I", "/F1", 
 - `XFEL.RF/TIMER/LLA0M/BUNCH_POSITION.1/I` - this will access the integer component of the property `XFEL.RF/TIMER/LLA0M/BUNCH_POSITION.1`
 - `XFEL.RF/TIMER/LLA0M/BUNCH_POSITION.1/F1` - this will access the first float component of the property `XFEL.RF/TIMER/LLA0M/BUNCH_POSITION.1`
 
-*/
+Note: Writing is implemented as read-modify-write. Concurrent writes to different components of the same property may
+lead to undesired behaviour.
 
+*/
