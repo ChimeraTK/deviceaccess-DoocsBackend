@@ -37,16 +37,12 @@ std::string ChimeraTK_DeviceAccess_version{CHIMERATK_DEVICEACCESS_VERSION};
 std::string backend_name = "doocs";
 }
 
+static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::future<void> cancelFlag);
 
 /**
  *  RegisterInfo-derived class to be put into the RegisterCatalogue
  */
 namespace {
-
-  static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress);
-
-
-
 
   class DoocsBackendRegisterInfo : public ChimeraTK::RegisterInfo {
    public:
@@ -74,210 +70,35 @@ namespace {
     ChimeraTK::AccessModeFlags accessModeFlags{};
   };
 
+} // namespace
+
   class CatalogueFetcher {
   public:
-    CatalogueFetcher(const std::string &serverAddress)
-        : serverAddress_(serverAddress) {}
+    CatalogueFetcher(const std::string &serverAddress, std::future<void> cancelIndicator)
+        : serverAddress_(serverAddress),
+          cancelFlag_(std::move(cancelIndicator)) {}
+
+
     std::unique_ptr<ctk::RegisterCatalogue> fetch();
   private:
     std::string serverAddress_;
+    std::future<void> cancelFlag_;
     std::unique_ptr<ctk::RegisterCatalogue> catalogue_{};
 
     void fillCatalogue(std::string fixedComponents, long level) const;
     static long slashes(const std::string &s);
+    bool isCancelled() const {
+      return (cancelFlag_.wait_for(std::chrono::microseconds(0)) == std::future_status::ready);
+    }
     bool checkZmqAvailability(const std::string &fullLocationPath, const std::string &propertyName) const;
     bool ignorePattern(std::string name, std::string pattern) const;
   };
 
-  std::unique_ptr<ctk::RegisterCatalogue> CatalogueFetcher::fetch() {
-    catalogue_ = std::make_unique<ctk::RegisterCatalogue>();
-    auto nSlashes = slashes(serverAddress_);
-    fillCatalogue(serverAddress_, nSlashes);
-    return std::move(catalogue_);
+  /********************************************************************************************************************/
+
+  static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::future<void> cancelFlag){
+    return CatalogueFetcher(serverAddress, std::move(cancelFlag)).fetch();
   }
-
-  void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) const {
-    // obtain list of elements within the given partial address
-    EqAdr ea;
-    EqCall eq;
-    EqData src, propList;
-    ea.adr((fixedComponents + "/*").c_str());
-    int rc = eq.names(&ea, &propList);
-    if (rc) {
-      // if the enumeration failes, maybe the server is not available (but
-      // exists in ENS) -> just ignore this address
-      return;
-    }
-
-    // iterate over list
-    for(int i = 0; i < propList.array_length(); ++i) {
-      // obtain the name of the element
-      char c[255];
-      propList.get_string_arg(i, c, 255);
-      std::string name = c;
-      name = name.substr(0, name.find_first_of(" ")); // ignore comment which is following the space
-
-      // if we are not yet at the property-level, recursivly call the function
-      // again to resolve the next hierarchy level
-      if (level < 2) {
-        fillCatalogue(fixedComponents + "/" + name, level + 1);
-      } else {
-        // this is a property: create RegisterInfo entry and set its name
-        bool skipRegister = false;
-        for(uint i = 0; i < ctk::SIZE_IGNORE_PATTERNS; i++) {
-          std::string pattern = ctk::IGNORE_PATTERNS[i];
-          if(ignorePattern(name, pattern)) {
-            skipRegister = true;
-            break;
-          }
-        }
-        if(skipRegister) {
-          continue;
-        }
-        boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
-        std::string fqn = fixedComponents + "/" + name;
-        info->name = fqn.substr(std::string(serverAddress_).length());
-
-        // read property once to determine its length and data type
-        ///@todo Is there a more efficient way to do this?
-        EqData dst;
-        ea.adr(fqn.c_str()); // strip leading slash
-        rc = eq.get(&ea, &src, &dst);
-        if (rc) {
-          // if the property is not accessible, ignore it. This happens
-          // frequently e.g. for archiver-related properties
-          continue;
-        }
-
-        if(checkZmqAvailability(fixedComponents, name))
-          info->accessModeFlags.add(ctk::AccessMode::wait_for_new_data);
-
-        info->length = dst.array_length();
-        if (info->length == 0)
-          info->length = 1; // DOOCS reports 0 if not an array
-        if (dst.type() == DATA_TEXT ||
-            dst.type() == DATA_STRING || // in case of strings, DOOCS reports
-                                         // the length of the string
-            dst.type() == DATA_STRING16 || dst.type() == DATA_USTR) {
-          info->length = 1;
-          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-              ChimeraTK::RegisterInfo::FundamentalType::string);
-        } else if (dst.type() == DATA_INT || dst.type() == DATA_A_INT ||
-                   dst.type() == DATA_A_SHORT || dst.type() == DATA_A_LONG ||
-                   dst.type() == DATA_A_BYTE ||
-                   dst.type() == DATA_IIII) { // integral data types
-          size_t digits;
-          if (dst.type() == DATA_A_SHORT) { // 16 bit signed
-            digits = 6;
-          } else if (dst.type() == DATA_A_BYTE) { // 8 bit signed
-            digits = 4;
-          } else if (dst.type() == DATA_A_LONG) { // 64 bit signed
-            digits = 20;
-          } else { // 32 bit signed
-            digits = 11;
-          }
-          if (dst.type() == DATA_IIII)
-            info->length = 4;
-
-          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-              ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true,
-              digits);
-        }
-        else if(dst.type() == DATA_IFFF) {
-          info->name = fqn.substr(std::string(serverAddress_).length()) + "/I";
-          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-              ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, 11); // 32 bit integer
-
-          boost::shared_ptr<DoocsBackendRegisterInfo> infoF1(new DoocsBackendRegisterInfo(*info));
-          infoF1->name = fqn.substr(std::string(serverAddress_).length()) + "/F1";
-          infoF1->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-              ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300); // float
-
-          boost::shared_ptr<DoocsBackendRegisterInfo> infoF2(new DoocsBackendRegisterInfo(*infoF1));
-          infoF2->name = fqn.substr(std::string(serverAddress_).length()) + "/F2";
-
-          boost::shared_ptr<DoocsBackendRegisterInfo> infoF3(new DoocsBackendRegisterInfo(*infoF1));
-          infoF3->name = fqn.substr(std::string(serverAddress_).length()) + "/F3";
-
-          catalogue_->addRegister(infoF1);
-          catalogue_->addRegister(infoF2);
-          catalogue_->addRegister(infoF3);
-          // the info for the integer is added below
-        }
-        else { // floating point data types: always treat like double
-          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-              ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true,
-              320, 300);
-        }
-
-        // add info to catalogue
-        catalogue_->addRegister(info);
-      }
-    }
-  }
-
-  long CatalogueFetcher::slashes(const std::string &s) {
-    size_t nSlashes;
-    if (!boost::starts_with(s, "doocs://")) {
-      nSlashes = std::count(s.begin(), s.end(), '/');
-    } else {
-      nSlashes = std::count(s.begin(), s.end(), '/') - 3;
-    }
-    return nSlashes;
-  }
-
-  bool CatalogueFetcher::checkZmqAvailability(const std::string& fullLocationPath, const std::string& propertyName) const{
-    int rc;
-    float f1;
-    float f2;
-    char* sp;
-    time_t tm;
-    EqAdr ea;
-    EqData dat;
-    EqData dst;
-    EqCall eq;
-    int portp;
-
-    ea.adr(fullLocationPath + "/SPN");
-
-    // get channel port number
-    dat.set(1, 0.0f, 0.0f, time_t{0}, propertyName, 0);
-
-    // call get () to see whether it is supported
-    rc = eq.get(&ea, &dat, &dst);
-    if(rc) {
-      return false;
-    }
-
-    rc = dst.get_ustr(&portp, &f1, &f2, &tm, &sp, 0);
-    if(rc && !portp && !static_cast<int>(f1 + f2)) rc = 0; // not supported
-
-    if(!rc) {
-      dst.get_ustr(&portp, &f1, &f2, &tm, &sp, 0);
-      // get () not supported, call set ()
-      rc = eq.set(&ea, &dat, &dst);
-      if(rc) {
-        return false;
-      }
-    }
-
-    if(dst.type() == DATA_INT) {
-      portp = dst.get_int();
-    }
-    else {
-      dst.get_ustr(&portp, &f1, &f2, &tm, &sp, 0);
-    }
-    return portp != 0;
-  }
-
-  bool CatalogueFetcher::ignorePattern(std::string name, std::string pattern) const {
-    return boost::algorithm::ends_with(name, pattern);
-  }
-
-  static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress) {
-    return CatalogueFetcher(serverAddress).fetch();
-  }
-} // namespace
 
 namespace ChimeraTK {
 
@@ -294,7 +115,11 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   DoocsBackend::DoocsBackend(const std::string& serverAddress) : _serverAddress(serverAddress) {
-    _catalogueFuture = std::async(std::launch::async, fetchCatalogue, serverAddress);
+
+      _catalogueFuture = std::async(std::launch::async, fetchCatalogue,
+                                  serverAddress, _cancelFlag.get_future());
+
+
     FILL_VIRTUAL_FUNCTION_TEMPLATE_VTABLE(getRegisterAccessor_impl);
 
 
@@ -305,6 +130,7 @@ namespace ChimeraTK {
   DoocsBackend::~DoocsBackend() {
     if (_catalogueFuture.valid()) {
       try {
+        _cancelFlag.set_value(); // cancel fill catalogue async task
         _catalogueFuture.get();
       } catch (...) {
         // prevent throwing in destructor (ub if it does);
@@ -435,3 +261,207 @@ namespace ChimeraTK {
   }
 
 } /* namespace ChimeraTK */
+
+/********************************************************************************************************************/
+
+std::unique_ptr<ctk::RegisterCatalogue> CatalogueFetcher::fetch() {
+  catalogue_ = std::make_unique<ctk::RegisterCatalogue>();
+
+  auto nSlashes = slashes(serverAddress_);
+  fillCatalogue(serverAddress_, nSlashes);
+
+    return isCancelled() ? std::make_unique<ctk::RegisterCatalogue>()
+                         : std::move(catalogue_);
+}
+
+/********************************************************************************************************************/
+
+long CatalogueFetcher::slashes(const std::string &s) {
+  long nSlashes;
+  if (!boost::starts_with(s, "doocs://")) {
+    nSlashes = std::count(s.begin(), s.end(), '/');
+  } else {
+    nSlashes = std::count(s.begin(), s.end(), '/') - 3;
+  }
+  return nSlashes;
+}
+
+/********************************************************************************************************************/
+
+void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) const {
+  // obtain list of elements within the given partial address
+  EqAdr ea;
+  EqCall eq;
+  EqData src, propList;
+  ea.adr((fixedComponents + "/*").c_str());
+  int rc = eq.names(&ea, &propList);
+  if (rc) {
+    // if the enumeration failes, maybe the server is not available (but
+    // exists in ENS) -> just ignore this address
+    return;
+  }
+
+  // iterate over list
+    for (int i = 0; i < propList.array_length() && (isCancelled() == false); ++i) {
+    // obtain the name of the element
+    char c[255];
+    propList.get_string_arg(i, c, 255);
+    std::string name = c;
+    name = name.substr(0, name.find_first_of(" ")); // ignore comment which is following the space
+
+    // if we are not yet at the property-level, recursivly call the function
+    // again to resolve the next hierarchy level
+    if (level < 2) {
+      fillCatalogue(fixedComponents + "/" + name, level + 1);
+    } else {
+      // this is a property: create RegisterInfo entry and set its name
+      bool skipRegister = false;
+      for(uint i = 0; i < ctk::SIZE_IGNORE_PATTERNS; i++) {
+        std::string pattern = ctk::IGNORE_PATTERNS[i];
+        if(ignorePattern(name, pattern)) {
+          skipRegister = true;
+          break;
+        }
+      }
+      if(skipRegister) {
+        continue;
+      }
+      boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
+      std::string fqn = fixedComponents + "/" + name;
+      info->name = fqn.substr(std::string(serverAddress_).length());
+
+      // read property once to determine its length and data type
+      ///@todo Is there a more efficient way to do this?
+      EqData dst;
+      ea.adr(fqn.c_str()); // strip leading slash
+      rc = eq.get(&ea, &src, &dst);
+      if (rc) {
+        // if the property is not accessible, ignore it. This happens
+        // frequently e.g. for archiver-related properties
+        continue;
+      }
+
+      if(checkZmqAvailability(fixedComponents, name))
+        info->accessModeFlags.add(ctk::AccessMode::wait_for_new_data);
+
+      info->length = dst.array_length();
+      if (info->length == 0)
+        info->length = 1; // DOOCS reports 0 if not an array
+      if (dst.type() == DATA_TEXT ||
+          dst.type() == DATA_STRING || // in case of strings, DOOCS reports
+                                       // the length of the string
+          dst.type() == DATA_STRING16 || dst.type() == DATA_USTR) {
+        info->length = 1;
+        info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+            ChimeraTK::RegisterInfo::FundamentalType::string);
+      } else if (dst.type() == DATA_INT || dst.type() == DATA_A_INT ||
+                 dst.type() == DATA_A_SHORT || dst.type() == DATA_A_LONG ||
+                 dst.type() == DATA_A_BYTE ||
+                 dst.type() == DATA_IIII) { // integral data types
+        size_t digits;
+        if (dst.type() == DATA_A_SHORT) { // 16 bit signed
+          digits = 6;
+        } else if (dst.type() == DATA_A_BYTE) { // 8 bit signed
+          digits = 4;
+        } else if (dst.type() == DATA_A_LONG) { // 64 bit signed
+          digits = 20;
+        } else { // 32 bit signed
+          digits = 11;
+        }
+        if (dst.type() == DATA_IIII)
+          info->length = 4;
+
+        info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+            ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true,
+            digits);
+      }
+      else if(dst.type() == DATA_IFFF) {
+        info->name = fqn.substr(std::string(serverAddress_).length()) + "/I";
+        info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+            ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, 11); // 32 bit integer
+
+        boost::shared_ptr<DoocsBackendRegisterInfo> infoF1(new DoocsBackendRegisterInfo(*info));
+        infoF1->name = fqn.substr(std::string(serverAddress_).length()) + "/F1";
+        infoF1->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+            ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300); // float
+
+        boost::shared_ptr<DoocsBackendRegisterInfo> infoF2(new DoocsBackendRegisterInfo(*infoF1));
+        infoF2->name = fqn.substr(std::string(serverAddress_).length()) + "/F2";
+
+        boost::shared_ptr<DoocsBackendRegisterInfo> infoF3(new DoocsBackendRegisterInfo(*infoF1));
+        infoF3->name = fqn.substr(std::string(serverAddress_).length()) + "/F3";
+
+        catalogue_->addRegister(infoF1);
+        catalogue_->addRegister(infoF2);
+        catalogue_->addRegister(infoF3);
+        // the info for the integer is added below
+      }
+      else { // floating point data types: always treat like double
+        info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+            ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true,
+            320, 300);
+      }
+
+      // add info to catalogue
+      catalogue_->addRegister(info);
+    }
+  }
+}
+
+/********************************************************************************************************************/
+
+bool CatalogueFetcher::checkZmqAvailability(const std::string& fullLocationPath, const std::string& propertyName) const{
+  int rc;
+  float f1;
+  float f2;
+  char* sp;
+  time_t tm;
+  EqAdr ea;
+  EqData dat;
+  EqData dst;
+  EqCall eq;
+  int portp;
+
+  ea.adr(fullLocationPath + "/SPN");
+
+  // get channel port number
+  dat.set(1, 0.0f, 0.0f, time_t{0}, propertyName, 0);
+
+  // call get () to see whether it is supported
+  rc = eq.get(&ea, &dat, &dst);
+  if(rc) {
+    return false;
+  }
+
+  rc = dst.get_ustr(&portp, &f1, &f2, &tm, &sp, 0);
+  if(rc && !portp && !static_cast<int>(f1 + f2)) rc = 0; // not supported
+
+  if(!rc) {
+    dst.get_ustr(&portp, &f1, &f2, &tm, &sp, 0);
+    // get () not supported, call set ()
+    rc = eq.set(&ea, &dat, &dst);
+    if(rc) {
+      return false;
+    }
+  }
+
+  if(dst.type() == DATA_INT) {
+    portp = dst.get_int();
+  }
+  else {
+    dst.get_ustr(&portp, &f1, &f2, &tm, &sp, 0);
+  }
+  return portp != 0;
+}
+
+/********************************************************************************************************************/
+
+bool CatalogueFetcher::ignorePattern(std::string name, std::string pattern) const {
+  return boost::algorithm::ends_with(name, pattern);
+}
+
+/********************************************************************************************************************/
+
+
+
+/********************************************************************************************************************/

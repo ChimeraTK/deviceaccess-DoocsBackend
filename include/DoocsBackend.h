@@ -90,6 +90,7 @@ namespace ChimeraTK {
 
    private:
     mutable std::future<std::unique_ptr<RegisterCatalogue>> _catalogueFuture;
+    std::promise<void> _cancelFlag{};
   };
 
 } // namespace ChimeraTK
