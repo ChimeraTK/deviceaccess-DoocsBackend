@@ -8,8 +8,9 @@ eq_dummy::eq_dummy()
   prop_someBit("SOME_BIT", 0, &prop_someStatus.stat_, this), prop_someIntArray("SOME_INT_ARRAY", 42, this),
   prop_someShortArray("SOME_SHORT_ARRAY", 5, this), prop_someLongArray("SOME_LONG_ARRAY", 5, this),
   prop_someFloatArray("SOME_FLOAT_ARRAY", 5, this), prop_someDoubleArray("SOME_DOUBLE_ARRAY", 5, this),
-  prop_someSpectrum("SOME_SPECTRUM", 100, this), prop_someIIII("SOME_IIII", this),
-  prop_unsupportedDataType("UNSUPPORTED_DATA_TYPE", this), prop_someZMQInt("SOME_ZMQINT", this), counter(0) {}
+  prop_someSpectrum("SOME_SPECTRUM", 100, this), prop_someIIII("SOME_IIII", this), prop_someIFFF("SOME_IFFF", this),
+  prop_unsupportedDataType("UNSUPPORTED_DATA_TYPE", 640 * 460, this), prop_someZMQInt("SOME_ZMQINT", this), counter(0) {
+}
 
 eq_dummy::~eq_dummy() {}
 
@@ -22,10 +23,11 @@ void eq_dummy::init() {
   for(int i = 0; i < 42; i++) prop_someIntArray.set_value(3 * i + 120, i);
   for(int i = 0; i < 5; i++) prop_someShortArray.set_value(10 + i, i);
   for(int i = 0; i < 5; i++) prop_someLongArray.set_value(10 + i, i);
-  for(int i = 0; i < 5; i++) prop_someFloatArray.set_value((float)i / 1000., i);
-  for(int i = 0; i < 5; i++) prop_someDoubleArray.set_value((float)i / 333., i);
-  for(int i = 0; i < 100; i++) prop_someSpectrum.fill_spectrum(i, (float)i / 42.);
+  for(int i = 0; i < 5; i++) prop_someFloatArray.set_value((float)i / 1000.F, i);
+  for(int i = 0; i < 5; i++) prop_someDoubleArray.set_value((double)i / 333., i);
+  for(int i = 0; i < 100; i++) prop_someSpectrum.fill_spectrum(i, (float)i / 42.F);
   prop_someIIII.set_value(10, 11, 12, 13);
+  prop_someIFFF.set_value(10, 2.71828, 3.14159, 197.327);
   prop_someZMQInt.set_value(0);
 }
 
