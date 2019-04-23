@@ -1,0 +1,20 @@
+/**
+\mainpage ChimeraTK-DeviceAccess-DoocsBackend
+
+This library provides a ChimeraTK-DeviceAccess backend, which brings support for the DOOCS control system middleware
+client protocol.
+
+Note: This doucmentation is still incomplete.
+
+\page supported_types Supported Data Types
+
+This page lists the supported data types. The list is still incomplete.
+
+\section ifff IFFF
+IFFF data is supported with component-wise access only. Each of the four fields need to be accessed with its own scalar
+accessor. The register name is the full property name, extended by "/I", "/F1", "/F2", resp. "/F3". Example:
+- `XFEL.RF/TIMER/LLA0M/BUNCH_POSITION.1/I` - this will access the integer component of the property `XFEL.RF/TIMER/LLA0M/BUNCH_POSITION.1`
+- `XFEL.RF/TIMER/LLA0M/BUNCH_POSITION.1/F1` - this will access the first float component of the property `XFEL.RF/TIMER/LLA0M/BUNCH_POSITION.1`
+
+*/
+

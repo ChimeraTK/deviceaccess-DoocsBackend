@@ -38,8 +38,7 @@ struct DoocsLauncher {
     auto rc = std::system(command.c_str());
     (void)rc;
     // start the server
-    std::thread(eq_server,
-        boost::unit_test::framework::master_test_suite().argc,
+    std::thread(eq_server, boost::unit_test::framework::master_test_suite().argc,
         boost::unit_test::framework::master_test_suite().argv)
         .detach();
     // set CDDs for the two doocs addresses used in the test
@@ -660,6 +659,86 @@ BOOST_AUTO_TEST_CASE(testIIII) {
   acc_someArrayAsString.write();
   vals = DoocsServerTestHelper::doocsGetArray<int>("//MYDUMMY/SOME_IIII");
   for(int i = 0; i < 4; i++) BOOST_CHECK(vals[i] == 3 * i);
+
+  device.close();
+}
+
+/**********************************************************************************************************************/
+
+BOOST_AUTO_TEST_CASE(testIFFF) {
+  DoocsLauncher::launchIfNotYetLaunched();
+
+  ChimeraTK::Device device;
+  device.open(DoocsLauncher::DoocsServer1);
+
+  // read access via int/float
+  {
+    auto acc_I = device.getScalarRegisterAccessor<int>("MYDUMMY/SOME_IFFF/I");
+    auto acc_F1 = device.getScalarRegisterAccessor<float>("MYDUMMY/SOME_IFFF/F1");
+    auto acc_F2 = device.getScalarRegisterAccessor<float>("MYDUMMY/SOME_IFFF/F2");
+    auto acc_F3 = device.getScalarRegisterAccessor<float>("MYDUMMY/SOME_IFFF/F3");
+
+    acc_I.read();
+    BOOST_CHECK_EQUAL(int(acc_I), 10);
+    acc_F1.read();
+    BOOST_CHECK_CLOSE(float(acc_F1), 2.71828, 0.00001);
+    acc_F2.read();
+    BOOST_CHECK_CLOSE(float(acc_F2), 3.14159, 0.00001);
+    acc_F3.read();
+    BOOST_CHECK_CLOSE(float(acc_F3), 197.327, 0.00001);
+  }
+
+  // read access via strings
+  {
+    auto acc_I = device.getScalarRegisterAccessor<std::string>("MYDUMMY/SOME_IFFF/I");
+    auto acc_F1 = device.getScalarRegisterAccessor<std::string>("MYDUMMY/SOME_IFFF/F1");
+    auto acc_F2 = device.getScalarRegisterAccessor<std::string>("MYDUMMY/SOME_IFFF/F2");
+    auto acc_F3 = device.getScalarRegisterAccessor<std::string>("MYDUMMY/SOME_IFFF/F3");
+
+    acc_I.read();
+    BOOST_CHECK_EQUAL(std::string(acc_I), "10");
+    acc_F1.read();
+    BOOST_CHECK_CLOSE(std::stod(acc_F1), 2.71828, 0.00001);
+    acc_F2.read();
+    BOOST_CHECK_CLOSE(std::stod(acc_F2), 3.14159, 0.00001);
+    acc_F3.read();
+    BOOST_CHECK_CLOSE(std::stod(acc_F3), 197.327, 0.00001);
+  }
+
+  // write access via int/float
+  {
+    auto acc_I = device.getScalarRegisterAccessor<int>("MYDUMMY/SOME_IFFF/I");
+    auto acc_F1 = device.getScalarRegisterAccessor<float>("MYDUMMY/SOME_IFFF/F1");
+    auto acc_F2 = device.getScalarRegisterAccessor<float>("MYDUMMY/SOME_IFFF/F2");
+    auto acc_F3 = device.getScalarRegisterAccessor<float>("MYDUMMY/SOME_IFFF/F3");
+
+    acc_I = 42;
+    acc_I.write();
+
+    acc_I.read();
+    BOOST_CHECK_EQUAL(int(acc_I), 42);
+    acc_F1.read();
+    BOOST_CHECK_CLOSE(float(acc_F1), 2.71828, 0.00001);
+    acc_F2.read();
+    BOOST_CHECK_CLOSE(float(acc_F2), 3.14159, 0.00001);
+    acc_F3.read();
+    BOOST_CHECK_CLOSE(float(acc_F3), 197.327, 0.00001);
+
+    acc_F2 = 123.456;
+    acc_F2.write();
+
+    acc_F3 = -666.666;
+    acc_F3.write();
+
+    acc_I.read();
+    BOOST_CHECK_EQUAL(int(acc_I), 42);
+    acc_F1.read();
+    BOOST_CHECK_CLOSE(float(acc_F1), 2.71828, 0.00001);
+    acc_F2.read();
+    BOOST_CHECK_CLOSE(float(acc_F2), 123.456, 0.00001);
+    acc_F3.read();
+    BOOST_CHECK_CLOSE(float(acc_F3), -666.666, 0.00001);
+  }
 
   device.close();
 }

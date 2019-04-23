@@ -14,6 +14,7 @@
 #include "DoocsBackend.h"
 #include "DoocsBackendFloatRegisterAccessor.h"
 #include "DoocsBackendIIIIRegisterAccessor.h"
+#include "DoocsBackendIFFFRegisterAccessor.h"
 #include "DoocsBackendIntRegisterAccessor.h"
 #include "DoocsBackendLongRegisterAccessor.h"
 #include "DoocsBackendStringRegisterAccessor.h"
@@ -238,6 +239,35 @@ namespace ChimeraTK {
     NDRegisterAccessor<UserType>* p;
     std::string path = _serverAddress + registerPathName;
 
+    // check for additional hierarchy level, which indicates an access to a field of a complex property data type
+    bool hasExtraLevel = false;
+    if(!boost::starts_with(path, "doocs://") && !boost::starts_with(path, "epics://")) {
+      size_t nSlashes = std::count(path.begin(), path.end(), '/');
+      if(nSlashes == 4) {
+        hasExtraLevel = true;
+      }
+      else if(nSlashes < 3 || nSlashes > 4) {
+        throw ChimeraTK::logic_error(std::string("DOOCS address has an illegal format: ") + path);
+      }
+    }
+    else if(boost::starts_with(path, "doocs://")) {
+      size_t nSlashes = std::count(path.begin(), path.end(), '/');
+      // we have 3 extra slashes compared to the standard syntax without "doocs:://"
+      if(nSlashes == 4 + 3) {
+        hasExtraLevel = true;
+      }
+      else if(nSlashes < 3 + 3 || nSlashes > 4 + 3) {
+        throw ChimeraTK::logic_error(std::string("DOOCS address has an illegal format: ") + path);
+      }
+    }
+
+    // split the path into property name and field name
+    std::string field;
+    if(hasExtraLevel) {
+      field = path.substr(path.find_last_of('/') + 1);
+      path = path.substr(0, path.find_last_of('/'));
+    }
+
     // read property once
     EqAdr ea;
     EqCall eq;
@@ -245,10 +275,11 @@ namespace ChimeraTK {
     ea.adr(std::string(path).c_str());
     int rc = eq.get(&ea, &src, &dst);
     if(rc) {
-      throw ChimeraTK::runtime_error(std::string("Cannot open DOOCS property: ") + dst.get_string());
+      throw ChimeraTK::runtime_error("Cannot open DOOCS property '" + path + "': " + dst.get_string());
     }
 
     // check type and create matching accessor
+    bool extraLevelUsed = false;
     if(dst.type() == DATA_INT || dst.type() == DATA_A_INT || dst.type() == DATA_BOOL || dst.type() == DATA_A_BOOL ||
         dst.type() == DATA_A_SHORT) {
       p = new DoocsBackendIntRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
@@ -266,8 +297,19 @@ namespace ChimeraTK {
     else if(dst.type() == DATA_IIII) {
       p = new DoocsBackendIIIIRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags);
     }
+    else if(dst.type() == DATA_IFFF) {
+      extraLevelUsed = true;
+      p = new DoocsBackendIFFFRegisterAccessor<UserType>(path, field, numberOfWords, wordOffsetInRegister, flags);
+    }
     else {
-      throw ChimeraTK::logic_error("Unsupported DOOCS data type: " + std::string(dst.type_string()));
+      throw ChimeraTK::logic_error("Unsupported DOOCS data type " + std::string(dst.type_string()) + " of property '" +
+          _serverAddress + registerPathName + "'");
+    }
+
+    // if the field name has been specified but the data type does not use it, throw an exception
+    if(hasExtraLevel && !extraLevelUsed) {
+      throw ChimeraTK::logic_error("Specifiaction of field name is not supported for the DOOCS data type " +
+          std::string(dst.type_string()) + ": " + _serverAddress + registerPathName);
     }
 
     return boost::shared_ptr<NDRegisterAccessor<UserType>>(p);
