@@ -181,6 +181,27 @@ namespace ChimeraTK {
           info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
               ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, digits);
         }
+        else if(dst.type() == DATA_IFFF) {
+          info->name = fqn.substr(std::string(_serverAddress).length()) + "/I";
+          info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+              ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, 11); // 32 bit integer
+
+          boost::shared_ptr<DoocsBackendRegisterInfo> infoF1(new DoocsBackendRegisterInfo(*info));
+          infoF1->name = fqn.substr(std::string(_serverAddress).length()) + "/F1";
+          infoF1->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+              ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300); // float
+
+          boost::shared_ptr<DoocsBackendRegisterInfo> infoF2(new DoocsBackendRegisterInfo(*infoF1));
+          infoF2->name = fqn.substr(std::string(_serverAddress).length()) + "/F2";
+
+          boost::shared_ptr<DoocsBackendRegisterInfo> infoF3(new DoocsBackendRegisterInfo(*infoF1));
+          infoF3->name = fqn.substr(std::string(_serverAddress).length()) + "/F3";
+
+          _catalogue_mutable.addRegister(infoF1);
+          _catalogue_mutable.addRegister(infoF2);
+          _catalogue_mutable.addRegister(infoF3);
+          // the info for the integer is added below
+        }
         else { // floating point data types: always treat like double
           info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
               ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300);

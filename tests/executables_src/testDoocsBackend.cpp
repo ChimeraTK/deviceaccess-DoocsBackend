@@ -671,6 +671,22 @@ BOOST_AUTO_TEST_CASE(testIFFF) {
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
+  // check catalogue
+  auto catalogue = device.getRegisterCatalogue();
+  auto regI = catalogue.getRegister("MYDUMMY/SOME_IFFF/I");
+  auto regF1 = catalogue.getRegister("MYDUMMY/SOME_IFFF/F1");
+  auto regF2 = catalogue.getRegister("MYDUMMY/SOME_IFFF/F2");
+  auto regF3 = catalogue.getRegister("MYDUMMY/SOME_IFFF/F3");
+  BOOST_CHECK(regI->getDataDescriptor().isIntegral());
+  BOOST_CHECK(regI->getDataDescriptor().isSigned());
+  BOOST_CHECK(regI->getDataDescriptor().nDigits() == 11);
+  BOOST_CHECK(!regF1->getDataDescriptor().isIntegral());
+  BOOST_CHECK(regF1->getDataDescriptor().isSigned());
+  BOOST_CHECK(!regF2->getDataDescriptor().isIntegral());
+  BOOST_CHECK(regF2->getDataDescriptor().isSigned());
+  BOOST_CHECK(!regF3->getDataDescriptor().isIntegral());
+  BOOST_CHECK(regF3->getDataDescriptor().isSigned());
+
   // read access via int/float
   {
     auto acc_I = device.getScalarRegisterAccessor<int>("MYDUMMY/SOME_IFFF/I");
