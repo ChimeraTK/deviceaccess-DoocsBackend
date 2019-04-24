@@ -14,6 +14,9 @@
 
 namespace ChimeraTK {
 
+   const std::string IGNORE_PATTERNS[] = {".HIST",".FILT",".EGU",".DESC",
+    ".HSTAT", "._HIST",".LIST",".SAVE",".COMMENT",".XEGU",".POLYPARA"};
+   const size_t SIZE_IGNORE_PATTERNS = std::extent<decltype(IGNORE_PATTERNS)>::value;
   /** Backend to access DOOCS control system servers.
    *
    *  The sdm URI should look like this:
@@ -91,6 +94,8 @@ namespace ChimeraTK {
 
     template<typename UserType>
     friend class DoocsBackendRegisterAccessor;
+  private:
+    bool ignorePattern(std::string name, std::string pattern) const;
   };
 
 } // namespace ChimeraTK
