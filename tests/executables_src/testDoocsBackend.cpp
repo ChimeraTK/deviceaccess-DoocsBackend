@@ -1071,7 +1071,7 @@ BOOST_AUTO_TEST_CASE(testCatalogue) {
   BOOST_CHECK(r9->getNumberOfDimensions() == 0);
   BOOST_CHECK(not r9->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
-  auto r10 = catalogue.getRegister("MYDUMMY/SOME_ZMQINT");
+  auto r10 = catalogue2.getRegister("MYDUMMY/SOME_ZMQINT");
   BOOST_CHECK(r10->getRegisterName() == "MYDUMMY/SOME_ZMQINT");
   BOOST_CHECK(r10->getNumberOfElements() == 1);
   BOOST_CHECK(r10->getNumberOfChannels() == 1);
