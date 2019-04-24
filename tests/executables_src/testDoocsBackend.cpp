@@ -995,42 +995,49 @@ BOOST_AUTO_TEST_CASE(testCatalogue) {
   BOOST_CHECK(r1->getNumberOfElements() == 1);
   BOOST_CHECK(r1->getNumberOfChannels() == 1);
   BOOST_CHECK(r1->getNumberOfDimensions() == 0);
+  BOOST_CHECK(not r1->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
   auto r2 = catalogue.getRegister("SOME_STRING");
   BOOST_CHECK(r2->getRegisterName() == "SOME_STRING");
   BOOST_CHECK(r2->getNumberOfElements() == 1);
   BOOST_CHECK(r2->getNumberOfChannels() == 1);
   BOOST_CHECK(r2->getNumberOfDimensions() == 0);
+  BOOST_CHECK(not r2->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
   auto r3 = catalogue.getRegister("SOME_INT_ARRAY");
   BOOST_CHECK(r3->getRegisterName() == "SOME_INT_ARRAY");
   BOOST_CHECK(r3->getNumberOfElements() == 42);
   BOOST_CHECK(r3->getNumberOfChannels() == 1);
   BOOST_CHECK(r3->getNumberOfDimensions() == 1);
+  BOOST_CHECK(not r3->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
   auto r4 = catalogue.getRegister("SOME_FLOAT_ARRAY");
   BOOST_CHECK(r4->getRegisterName() == "SOME_FLOAT_ARRAY");
   BOOST_CHECK(r4->getNumberOfElements() == 5);
   BOOST_CHECK(r4->getNumberOfChannels() == 1);
   BOOST_CHECK(r4->getNumberOfDimensions() == 1);
+  BOOST_CHECK(not r4->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
   auto r5 = catalogue.getRegister("SOME_SPECTRUM");
   BOOST_CHECK(r5->getRegisterName() == "SOME_SPECTRUM");
   BOOST_CHECK(r5->getNumberOfElements() == 100);
   BOOST_CHECK(r5->getNumberOfChannels() == 1);
   BOOST_CHECK(r5->getNumberOfDimensions() == 1);
+  BOOST_CHECK(not r5->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
   auto r6 = catalogue.getRegister("SOME_ZMQINT");
   BOOST_CHECK(r6->getRegisterName() == "SOME_ZMQINT");
   BOOST_CHECK(r6->getNumberOfElements() == 1);
   BOOST_CHECK(r6->getNumberOfChannels() == 1);
   BOOST_CHECK(r6->getNumberOfDimensions() == 0);
+  BOOST_CHECK(r6->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
   auto r7 = catalogue.getRegister("SOME_IIII");
   BOOST_CHECK(r7->getRegisterName() == "SOME_IIII");
   BOOST_CHECK(r7->getNumberOfElements() == 4);
   BOOST_CHECK(r7->getNumberOfChannels() == 1);
   BOOST_CHECK(r7->getNumberOfDimensions() == 1);
+  BOOST_CHECK(not r7->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
   device.close();
 
@@ -1046,6 +1053,7 @@ BOOST_AUTO_TEST_CASE(testCatalogue) {
 
   // check for the presence of known registers
   BOOST_CHECK(catalogue2.hasRegister("MYDUMMY/SOME_INT"));
+  BOOST_CHECK(catalogue2.hasRegister("MYDUMMY/SOME_ZMQINT"));
   BOOST_CHECK(catalogue2.hasRegister("DUMMY._SVR/SVR.BPN"));
 
   // check the properties of some registers
@@ -1054,12 +1062,21 @@ BOOST_AUTO_TEST_CASE(testCatalogue) {
   BOOST_CHECK(r8->getNumberOfElements() == 1);
   BOOST_CHECK(r8->getNumberOfChannels() == 1);
   BOOST_CHECK(r8->getNumberOfDimensions() == 0);
+  BOOST_CHECK(not r8->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
   auto r9 = catalogue2.getRegister("DUMMY._SVR/SVR.BPN");
   BOOST_CHECK(r9->getRegisterName() == "DUMMY._SVR/SVR.BPN");
   BOOST_CHECK(r9->getNumberOfElements() == 1);
   BOOST_CHECK(r9->getNumberOfChannels() == 1);
   BOOST_CHECK(r9->getNumberOfDimensions() == 0);
+  BOOST_CHECK(not r9->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+
+  auto r10 = catalogue.getRegister("MYDUMMY/SOME_ZMQINT");
+  BOOST_CHECK(r10->getRegisterName() == "MYDUMMY/SOME_ZMQINT");
+  BOOST_CHECK(r10->getNumberOfElements() == 1);
+  BOOST_CHECK(r10->getNumberOfChannels() == 1);
+  BOOST_CHECK(r10->getNumberOfDimensions() == 0);
+  BOOST_CHECK(r10->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
   device.close();
 }
