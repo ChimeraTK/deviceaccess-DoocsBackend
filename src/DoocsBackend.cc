@@ -133,8 +133,7 @@ namespace ChimeraTK {
       char c[255];
       propList.get_string_arg(i, c, 255);
       std::string name = c;
-      name = name.substr(0,
-          name.find_first_of(" ")); // ignore comment which is following the space
+      name = name.substr(0, name.find_first_of(" ")); // ignore comment which is following the space
 
       // if we are not yet at the property-level, recursivly call the function
       // again to resolve the next hierarchy level
@@ -143,15 +142,15 @@ namespace ChimeraTK {
       }
       else {
         // this is a property: create RegisterInfo entry and set its name
-        bool skipRegister =false;
-        for(uint i= 0; i < SIZE_IGNORE_PATTERNS; i++){
+        bool skipRegister = false;
+        for(uint i = 0; i < SIZE_IGNORE_PATTERNS; i++) {
           std::string pattern = IGNORE_PATTERNS[i];
-          if (ignorePattern(name, pattern)){
+          if(ignorePattern(name, pattern)) {
             skipRegister = true;
             break;
           }
         }
-        if (skipRegister){
+        if(skipRegister) {
           continue;
         }
         boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
