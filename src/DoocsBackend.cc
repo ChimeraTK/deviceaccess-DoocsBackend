@@ -109,6 +109,11 @@ namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
+  bool DoocsBackend::ignorePattern(std::string name, std::string pattern) const {
+    return boost::algorithm::ends_with(name, pattern);
+  }
+
+  /********************************************************************************************************************/
   void DoocsBackend::fillCatalogue(std::string fixedComponents, long level) const {
     // obtain list of elements within the given partial address
     EqAdr ea;
@@ -138,6 +143,17 @@ namespace ChimeraTK {
       }
       else {
         // this is a property: create RegisterInfo entry and set its name
+        bool skipRegister =false;
+        for(uint i= 0; i < SIZE_IGNORE_PATTERNS; i++){
+          std::string pattern = IGNORE_PATTERNS[i];
+          if (ignorePattern(name, pattern)){
+            skipRegister = true;
+            break;
+          }
+        }
+        if (skipRegister){
+          continue;
+        }
         boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
         std::string fqn = fixedComponents + "/" + name;
         info->name = fqn.substr(std::string(_serverAddress).length());
