@@ -56,14 +56,15 @@ namespace {
     bool isWriteable() const override { return true; } /// @todo fixme: return true for read-only properties
 
     ChimeraTK::AccessModeFlags getSupportedAccessModes() const override {
-      return {};
-    } /// @todo can we determine if zeromq can be used?
+      return accessModeFlags;
+    }
 
     const ChimeraTK::RegisterInfo::DataDescriptor& getDataDescriptor() const override { return dataDescriptor; }
 
     ChimeraTK::RegisterPath name;
     unsigned int length;
     ChimeraTK::RegisterInfo::DataDescriptor dataDescriptor;
+    ChimeraTK::AccessModeFlags accessModeFlags{};
   };
 } // namespace
 
@@ -105,6 +106,52 @@ namespace ChimeraTK {
 
     // create and return the backend
     return boost::shared_ptr<DeviceBackend>(new DoocsBackend(address));
+  }
+
+  /********************************************************************************************************************/
+
+  bool DoocsBackend::checkZmqAvailability(const std::string &fullLocationPath, const std::string &propertyName) {
+    int          rc;
+    float        f1;
+    float        f2;
+    char         *sp;
+    time_t       tm;
+    EqAdr        ea;
+    EqData       dat;
+    EqData       dst;
+    EqCall       eq;
+    int          portp;
+
+    ea.adr(fullLocationPath + "/SPN");
+
+    // get channel port number
+    dat.set (1, 0.0f, 0.0f, time_t{0}, propertyName, 0);
+
+    // call get () to see whether it is supported
+    rc = eq.get (&ea, &dat, &dst);
+    if (rc) {
+      return false;
+    }
+
+    rc = dst.get_ustr(&portp, &f1, &f2, &tm, &sp, 0);
+    if (rc && !portp && !static_cast<int>(f1 + f2)) rc = 0; // not supported
+
+    if (!rc) {
+      dst.get_ustr (&portp, &f1, &f2, &tm, &sp, 0);
+      // get () not supported, call set ()
+      rc = eq.set (&ea, &dat, &dst);
+      if (rc) {
+        return false;
+      }
+    }
+
+    if (dst.type () == DATA_INT) {
+      portp = dst.get_int ();
+    } else {
+      dst.get_ustr (&portp, &f1, &f2, &tm, &sp, 0);
+    }
+
+    return portp != 0;
   }
 
   /********************************************************************************************************************/
@@ -167,6 +214,10 @@ namespace ChimeraTK {
           // e.g. for archiver-related properties
           continue;
         }
+
+        if (DoocsBackend::checkZmqAvailability(fixedComponents, name))
+          info->accessModeFlags.add(AccessMode::wait_for_new_data);
+
         info->length = dst.array_length();
         if(info->length == 0) info->length = 1;                    // DOOCS reports 0 if not an array
         if(dst.type() == DATA_TEXT || dst.type() == DATA_STRING || // in case of strings, DOOCS reports the

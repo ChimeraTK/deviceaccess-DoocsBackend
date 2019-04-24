@@ -87,6 +87,9 @@ namespace ChimeraTK {
     };
     static BackendRegisterer backendRegisterer;
 
+    /** Utility function to check if a property is published by ZMQ. */
+    static bool checkZmqAvailability(const std::string &fullLocationPath, const std::string &propertyName);
+
     /** static flag if dmsg_start() has been called already, with mutex for thread
      * safety */
     static bool dmsgStartCalled;
