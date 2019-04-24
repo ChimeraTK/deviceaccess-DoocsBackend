@@ -138,8 +138,6 @@ namespace ChimeraTK {
 
     if (!rc) {
       dst.get_ustr (&portp, &f1, &f2, &tm, &sp, 0);
-      std::cout << portp << " error " << f1 << " " << f2
-                << " " << tm << " " << sp << std::endl;
       // get () not supported, call set ()
       rc = eq.set (&ea, &dat, &dst);
       if (rc) {
