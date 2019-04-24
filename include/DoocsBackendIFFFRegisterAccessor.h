@@ -29,12 +29,21 @@ namespace ChimeraTK {
 
     void doPreWrite() override;
 
+    bool mayReplaceOther(const boost::shared_ptr<TransferElement const>& other) const override {
+      auto rhsCasted = boost::dynamic_pointer_cast<const DoocsBackendIFFFRegisterAccessor<UserType>>(other);
+      if(!rhsCasted) return false;
+      if(_path != rhsCasted->_path) return false;
+      if(field != rhsCasted->field) return false;
+      return true;
+    }
+
     enum class Field { I, F1, F2, F3 };
     Field field;
 
     using NDRegisterAccessor<UserType>::buffer_2D;
     using DoocsBackendRegisterAccessor<UserType>::src;
     using DoocsBackendRegisterAccessor<UserType>::dst;
+    using DoocsBackendRegisterAccessor<UserType>::_path;
 
     friend class DoocsBackend;
   };
