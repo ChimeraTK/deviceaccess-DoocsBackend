@@ -1,5 +1,5 @@
-#ifndef MTCA4U_DOOCS_BACKEND_REGISTER_ACCESSOR_H
-#define MTCA4U_DOOCS_BACKEND_REGISTER_ACCESSOR_H
+#ifndef CHIMERATK_DOOCS_BACKEND_REGISTER_ACCESSOR_H
+#define CHIMERATK_DOOCS_BACKEND_REGISTER_ACCESSOR_H
 #include <condition_variable>
 #include <mutex>
 #include <queue>
@@ -16,78 +16,9 @@
 
 namespace ChimeraTK {
 
-  template<typename UserType>
-  class DoocsBackendRegisterAccessor : public NDRegisterAccessor<UserType> {
+  /** This is the untemplated base class which unifies all data members not depending on the UserType. */
+  class DoocsBackendRegisterAccessorBase {
    public:
-    virtual ~DoocsBackendRegisterAccessor();
-
-    /**
-     * All implementations must call this function in their destructor. Also,
-     * implementations must call it in their constructors before throwing an
-     * exception.
-     */
-    void shutdown() {
-      if(useZMQ) {
-        dmsg_detach(&ea, tag);
-      }
-      if(readAsyncThread.joinable()) {
-        readAsyncThread.interrupt();
-        readAsyncThread.join();
-      }
-      shutdownCalled = true;
-    }
-
-    void doReadTransfer() override;
-
-    bool doReadTransferNonBlocking() override;
-
-    bool doReadTransferLatest() override;
-
-    bool doWriteTransfer(ChimeraTK::VersionNumber versionNumber = {}) override {
-      write_internal();
-      currentVersion = versionNumber;
-      return false;
-    }
-
-    void doPostRead() override { currentVersion = {}; }
-
-    AccessModeFlags getAccessModeFlags() const override {
-      if(useZMQ) return {AccessMode::wait_for_new_data};
-      return {};
-    }
-
-    TransferFuture doReadTransferAsync();
-
-    void interrupt() override {
-      try {
-        throw boost::thread_interrupted();
-      }
-      catch(boost::thread_interrupted&) {
-        notifications.push_exception(std::current_exception());
-      }
-    }
-
-    ChimeraTK::VersionNumber getVersionNumber() const override { return currentVersion; }
-
-   protected:
-    DoocsBackendRegisterAccessor(const std::string& path, size_t numberOfWords, size_t wordOffsetInRegister,
-        AccessModeFlags flags, bool allocateBuffers = true);
-
-    bool mayReplaceOther(const boost::shared_ptr<TransferElement const>& other) const override {
-      auto rhsCasted = boost::dynamic_pointer_cast<const DoocsBackendRegisterAccessor<UserType>>(other);
-      if(!rhsCasted) return false;
-      if(_path != rhsCasted->_path) return false;
-      if(nElements != rhsCasted->nElements) return false;
-      if(elementOffset != rhsCasted->elementOffset) return false;
-      return true;
-    }
-
-    bool isReadOnly() const override { return false; }
-
-    bool isReadable() const override { return true; }
-
-    bool isWriteable() const override { return true; }
-
     /// register path
     std::string _path;
 
@@ -132,16 +63,80 @@ namespace ChimeraTK {
     /// Flag whether shutdown() has been called or not
     bool shutdownCalled{false};
 
+    ChimeraTK::VersionNumber currentVersion;
+  };
+
+  /********************************************************************************************************************/
+
+  template<typename UserType>
+  class DoocsBackendRegisterAccessor : public DoocsBackendRegisterAccessorBase, public NDRegisterAccessor<UserType> {
+   public:
+    ~DoocsBackendRegisterAccessor() override;
+
+    /**
+     * All implementations must call this function in their destructor. Also,
+     * implementations must call it in their constructors before throwing an
+     * exception.
+     */
+    void shutdown() {
+      if(useZMQ) {
+        dmsg_detach(&ea, tag);
+      }
+      if(readAsyncThread.joinable()) {
+        readAsyncThread.interrupt();
+        readAsyncThread.join();
+      }
+      shutdownCalled = true;
+    }
+
+    void doReadTransfer() override;
+
+    bool doReadTransferNonBlocking() override;
+
+    bool doReadTransferLatest() override;
+
+    bool doWriteTransfer(ChimeraTK::VersionNumber versionNumber = {}) override {
+      write_internal();
+      currentVersion = versionNumber;
+      return false;
+    }
+
+    void doPostRead() override { currentVersion = {}; }
+
+    AccessModeFlags getAccessModeFlags() const override {
+      if(useZMQ) return {AccessMode::wait_for_new_data};
+      return {};
+    }
+
+    TransferFuture doReadTransferAsync() override;
+
+    void interrupt() override {
+      try {
+        throw boost::thread_interrupted();
+      }
+      catch(boost::thread_interrupted&) {
+        notifications.push_exception(std::current_exception());
+      }
+    }
+
+    ChimeraTK::VersionNumber getVersionNumber() const override { return currentVersion; }
+
+    bool isReadOnly() const override { return false; }
+
+    bool isReadable() const override { return true; }
+
+    bool isWriteable() const override { return true; }
+
     using TransferElement::activeFuture;
 
-    /// internal write from EqData src
-    void write_internal();
-
-    /// callback function for ZeroMQ
-    /// This is a static function so we can pass a plain pointer to the DOOCS
-    /// client. The first argument will contain the pointer to the object (will be
-    /// statically casted into DoocsBackendRegisterAccessor<UserType>*).
-    static void zmq_callback(void* self, EqData* data, dmsg_info_t* info);
+    bool mayReplaceOther(const boost::shared_ptr<TransferElement const>& other) const override {
+      auto rhsCasted = boost::dynamic_pointer_cast<const DoocsBackendRegisterAccessor<UserType>>(other);
+      if(!rhsCasted) return false;
+      if(_path != rhsCasted->_path) return false;
+      if(nElements != rhsCasted->nElements) return false;
+      if(elementOffset != rhsCasted->elementOffset) return false;
+      return true;
+    }
 
     std::vector<boost::shared_ptr<TransferElement>> getHardwareAccessingElements() override {
       return {boost::enable_shared_from_this<TransferElement>::shared_from_this()};
@@ -151,15 +146,33 @@ namespace ChimeraTK {
 
     void replaceTransferElement(boost::shared_ptr<TransferElement> /*newElement*/) override {} // LCOV_EXCL_LINE
 
-    ChimeraTK::VersionNumber currentVersion;
+   protected:
+    DoocsBackendRegisterAccessor(const std::string& path, size_t numberOfWords, size_t wordOffsetInRegister,
+        AccessModeFlags flags, bool allocateBuffers = true);
+
+    /// internal write from EqData src
+    void write_internal();
+
+    /// callback function for ZeroMQ
+    /// This is a static function so we can pass a plain pointer to the DOOCS
+    /// client. The first argument will contain the pointer to the object (will be
+    /// statically casted into DoocsBackendRegisterAccessor<UserType>*).
+    static void zmq_callback(void* self, EqData* data, dmsg_info_t* info);
   };
 
-  /**********************************************************************************************************************/
+  /********************************************************************************************************************/
+  /********************************************************************************************************************/
+  /** Implementations below this point                                                                               **/
+  /********************************************************************************************************************/
+  /********************************************************************************************************************/
 
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const std::string& path, size_t numberOfWords,
       size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
-  : NDRegisterAccessor<UserType>(path), _path(path), elementOffset(wordOffsetInRegister), useZMQ(false) {
+  : NDRegisterAccessor<UserType>(path) {
+    _path = path;
+    elementOffset = wordOffsetInRegister;
+    useZMQ = false;
     try {
       // check for unknown access mode flags
       flags.checkForUnknownFlags({AccessMode::wait_for_new_data});
@@ -221,10 +234,11 @@ namespace ChimeraTK {
         futureCreated = true;
 
         // subscribe to property
-        int err = dmsg_attach(&ea, &dst, (void*)this, &zmq_callback, &tag);
+        int err =
+            dmsg_attach(&ea, &dst, (void*)static_cast<DoocsBackendRegisterAccessorBase*>(this), &zmq_callback, &tag);
         if(err) {
           throw ChimeraTK::runtime_error(
-              std::string("Cannot subscribe to DOOCS property via ZeroMQ: ") + dst.get_string());
+              std::string("Cannot subscribe to DOOCS property '" + path + "' via ZeroMQ: ") + dst.get_string());
         }
         // run dmsg_start() once
         std::unique_lock<std::mutex> lck(DoocsBackend::dmsgStartCalled_mutex);
@@ -240,14 +254,14 @@ namespace ChimeraTK {
     }
   }
 
-  /**********************************************************************************************************************/
+  /********************************************************************************************************************/
 
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::~DoocsBackendRegisterAccessor() {
     assert(shutdownCalled);
   }
 
-  /**********************************************************************************************************************/
+  /********************************************************************************************************************/
 
   template<typename UserType>
   bool DoocsBackendRegisterAccessor<UserType>::doReadTransferNonBlocking() {
@@ -279,7 +293,7 @@ namespace ChimeraTK {
     }
   }
 
-  /**********************************************************************************************************************/
+  /********************************************************************************************************************/
 
   template<typename UserType>
   bool DoocsBackendRegisterAccessor<UserType>::doReadTransferLatest() {
@@ -295,7 +309,7 @@ namespace ChimeraTK {
     }
   }
 
-  /**********************************************************************************************************************/
+  /********************************************************************************************************************/
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::doReadTransfer() {
@@ -336,7 +350,7 @@ namespace ChimeraTK {
     }
   }
 
-  /**********************************************************************************************************************/
+  /********************************************************************************************************************/
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::write_internal() {
@@ -348,18 +362,18 @@ namespace ChimeraTK {
     }
   }
 
-  /**********************************************************************************************************************/
+  /********************************************************************************************************************/
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::zmq_callback(void* self_, EqData* data, dmsg_info_t*) {
     // obtain pointer to accessor object
-    DoocsBackendRegisterAccessor<UserType>* self = static_cast<DoocsBackendRegisterAccessor<UserType>*>(self_);
+    DoocsBackendRegisterAccessorBase* self = static_cast<DoocsBackendRegisterAccessorBase*>(self_);
 
     // add (a copy of) EqData to queue
     self->notifications.push_overwrite(*data);
   }
 
-  /**********************************************************************************************************************/
+  /********************************************************************************************************************/
 
   template<typename UserType>
   TransferFuture DoocsBackendRegisterAccessor<UserType>::doReadTransferAsync() {
@@ -389,6 +403,9 @@ namespace ChimeraTK {
     // return the TransferFuture
     return activeFuture;
   }
+
+  /********************************************************************************************************************/
+
 } // namespace ChimeraTK
 
-#endif /* MTCA4U_DOOCS_BACKEND_REGISTER_ACCESSOR_H */
+#endif /* CHIMERATK_DOOCS_BACKEND_REGISTER_ACCESSOR_H */
