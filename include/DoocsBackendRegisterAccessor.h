@@ -14,6 +14,9 @@
 #include <eq_client.h>
 #include <eq_fct.h>
 
+#include "DoocsBackend.h"
+#include "ZMQSubscriptionManager.h"
+
 namespace ChimeraTK {
 
   /** This is the untemplated base class which unifies all data members not depending on the UserType. */
@@ -30,9 +33,6 @@ namespace ChimeraTK {
 
     /// DOOCS data structures
     EqData src, dst;
-
-    /// cached dmsg tag needed for cleanup
-    dmsg_t tag;
 
     /// flag if the DOOCS data type is an array or not
     bool isArray;
@@ -80,7 +80,7 @@ namespace ChimeraTK {
      */
     void shutdown() {
       if(useZMQ) {
-        dmsg_detach(&ea, tag);
+        DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().unsubscribe(_path, this);
       }
       if(readAsyncThread.joinable()) {
         readAsyncThread.interrupt();
@@ -152,12 +152,6 @@ namespace ChimeraTK {
 
     /// internal write from EqData src
     void write_internal();
-
-    /// callback function for ZeroMQ
-    /// This is a static function so we can pass a plain pointer to the DOOCS
-    /// client. The first argument will contain the pointer to the object (will be
-    /// statically casted into DoocsBackendRegisterAccessor<UserType>*).
-    static void zmq_callback(void* self, EqData* data, dmsg_info_t* info);
   };
 
   /********************************************************************************************************************/
@@ -233,19 +227,8 @@ namespace ChimeraTK {
         activeFuture = TransferFuture(notifications.then<void>([](EqData&) {}, std::launch::deferred), this);
         futureCreated = true;
 
-        // subscribe to property
-        int err =
-            dmsg_attach(&ea, &dst, (void*)static_cast<DoocsBackendRegisterAccessorBase*>(this), &zmq_callback, &tag);
-        if(err) {
-          throw ChimeraTK::runtime_error(
-              std::string("Cannot subscribe to DOOCS property '" + path + "' via ZeroMQ: ") + dst.get_string());
-        }
-        // run dmsg_start() once
-        std::unique_lock<std::mutex> lck(DoocsBackend::dmsgStartCalled_mutex);
-        if(!DoocsBackend::dmsgStartCalled) {
-          dmsg_start();
-          DoocsBackend::dmsgStartCalled = true;
-        }
+        // subscribe via subscription manager
+        DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().subscribe(path, this);
       }
     }
     catch(...) {
@@ -360,17 +343,6 @@ namespace ChimeraTK {
     if(rc || dst.error() != 0) {
       throw ChimeraTK::runtime_error(std::string("Cannot write to DOOCS property: ") + dst.get_string());
     }
-  }
-
-  /********************************************************************************************************************/
-
-  template<typename UserType>
-  void DoocsBackendRegisterAccessor<UserType>::zmq_callback(void* self_, EqData* data, dmsg_info_t*) {
-    // obtain pointer to accessor object
-    DoocsBackendRegisterAccessorBase* self = static_cast<DoocsBackendRegisterAccessorBase*>(self_);
-
-    // add (a copy of) EqData to queue
-    self->notifications.push_overwrite(*data);
   }
 
   /********************************************************************************************************************/

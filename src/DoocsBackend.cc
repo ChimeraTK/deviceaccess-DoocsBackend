@@ -80,11 +80,6 @@ namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
-  bool DoocsBackend::dmsgStartCalled = false;
-  std::mutex DoocsBackend::dmsgStartCalled_mutex;
-
-  /********************************************************************************************************************/
-
   DoocsBackend::DoocsBackend(const std::string& serverAddress) : _serverAddress(serverAddress) {
     FILL_VIRTUAL_FUNCTION_TEMPLATE_VTABLE(getRegisterAccessor_impl);
   }

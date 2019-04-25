@@ -31,10 +31,6 @@ namespace ChimeraTK {
 
     void doPreWrite() override;
 
-    /// fixed point converter for writing integers (used with default 32.0 signed
-    /// settings, since DOOCS knows only "int")
-    FixedPointConverter fixedPointConverter;
-
     friend class DoocsBackend;
   };
 
@@ -43,8 +39,7 @@ namespace ChimeraTK {
   template<typename UserType>
   DoocsBackendLongRegisterAccessor<UserType>::DoocsBackendLongRegisterAccessor(
       const std::string& path, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
-  : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags),
-    fixedPointConverter(path) {
+  : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags) {
     try {
       // check data type
       if(DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_LONG) {

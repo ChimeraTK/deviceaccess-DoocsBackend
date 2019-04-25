@@ -22,10 +22,8 @@ namespace ChimeraTK {
     virtual ~DoocsBackendFloatRegisterAccessor();
 
    protected:
-    DoocsBackendFloatRegisterAccessor(const std::string& path,
-        size_t numberOfWords,
-        size_t wordOffsetInRegister,
-        AccessModeFlags flags);
+    DoocsBackendFloatRegisterAccessor(
+        const std::string& path, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
 
     void doPostRead() override;
 

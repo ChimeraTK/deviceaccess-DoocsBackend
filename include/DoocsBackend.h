@@ -14,9 +14,11 @@
 
 namespace ChimeraTK {
 
-   const std::string IGNORE_PATTERNS[] = {".HIST",".FILT",".EGU",".DESC",
-    ".HSTAT", "._HIST",".LIST",".SAVE",".COMMENT",".XEGU",".POLYPARA"};
-   const size_t SIZE_IGNORE_PATTERNS = std::extent<decltype(IGNORE_PATTERNS)>::value;
+  class DoocsBackendRegisterAccessorBase;
+
+  const std::string IGNORE_PATTERNS[] = {
+      ".HIST", ".FILT", ".EGU", ".DESC", ".HSTAT", "._HIST", ".LIST", ".SAVE", ".COMMENT", ".XEGU", ".POLYPARA"};
+  const size_t SIZE_IGNORE_PATTERNS = std::extent<decltype(IGNORE_PATTERNS)>::value;
   /** Backend to access DOOCS control system servers.
    *
    *  The sdm URI should look like this:
@@ -39,9 +41,6 @@ namespace ChimeraTK {
    * waiting forever.
    */
   class DoocsBackend : public DeviceBackendImpl {
-   public:
-    virtual ~DoocsBackend() {}
-
    protected:
     DoocsBackend(const std::string& serverAddress);
 
@@ -88,16 +87,12 @@ namespace ChimeraTK {
     static BackendRegisterer backendRegisterer;
 
     /** Utility function to check if a property is published by ZMQ. */
-    static bool checkZmqAvailability(const std::string &fullLocationPath, const std::string &propertyName);
-
-    /** static flag if dmsg_start() has been called already, with mutex for thread
-     * safety */
-    static bool dmsgStartCalled;
-    static std::mutex dmsgStartCalled_mutex;
+    static bool checkZmqAvailability(const std::string& fullLocationPath, const std::string& propertyName);
 
     template<typename UserType>
     friend class DoocsBackendRegisterAccessor;
-  private:
+
+   private:
     bool ignorePattern(std::string name, std::string pattern) const;
   };
 

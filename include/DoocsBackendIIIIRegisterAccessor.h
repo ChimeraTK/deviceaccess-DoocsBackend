@@ -25,8 +25,7 @@ namespace ChimeraTK {
   void DoocsBackendIIIIRegisterAccessor<UserType>::doPreWrite() {
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
-      int32_t raw = DoocsBackendIntRegisterAccessor<UserType>::fixedPointConverter.toRaw(
-          NDRegisterAccessor<UserType>::buffer_2D[0][0]);
+      int32_t raw = userTypeToNumeric<int32_t>(NDRegisterAccessor<UserType>::buffer_2D[0][0]);
       DoocsBackendRegisterAccessor<UserType>::src.set(raw);
     }
     else {
