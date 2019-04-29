@@ -7,9 +7,9 @@
 
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
-
 #include <ChimeraTK/BackendFactory.h>
 #include <ChimeraTK/DeviceAccessVersion.h>
+#include <libxml++/libxml++.h>
 
 #include "DoocsBackend.h"
 #include "DoocsBackendFloatRegisterAccessor.h"
@@ -21,6 +21,7 @@
 
 // this is required since we link against the DOOCS libEqServer.so
 const char* object_name = "DoocsBackend";
+const char* cache_file = "catalogue_cache.xml";
 
 namespace ctk = ChimeraTK;
 
@@ -38,6 +39,9 @@ std::string backend_name = "doocs";
 }
 
 static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::future<void> cancelFlag);
+namespace Cache {
+  static std::unique_ptr<ctk::RegisterCatalogue> readCatalogue(const std::string &xmlfile);
+}
 
 /**
  *  RegisterInfo-derived class to be put into the RegisterCatalogue
@@ -46,15 +50,24 @@ namespace {
 
   class DoocsBackendRegisterInfo : public ChimeraTK::RegisterInfo {
    public:
-    ~DoocsBackendRegisterInfo() override {}
+     DoocsBackendRegisterInfo()=default;
 
-    ChimeraTK::RegisterPath getRegisterName() const override { return name; }
+     DoocsBackendRegisterInfo(const std::string &n, unsigned int len,
+                              ctk::RegisterInfo::DataDescriptor &descriptor,
+                              ctk::AccessModeFlags &flags)
+         : name(n), length(len), dataDescriptor(descriptor),
+           accessModeFlags(flags) {}
 
-    unsigned int getNumberOfElements() const override { return length; }
+     ~DoocsBackendRegisterInfo() override {}
 
-    unsigned int getNumberOfChannels() const override { return 1; }
+     ChimeraTK::RegisterPath getRegisterName() const override { return name; }
 
-    unsigned int getNumberOfDimensions() const override { return length > 1 ? 1 : 0; }
+     unsigned int getNumberOfElements() const override { return length; }
+
+     unsigned int getNumberOfChannels() const override { return 1; }
+
+     unsigned int getNumberOfDimensions() const override {
+       return length > 1 ? 1 : 0; }
 
     bool isReadable() const override { return true; }
 
@@ -462,6 +475,267 @@ bool CatalogueFetcher::ignorePattern(std::string name, std::string pattern) cons
 
 /********************************************************************************************************************/
 
+namespace Cache {
 
+  static std::unique_ptr<xmlpp::DomParser> createDomParser(const std::string &xmlfile);
+  static xmlpp::Element *getRootNode(xmlpp::DomParser &parser);
+  static unsigned int convertToUint(const std::string &s, int line);
+  static boost::shared_ptr<DoocsBackendRegisterInfo> parseRegister(xmlpp::Element const *registerNode);
+  static unsigned int parseLength(xmlpp::Element const *c);
+  static ctk::RegisterInfo::DataDescriptor parseDescriptor(xmlpp::Element const *d);
+  static ctk::RegisterInfo::FundamentalType parseType(xmlpp::Element const *c);
+  static bool isInt(xmlpp::Element const *c);
+  static bool isSigned(xmlpp::Element const *c);
+  static size_t parseDigits(xmlpp::Element const *c);
+  static size_t parseFractionalDigits(xmlpp::Element const *c);
+  static ctk::AccessModeFlags parseAccessMode(xmlpp::Element const *c);
+  static ctk::RegisterInfo::FundamentalType convertToFundamentalType(const std::string &s);
+  static ctk::DataType getDataType(const std::string &t, int line);
+  static ctk::DataType parseRawType(xmlpp::Element const *c);
+  static ctk::DataType parseTransportType(xmlpp::Element const *c);
 
-/********************************************************************************************************************/
+  /********************************************************************************************************************/
+
+  std::unique_ptr<ctk::RegisterCatalogue> readCatalogue(const std::string &xmlfile) {
+    auto catalogue = std::make_unique<ctk::RegisterCatalogue>();
+    auto parser = createDomParser(xmlfile);
+    auto registerList = getRootNode(*parser);
+
+    for (auto const node : registerList->get_children()) {
+      auto reg = dynamic_cast<const xmlpp::Element *>(node);
+      if (reg == nullptr) {
+        continue;
+      }
+      catalogue->addRegister(parseRegister(reg));
+    }
+    return catalogue;
+   }
+
+  /********************************************************************************************************************/
+
+  boost::shared_ptr<DoocsBackendRegisterInfo> parseRegister(xmlpp::Element const *registerNode) {
+    std::string name;
+    unsigned int len;
+    ctk::RegisterInfo::DataDescriptor descriptor{};
+    ctk::AccessModeFlags flags{};
+
+    for (auto &node : registerNode->get_children()) {
+      auto e = dynamic_cast<const xmlpp::Element *>(node);
+      if (e == nullptr) {
+        continue;
+      }
+      std::string nodeName = e->get_name();
+
+      if (nodeName == "name") {
+        name = e->get_child_text()->get_content();
+      } else if (nodeName == "length") {
+        len = parseLength(e);
+      } else if (nodeName == "descriptor") {
+        descriptor = parseDescriptor(e);
+      } else if (nodeName == "access_mode") {
+        flags = parseAccessMode(e);
+      }
+    }
+    return boost::make_shared<DoocsBackendRegisterInfo>(name, len, descriptor, flags);
+  }
+
+  /********************************************************************************************************************/
+
+  unsigned int parseLength(xmlpp::Element const *c) {
+    return convertToUint(c->get_child_text()->get_content(), c->get_line());
+  }
+  
+  /********************************************************************************************************************/
+
+  ctk::RegisterInfo::DataDescriptor parseDescriptor(xmlpp::Element const *d) {
+      ctk::RegisterInfo::FundamentalType t{};
+    bool isInteger{false};
+    bool sign{false};
+    size_t nDigits{0};
+    size_t nFractional{0};
+    ctk::DataType raw{ctk::DataType::none};
+    ctk::DataType transport{ctk::DataType::none};
+
+    for (auto &child : d->get_children()) {
+      auto c = dynamic_cast<const xmlpp::Element *>(child);
+      if (c == nullptr) {
+        continue;
+      }
+      auto nodeName = c->get_name();
+      if (nodeName == "type") {
+        t = parseType(c);
+      } else if (nodeName == "integral") {
+        isInteger = isInt(c);
+      } else if (nodeName == "signed") {
+        sign = isSigned(c);
+      } else if (nodeName == "digits") {
+        nDigits = parseDigits(c);
+      } else if (nodeName == "fractional_digits") {
+        nFractional = parseFractionalDigits(c);
+      } else if (nodeName == "raw_type") {
+        raw = parseRawType(c);
+      } else if (nodeName == "transport_type") {
+        transport = parseTransportType(c);
+      }
+    }
+    return ctk::RegisterInfo::DataDescriptor{ t,        isInteger,   sign,
+                                              nDigits,  nFractional, raw,
+                                              transport };
+  }
+
+  /********************************************************************************************************************/
+
+  ctk::RegisterInfo::FundamentalType parseType(xmlpp::Element const *c) {
+    std::string text = c->get_child_text()->get_content();
+    try {
+      return convertToFundamentalType(text);
+    } catch (std::out_of_range &e) {
+      throw ctk::logic_error("Unrecognized type on line " +
+                             std::to_string(c->get_line()) + ": " + e.what());
+    }
+  }
+
+  /********************************************************************************************************************/
+
+  bool isInt(xmlpp::Element const *c) {
+    std::string text = c->get_child_text()->get_content();
+    if (text == "true") {
+      return true;
+    } else if (text == "false") {
+      return false;
+    }
+    throw ctk::logic_error("Unrecognized value on line " +
+                           std::to_string(c->get_line()) +
+                           ". Expected string: true/false");
+  }
+
+  /********************************************************************************************************************/
+
+  bool isSigned(xmlpp::Element const *c) {
+    std::string text = c->get_child_text()->get_content();
+    if (text == "true") {
+      return true;
+    } else if (text == "false") {
+      return false;
+    }
+    throw ctk::logic_error("Unrecognized value on line " +
+                           std::to_string(c->get_line()) +
+                           ". Expected string: true/false");
+  }
+
+  /********************************************************************************************************************/
+
+  size_t parseDigits(xmlpp::Element const *c) {
+    return convertToUint(c->get_child_text()->get_content(), c->get_line());
+  }
+
+  /********************************************************************************************************************/
+
+  size_t parseFractionalDigits(xmlpp::Element const *c) {
+    return convertToUint(c->get_child_text()->get_content(), c->get_line());
+  }
+
+  /********************************************************************************************************************/
+
+  ctk::DataType parseRawType(xmlpp::Element const *c) {
+        return getDataType(c->get_child_text()->get_content(), c->get_line());
+  }
+
+  /********************************************************************************************************************/
+
+  ctk::DataType parseTransportType(xmlpp::Element const *c) {
+        return getDataType(c->get_child_text()->get_content(), c->get_line());
+  }
+
+  /********************************************************************************************************************/
+
+  ctk::AccessModeFlags parseAccessMode(xmlpp::Element const *c) {
+    std::string accessMode{};
+    auto t = c->get_child_text();
+    if (t != nullptr) {
+      accessMode = t->get_content();
+    }
+    return ctk::AccessModeFlags::deserialize(accessMode);
+  }
+
+  /********************************************************************************************************************/
+
+  std::unique_ptr<xmlpp::DomParser> createDomParser(const std::string& xmlfile){
+      try {
+          return std::make_unique<xmlpp::DomParser>(xmlfile);
+      } catch (xmlpp::exception &e) {
+          throw ChimeraTK::logic_error("Error opening " + xmlfile + ": " + e.what());
+      }
+  }
+
+  /********************************************************************************************************************/
+
+  xmlpp::Element* getRootNode(xmlpp::DomParser& parser){
+    auto root = parser.get_document()->get_root_node();
+    if(root->get_name() != "catalogue") {
+      ctk::logic_error("Expected tag 'catalog' got: " + root->get_name());
+    }
+    return root;
+  }
+
+  /********************************************************************************************************************/
+
+  unsigned int convertToUint(const std::string& s, int line){
+    try {
+      return std::stoul(s);
+    }
+    catch (std::invalid_argument &e) {
+      throw ctk::logic_error("Failed to parse node at line " +
+                             std::to_string(line) + ":" + e.what());
+    }
+    catch (std::out_of_range &e) {
+      throw ctk::logic_error("Failed to parse node at line " +
+                             std::to_string(line) + ":" + e.what());
+    }
+  }
+
+  /********************************************************************************************************************/
+
+  std::string typeToString(ctk::RegisterInfo::FundamentalType t) {
+    using ctk_type = ctk::RegisterInfo::FundamentalType;
+    static std::map<ctk::RegisterInfo::FundamentalType, std::string>
+        m_{{ctk_type::numeric, "numeric"},
+           {ctk_type::string, "string"},
+           {ctk_type::boolean, "boolean"},
+           {ctk_type::nodata, "nodata"},
+           {ctk_type::undefined, "undefined"}};
+    return m_.at(t);
+  }
+
+  /********************************************************************************************************************/
+
+ ctk::RegisterInfo::FundamentalType convertToFundamentalType(const std::string &s) {
+   using ctk_type = ctk::RegisterInfo::FundamentalType;
+   static std::map<std::string, ctk::RegisterInfo::FundamentalType>
+       m_{{"numeric", ctk_type::numeric},
+          {"string", ctk_type::string},
+          {"boolean", ctk_type::boolean},
+          {"nodata", ctk_type::nodata},
+          {"undefined", ctk_type::undefined}};
+   return m_.at(s);
+ }
+
+  /********************************************************************************************************************/
+
+  ctk::DataType getDataType(const std::string &t, int line) {
+    static std::unordered_map<std::string, ctk::DataType::TheType> typeMap{
+      { "int8", ctk::DataType::int8 },       { "uint8", ctk::DataType::uint8 },
+      { "int16", ctk::DataType::int16 },     { "uint16", ctk::DataType::uint16 },
+      { "int32", ctk::DataType::int32 },     { "uint32", ctk::DataType::uint32 },
+      { "int64", ctk::DataType::int64 },     { "uint64", ctk::DataType::uint64 },
+      { "float32", ctk::DataType::float32 }, { "float64", ctk::DataType::float64 }
+    };
+    try{
+      return typeMap.at(t);
+    } catch (std::out_of_range &e) {
+      throw ctk::logic_error("Unrecognized type on line " +
+                             std::to_string(line));
+    }
+  }
+} // namespace Cache
+
