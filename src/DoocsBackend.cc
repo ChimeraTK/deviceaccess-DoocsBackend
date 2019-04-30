@@ -10,6 +10,7 @@
 #include <ChimeraTK/BackendFactory.h>
 #include <ChimeraTK/DeviceAccessVersion.h>
 #include <libxml++/libxml++.h>
+#include <fstream>
 
 #include "DoocsBackend.h"
 #include "DoocsBackendFloatRegisterAccessor.h"
@@ -41,6 +42,7 @@ std::string backend_name = "doocs";
 static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::future<void> cancelFlag);
 namespace Cache {
   static std::unique_ptr<ctk::RegisterCatalogue> readCatalogue(const std::string &xmlfile);
+  static void saveCatalogue(ctk::RegisterCatalogue &c, const std::string &xmlfile);
 }
 
 /**
@@ -134,8 +136,6 @@ namespace ChimeraTK {
 
 
     FILL_VIRTUAL_FUNCTION_TEMPLATE_VTABLE(getRegisterAccessor_impl);
-
-
   }
 
   /********************************************************************************************************************/
@@ -489,10 +489,76 @@ namespace Cache {
   static size_t parseDigits(xmlpp::Element const *c);
   static size_t parseFractionalDigits(xmlpp::Element const *c);
   static ctk::AccessModeFlags parseAccessMode(xmlpp::Element const *c);
-  static ctk::RegisterInfo::FundamentalType convertToFundamentalType(const std::string &s);
-  static ctk::DataType getDataType(const std::string &t, int line);
   static ctk::DataType parseRawType(xmlpp::Element const *c);
   static ctk::DataType parseTransportType(xmlpp::Element const *c);
+  static void addRegInfoXmlNode(DoocsBackendRegisterInfo &r, xmlpp::Node *rootNode);
+  static void addDescriptorTagToXmlNode(ctk::RegisterInfo::DataDescriptor const &d, xmlpp::Element *registerNode);
+
+
+  /********************************************************************************************************************
+   * NOTE: Enum entries for below functions must be kept in sync with DeviceAccess changes.
+   * */
+  static std::string fundamentalTypeToString(ctk::RegisterInfo::FundamentalType t) {
+    using ctk_type = ctk::RegisterInfo::FundamentalType;
+    static std::map<ctk::RegisterInfo::FundamentalType, std::string>
+        m_{{ctk_type::numeric, "numeric"},
+           {ctk_type::string, "string"},
+           {ctk_type::boolean, "boolean"},
+           {ctk_type::nodata, "nodata"},
+           {ctk_type::undefined, "undefined"}};
+    return m_.at(t);
+  }
+
+ static ctk::RegisterInfo::FundamentalType stringToFundamentalType(const std::string &s) {
+   using ctk_type = ctk::RegisterInfo::FundamentalType;
+   static std::map<std::string, ctk::RegisterInfo::FundamentalType>
+       m_{{"numeric", ctk_type::numeric},
+          {"string", ctk_type::string},
+          {"boolean", ctk_type::boolean},
+          {"nodata", ctk_type::nodata},
+          {"undefined", ctk_type::undefined}};
+   return m_.at(s);
+ }
+
+  static std::string dataTypeToString(ctk::DataType d) {
+    static std::map<ctk::DataType::TheType, std::string> typeMapReverse{
+        {ctk::DataType::int8, "int8"},
+        {ctk::DataType::uint8, "uint8"},
+        {ctk::DataType::int16, "int16"},
+        {ctk::DataType::uint16, "uint16"},
+        {ctk::DataType::int32, "int32"},
+        {ctk::DataType::uint32, "uint32"},
+        {ctk::DataType::int64, "int64"},
+        {ctk::DataType::uint64, "uint64"},
+        {ctk::DataType::float32, "float32"},
+        {ctk::DataType::float64, "float64"},
+        {ctk::DataType::string, "string"},
+        {ctk::DataType::none, "none"},
+    };
+    return typeMapReverse.at(d);
+  }
+
+  static ctk::DataType stringToDataType(const std::string &t, int line) {
+    static std::map<std::string, ctk::DataType::TheType> typeMap{
+        {"int8", ctk::DataType::int8},
+        {"uint8", ctk::DataType::uint8},
+        {"int16", ctk::DataType::int16},
+        {"uint16", ctk::DataType::uint16},
+        {"int32", ctk::DataType::int32},
+        {"uint32", ctk::DataType::uint32},
+        {"int64", ctk::DataType::int64},
+        {"uint64", ctk::DataType::uint64},
+        {"float32", ctk::DataType::float32},
+        {"float64", ctk::DataType::float64},
+        {"string", ctk::DataType::string},
+        {"none", ctk::DataType::none}};
+    try{
+      return typeMap.at(t);
+    } catch (std::out_of_range &e) {
+      throw ctk::logic_error("Unrecognized type on line " +
+                             std::to_string(line) + ": " + e.what());
+    }
+  }
 
   /********************************************************************************************************************/
 
@@ -510,6 +576,24 @@ namespace Cache {
     }
     return catalogue;
    }
+
+  /********************************************************************************************************************/
+
+  void saveCatalogue(ctk::RegisterCatalogue &c, const std::string &xmlfile) {
+    xmlpp::Document doc;
+
+    auto rootNode = doc.create_root_node("catalogue");
+    rootNode->set_attribute("version", "1.0");
+
+    for (auto it =  c.begin(); it != c.end(); ++it){
+      auto basePtr = it.get().get();
+      auto doocsRegInfo = dynamic_cast<DoocsBackendRegisterInfo*>(basePtr);
+      if(doocsRegInfo != nullptr){
+        addRegInfoXmlNode(*doocsRegInfo, rootNode);
+      }
+    }
+    doc.write_to_file_formatted(xmlfile);
+  }
 
   /********************************************************************************************************************/
 
@@ -544,7 +628,7 @@ namespace Cache {
   unsigned int parseLength(xmlpp::Element const *c) {
     return convertToUint(c->get_child_text()->get_content(), c->get_line());
   }
-  
+
   /********************************************************************************************************************/
 
   ctk::RegisterInfo::DataDescriptor parseDescriptor(xmlpp::Element const *d) {
@@ -588,7 +672,7 @@ namespace Cache {
   ctk::RegisterInfo::FundamentalType parseType(xmlpp::Element const *c) {
     std::string text = c->get_child_text()->get_content();
     try {
-      return convertToFundamentalType(text);
+      return stringToFundamentalType(text);
     } catch (std::out_of_range &e) {
       throw ctk::logic_error("Unrecognized type on line " +
                              std::to_string(c->get_line()) + ": " + e.what());
@@ -638,13 +722,13 @@ namespace Cache {
   /********************************************************************************************************************/
 
   ctk::DataType parseRawType(xmlpp::Element const *c) {
-        return getDataType(c->get_child_text()->get_content(), c->get_line());
+        return stringToDataType(c->get_child_text()->get_content(), c->get_line());
   }
 
   /********************************************************************************************************************/
 
   ctk::DataType parseTransportType(xmlpp::Element const *c) {
-        return getDataType(c->get_child_text()->get_content(), c->get_line());
+        return stringToDataType(c->get_child_text()->get_content(), c->get_line());
   }
 
   /********************************************************************************************************************/
@@ -696,46 +780,51 @@ namespace Cache {
 
   /********************************************************************************************************************/
 
-  std::string typeToString(ctk::RegisterInfo::FundamentalType t) {
-    using ctk_type = ctk::RegisterInfo::FundamentalType;
-    static std::map<ctk::RegisterInfo::FundamentalType, std::string>
-        m_{{ctk_type::numeric, "numeric"},
-           {ctk_type::string, "string"},
-           {ctk_type::boolean, "boolean"},
-           {ctk_type::nodata, "nodata"},
-           {ctk_type::undefined, "undefined"}};
-    return m_.at(t);
-  }
+  void addDescriptorTagToXmlNode(ctk::RegisterInfo::DataDescriptor const &d,
+                        xmlpp::Element *registerNode) {
 
-  /********************************************************************************************************************/
+    auto descriptorNode = registerNode->add_child("descriptor");
 
- ctk::RegisterInfo::FundamentalType convertToFundamentalType(const std::string &s) {
-   using ctk_type = ctk::RegisterInfo::FundamentalType;
-   static std::map<std::string, ctk::RegisterInfo::FundamentalType>
-       m_{{"numeric", ctk_type::numeric},
-          {"string", ctk_type::string},
-          {"boolean", ctk_type::boolean},
-          {"nodata", ctk_type::nodata},
-          {"undefined", ctk_type::undefined}};
-   return m_.at(s);
- }
+    auto typeNode = descriptorNode->add_child("type");
+    typeNode->set_child_text(fundamentalTypeToString(d.fundamentalType()));
 
-  /********************************************************************************************************************/
+    if (d.fundamentalType() == ctk::RegisterInfo::FundamentalType::numeric) {
+      auto isIntegral = descriptorNode->add_child("integral");
+      isIntegral->set_child_text(d.isIntegral() ? "true" : "false");
 
-  ctk::DataType getDataType(const std::string &t, int line) {
-    static std::unordered_map<std::string, ctk::DataType::TheType> typeMap{
-      { "int8", ctk::DataType::int8 },       { "uint8", ctk::DataType::uint8 },
-      { "int16", ctk::DataType::int16 },     { "uint16", ctk::DataType::uint16 },
-      { "int32", ctk::DataType::int32 },     { "uint32", ctk::DataType::uint32 },
-      { "int64", ctk::DataType::int64 },     { "uint64", ctk::DataType::uint64 },
-      { "float32", ctk::DataType::float32 }, { "float64", ctk::DataType::float64 }
-    };
-    try{
-      return typeMap.at(t);
-    } catch (std::out_of_range &e) {
-      throw ctk::logic_error("Unrecognized type on line " +
-                             std::to_string(line));
+      auto isSigned = descriptorNode->add_child("signed");
+      isSigned->set_child_text(d.isSigned() ? "true" : "false");
+
+      auto digits = descriptorNode->add_child("digits");
+      digits->set_child_text(std::to_string(d.nDigits()));
+
+      if (!d.isIntegral()) {
+        auto fractionalDigits = descriptorNode->add_child("fractional_digits");
+        fractionalDigits->set_child_text(std::to_string(d.nFractionalDigits()));
+      }
     }
-  }
-} // namespace Cache
+    auto rawType = descriptorNode->add_child("raw_type");
+    rawType->set_child_text(dataTypeToString(d.rawDataType()));
 
+    auto transportType = descriptorNode->add_child("transport_type");
+    transportType->set_child_text(dataTypeToString(d.transportLayerDataType()));
+  }
+
+  /********************************************************************************************************************/
+
+  void addRegInfoXmlNode(DoocsBackendRegisterInfo &r, xmlpp::Node *rootNode) {
+    auto registerTag = rootNode->add_child("register");
+
+    auto nameTag = registerTag->add_child("name");
+    nameTag->set_child_text(static_cast<std::string>(r.name));
+
+    auto lengthTag = registerTag->add_child("length");
+    lengthTag->set_child_text(std::to_string(r.length));
+
+      addDescriptorTagToXmlNode(r.dataDescriptor, registerTag);
+
+    auto accessMode = registerTag->add_child("access_mode");
+    accessMode->set_child_text(r.accessModeFlags.serialize());
+  }
+
+} // namespace Cache
