@@ -48,7 +48,7 @@ namespace ChimeraTK {
     ~DoocsBackend() override;
 
    protected:
-    DoocsBackend(const std::string& serverAddress);
+    DoocsBackend(const std::string& serverAddress, const std::string& cacheFile = {});
 
     const RegisterCatalogue& getRegisterCatalogue() const override;
 
@@ -89,8 +89,12 @@ namespace ChimeraTK {
     friend class DoocsBackendRegisterAccessor;
 
    private:
+    std::string _cacheFile;
     mutable std::future<std::unique_ptr<RegisterCatalogue>> _catalogueFuture;
     std::promise<void> _cancelFlag{};
+
+    bool cacheFileExists();
+    bool isCachingEnabled() const;
   };
 
 } // namespace ChimeraTK

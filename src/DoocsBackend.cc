@@ -22,7 +22,6 @@
 
 // this is required since we link against the DOOCS libEqServer.so
 const char* object_name = "DoocsBackend";
-const char* cache_file = "catalogue_cache.xml";
 
 namespace ctk = ChimeraTK;
 
@@ -129,18 +128,21 @@ namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
-  DoocsBackend::DoocsBackend(const std::string& serverAddress) : _serverAddress(serverAddress) {
+  DoocsBackend::DoocsBackend(const std::string& serverAddress, const std::string& cacheFile)
+      : _serverAddress(serverAddress),_cacheFile(cacheFile) {
 
+   if (cacheFileExists() && isCachingEnabled()){
+       _catalogue_mutable = Cache::readCatalogue(_cacheFile);
+    } else {
       _catalogueFuture = std::async(std::launch::async, fetchCatalogue,
-                                  serverAddress, _cancelFlag.get_future());
-
-
+                                    serverAddress, _cancelFlag.get_future());
+    }
     FILL_VIRTUAL_FUNCTION_TEMPLATE_VTABLE(getRegisterAccessor_impl);
   }
 
   /********************************************************************************************************************/
 
-  DoocsBackend::~DoocsBackend() {
+   DoocsBackend::~DoocsBackend() {
     if (_catalogueFuture.valid()) {
       try {
         _cancelFlag.set_value(); // cancel fill catalogue async task
@@ -153,22 +155,41 @@ namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
-  boost::shared_ptr<DeviceBackend> DoocsBackend::createInstance(
-      std::string address, std::map<std::string, std::string> parameters) {
-    // if address is empty, build it from parameters (for compatibility with SDM)
-    if(address.empty()) {
-      RegisterPath serverAddress;
-      serverAddress /= parameters["facility"];
-      serverAddress /= parameters["device"];
-      serverAddress /= parameters["location"];
-      address = std::string(serverAddress).substr(1);
-    }
+  bool DoocsBackend::cacheFileExists() {
+     if (_cacheFile.empty()) {
+       return false;
+     }
+     std::ifstream f(_cacheFile.c_str());
+     return f.good();
+   }
 
-    // create and return the backend
-    return boost::shared_ptr<DeviceBackend>(new DoocsBackend(address));
-  }
+   /********************************************************************************************************************/
+
+   bool DoocsBackend::isCachingEnabled() const{
+       return !_cacheFile.empty();
+   }
 
   /********************************************************************************************************************/
+
+   boost::shared_ptr<DeviceBackend> DoocsBackend::createInstance(
+       std::string address, std::map<std::string, std::string> parameters) {
+     // if address is empty, build it from parameters (for compatibility with SDM)
+     if(address.empty()) {
+       RegisterPath serverAddress;
+       serverAddress /= parameters["facility"];
+       serverAddress /= parameters["device"];
+       serverAddress /= parameters["location"];
+       address = std::string(serverAddress).substr(1);
+     }
+     std::string cacheFile{};
+     try {
+         cacheFile = parameters.at("cacheFile");
+     } catch (std::out_of_range& ) {
+        // empty cacheFile string => no caching
+     }
+     // create and return the backend
+     return boost::shared_ptr<DeviceBackend>(new DoocsBackend(address, cacheFile));
+   }
 
   /********************************************************************************************************************/
 
@@ -181,6 +202,9 @@ namespace ChimeraTK {
   const RegisterCatalogue &DoocsBackend::getRegisterCatalogue() const {
     if (_catalogueFuture.valid()) {
       _catalogue_mutable = _catalogueFuture.get();
+      if (isCachingEnabled()) {
+        Cache::saveCatalogue(*_catalogue_mutable, _cacheFile);
+      }
     }
     return *_catalogue_mutable;
   }
@@ -813,18 +837,18 @@ namespace Cache {
   /********************************************************************************************************************/
 
   void addRegInfoXmlNode(DoocsBackendRegisterInfo &r, xmlpp::Node *rootNode) {
-    auto registerTag = rootNode->add_child("register");
+      auto registerTag = rootNode->add_child("register");
 
-    auto nameTag = registerTag->add_child("name");
-    nameTag->set_child_text(static_cast<std::string>(r.name));
+      auto nameTag = registerTag->add_child("name");
+      nameTag->set_child_text(static_cast<std::string>(r.name));
 
-    auto lengthTag = registerTag->add_child("length");
-    lengthTag->set_child_text(std::to_string(r.length));
+      auto lengthTag = registerTag->add_child("length");
+      lengthTag->set_child_text(std::to_string(r.length));
 
       addDescriptorTagToXmlNode(r.dataDescriptor, registerTag);
 
-    auto accessMode = registerTag->add_child("access_mode");
-    accessMode->set_child_text(r.accessModeFlags.serialize());
+      auto accessMode = registerTag->add_child("access_mode");
+      accessMode->set_child_text(r.accessModeFlags.serialize());
   }
 
 } // namespace Cache
