@@ -38,14 +38,13 @@ struct DoocsLauncher {
     auto rc = std::system(command.c_str());
     (void)rc;
     // start the server
-    std::thread(eq_server, boost::unit_test::framework::master_test_suite().argc,
-        boost::unit_test::framework::master_test_suite().argv)
-        .detach();
+    _thread = std::thread{eq_server, boost::unit_test::framework::master_test_suite().argc,
+        boost::unit_test::framework::master_test_suite().argv};
+
     // set CDDs for the two doocs addresses used in the test
     DoocsServer1 = "(doocs:doocs://localhost:" + rpc_no + "/F/D)";
     DoocsServer2 = "(doocs:doocs://localhost:" + rpc_no + "/F/D/MYDUMMY)";
     // wait until server has started (both the update thread and the rpc thread)
-    DoocsServerTestHelper::runUpdate();
     EqCall eq;
     EqAdr ea;
     EqData src, dst;
@@ -53,7 +52,12 @@ struct DoocsLauncher {
     while(eq.get(&ea, &src, &dst)) usleep(100000);
   }
 
-  static void launchIfNotYetLaunched() { static DoocsLauncher launcher; }
+  std::thread _thread;
+
+  ~DoocsLauncher() {
+    eq_exit();
+    _thread.join();
+  }
 
   static std::string rpc_no;
   static std::string DoocsServer1;
@@ -63,11 +67,11 @@ std::string DoocsLauncher::rpc_no;
 std::string DoocsLauncher::DoocsServer1;
 std::string DoocsLauncher::DoocsServer2;
 
+BOOST_GLOBAL_FIXTURE(DoocsLauncher);
+
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testScalarInt) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
 
   BOOST_CHECK(device.isOpened() == false);
@@ -160,8 +164,6 @@ BOOST_AUTO_TEST_CASE(testScalarInt) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testScalarFloat) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -250,8 +252,6 @@ BOOST_AUTO_TEST_CASE(testScalarFloat) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testScalarDouble) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -340,8 +340,6 @@ BOOST_AUTO_TEST_CASE(testScalarDouble) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testString) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -372,8 +370,6 @@ BOOST_AUTO_TEST_CASE(testString) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testArrayInt) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -427,8 +423,6 @@ BOOST_AUTO_TEST_CASE(testArrayInt) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testArrayShort) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -464,8 +458,6 @@ BOOST_AUTO_TEST_CASE(testArrayShort) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testArrayLong) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -501,8 +493,6 @@ BOOST_AUTO_TEST_CASE(testArrayLong) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testArrayFloat) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -537,8 +527,6 @@ BOOST_AUTO_TEST_CASE(testArrayFloat) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testArrayDouble) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -592,8 +580,6 @@ BOOST_AUTO_TEST_CASE(testArrayDouble) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testSpectrum) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -611,8 +597,6 @@ BOOST_AUTO_TEST_CASE(testSpectrum) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testIIII) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -666,8 +650,6 @@ BOOST_AUTO_TEST_CASE(testIIII) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testIFFF) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -762,8 +744,6 @@ BOOST_AUTO_TEST_CASE(testIFFF) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testBitAndStatus) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -825,8 +805,6 @@ BOOST_AUTO_TEST_CASE(testBitAndStatus) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testPartialAccess) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -936,8 +914,6 @@ BOOST_AUTO_TEST_CASE(testPartialAccess) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testExceptions) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
@@ -963,8 +939,6 @@ BOOST_AUTO_TEST_CASE(testExceptions) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testCatalogue) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer2);
 
@@ -1084,8 +1058,6 @@ BOOST_AUTO_TEST_CASE(testCatalogue) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testOther) {
-  DoocsLauncher::launchIfNotYetLaunched();
-
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
 
