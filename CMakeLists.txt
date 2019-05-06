@@ -24,6 +24,13 @@ add_dependency(doocs-server-test-helper 01.01 REQUIRED)
 
 FIND_PACKAGE(Boost COMPONENTS thread system unit_test_framework REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/include)
+FIND_PACKAGE(PkgConfig REQUIRED)
+
+set(LIBXML++_VERSION "libxml++-2.6")
+PKG_CHECK_MODULES(LibXML++ REQUIRED ${LIBXML++_VERSION})
+PKG_CHECK_MODULES(glib REQUIRED glib-2.0)
+include_directories(SYSTEM "${LibXML++_INCLUDEDIR}/${LIBXML++_VERSION}" ${glib_INCLUDE_DIRS} ${LibXML++_INCLUDE_DIRS})
+
 set(${PROJECT_NAME}_INCLUDE_DIRS ${${PROJECT_NAME}_INCLUDE_DIRS} ${CMAKE_SOURCE_DIR}/include/)
 ENABLE_TESTING()
 
@@ -69,7 +76,12 @@ add_library(${PROJECT_NAME} SHARED ${library_sources} )
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${${PROJECT_NAME}_FULL_LIBRARY_VERSION} SOVERSION ${${PROJECT_NAME}_SOVERSION})
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS "${ChimeraTK-DeviceAccess_CXX_FLAGS} ${DOOCS_CXX_FLAGS}")
 set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_FLAGS "${DOOCS_LINKER_FLAGS} ${ChimeraTK-DeviceAccess_LINKER_FLAGS}")
-target_link_libraries(${PROJECT_NAME} ${ChimeraTK-DeviceAccess_LIBRARIES} ${DOOCS_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}
+                      PUBLIC 
+                        ${ChimeraTK-DeviceAccess_LIBRARIES} 
+                        ${DOOCS_LIBRARIES} 
+                        ${LibXML++_LIBRARIES}
+                        ${glib_LIBRARIES})
 
 # Enable documentation
 include(cmake/enable_doxygen_documentation.cmake)

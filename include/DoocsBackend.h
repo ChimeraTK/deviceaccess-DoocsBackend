@@ -9,6 +9,7 @@
 #define MTCA4U_DOOCS_BACKEND_H
 
 #include <mutex>
+#include <future>
 
 #include <ChimeraTK/DeviceBackendImpl.h>
 
@@ -18,7 +19,8 @@ namespace ChimeraTK {
 
   const std::string IGNORE_PATTERNS[] = {
       ".HIST", ".FILT", ".EGU", ".DESC", ".HSTAT", "._HIST", ".LIST", ".SAVE", ".COMMENT", ".XEGU", ".POLYPARA"};
-  const size_t SIZE_IGNORE_PATTERNS = std::extent<decltype(IGNORE_PATTERNS)>::value;
+   const size_t SIZE_IGNORE_PATTERNS = std::extent<decltype(IGNORE_PATTERNS)>::value;
+
   /** Backend to access DOOCS control system servers.
    *
    *  The sdm URI should look like this:
@@ -41,12 +43,12 @@ namespace ChimeraTK {
    * waiting forever.
    */
   class DoocsBackend : public DeviceBackendImpl {
+
+   public:
+    ~DoocsBackend() override;
+
    protected:
-    DoocsBackend(const std::string& serverAddress);
-
-    void fillCatalogue() const;
-
-    void fillCatalogue(std::string fixedComponents, long level) const;
+    DoocsBackend(const std::string& serverAddress, const std::string& cacheFile = {});
 
     const RegisterCatalogue& getRegisterCatalogue() const override;
 
@@ -71,13 +73,7 @@ namespace ChimeraTK {
 
     /** We need to make the catalogue mutable, since we fill it within
      * getRegisterCatalogue() */
-    mutable RegisterCatalogue _catalogue_mutable;
-
-    /** Flag whether the catalogue has already been filled */
-    mutable bool catalogueFilled{false};
-
-    /** Flag whether the catalogue has been obtained */
-    mutable bool catalogueObtained{false};
+    mutable std::unique_ptr<RegisterCatalogue> _catalogue_mutable{};
 
     /** Class to register the backend type with the factory. */
     class BackendRegisterer {
@@ -93,7 +89,12 @@ namespace ChimeraTK {
     friend class DoocsBackendRegisterAccessor;
 
    private:
-    bool ignorePattern(std::string name, std::string pattern) const;
+    std::string _cacheFile;
+    mutable std::future<std::unique_ptr<RegisterCatalogue>> _catalogueFuture;
+    std::promise<void> _cancelFlag{};
+
+    bool cacheFileExists();
+    bool isCachingEnabled() const;
   };
 
 } // namespace ChimeraTK
