@@ -26,9 +26,9 @@ using namespace ChimeraTK;
 
 extern int eq_server(int, char**);
 
-static bool file_exists(const std::string & name);
-static void createCacheFile(const std::string &ccd);
-static void deleteFile(const std::string &filename);
+static bool file_exists(const std::string& name);
+static void createCacheFile(const std::string& ccd);
+static void deleteFile(const std::string& filename);
 
 struct DoocsLauncher {
   DoocsLauncher() {
@@ -46,10 +46,9 @@ struct DoocsLauncher {
     doocsServerThread = std::thread{eq_server, boost::unit_test::framework::master_test_suite().argc,
         boost::unit_test::framework::master_test_suite().argv};
 
-
     // set CDDs for the two doocs addresses used in the test
     DoocsServer1 = "(doocs:doocs://localhost:" + rpc_no + "/F/D)";
-    DoocsServer1_cached = "(doocs:doocs://localhost:" + rpc_no + "/F/D?cacheFile=" + cacheFile1 +  ")";
+    DoocsServer1_cached = "(doocs:doocs://localhost:" + rpc_no + "/F/D?cacheFile=" + cacheFile1 + ")";
     DoocsServer2 = "(doocs:doocs://localhost:" + rpc_no + "/F/D/MYDUMMY)";
     DoocsServer2_cached = "(doocs:doocs://localhost:" + rpc_no + "/F/D/MYDUMMY?cacheFile=" + cacheFile2 + ")";
 
@@ -68,8 +67,7 @@ struct DoocsLauncher {
  */
   void eq_exit() {
     auto nativeHandle = doocsServerThread.native_handle();
-    if (nativeHandle != 0)
-      pthread_kill(nativeHandle, SIGTERM);
+    if(nativeHandle != 0) pthread_kill(nativeHandle, SIGTERM);
   }
 
   ~DoocsLauncher() {
@@ -93,8 +91,8 @@ std::string DoocsLauncher::DoocsServer1;
 std::string DoocsLauncher::DoocsServer1_cached;
 std::string DoocsLauncher::DoocsServer2;
 std::string DoocsLauncher::DoocsServer2_cached;
-std::string DoocsLauncher::cacheFile1 {"cache1.xml"};
-std::string DoocsLauncher::cacheFile2 {"cache2.xml"};
+std::string DoocsLauncher::cacheFile1{"cache1.xml"};
+std::string DoocsLauncher::cacheFile2{"cache2.xml"};
 
 BOOST_GLOBAL_FIXTURE(DoocsLauncher);
 
@@ -967,13 +965,13 @@ BOOST_AUTO_TEST_CASE(testExceptions) {
 
 /**********************************************************************************************************************/
 
-void createCacheFile(const std::string &ccd) {
+void createCacheFile(const std::string& ccd) {
   namespace ctk = ChimeraTK;
   auto d = ctk::Device(ccd);
   d.open();
   d.getRegisterCatalogue();
 }
-void deleteFile(const std::string &filename) {
+void deleteFile(const std::string& filename) {
   std::string command = "rm " + filename;
   std::system(command.c_str());
 }
@@ -992,8 +990,7 @@ BOOST_AUTO_TEST_CASE(testCatalogue) {
   catalogueList2.push_back(device.getRegisterCatalogue());
   catalogueList2.push_back(device_cached.getRegisterCatalogue());
 
-  for(auto catalogue : catalogueList2){
-
+  for(auto catalogue : catalogueList2) {
     // check number of registers, but not with the exact number, since DOOCS adds
     // some registers!
     BOOST_CHECK(catalogue.getNumberOfRegisters() > 13);
@@ -1075,41 +1072,41 @@ BOOST_AUTO_TEST_CASE(testCatalogue) {
   catalogueList1.push_back(device.getRegisterCatalogue());
   catalogueList1.push_back(device_cached.getRegisterCatalogue());
 
-  for (auto catalogue: catalogueList1){
-  // check number of registers, but not with the exact number, since DOOCS adds
-  // some registers!
-  BOOST_CHECK(catalogue.getNumberOfRegisters() > 13);
+  for(auto catalogue : catalogueList1) {
+    // check number of registers, but not with the exact number, since DOOCS adds
+    // some registers!
+    BOOST_CHECK(catalogue.getNumberOfRegisters() > 13);
 
-  // check for the presence of known registers
-  BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_INT"));
-  BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_ZMQINT"));
-  BOOST_CHECK(catalogue.hasRegister("DUMMY._SVR/SVR.BPN"));
+    // check for the presence of known registers
+    BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_INT"));
+    BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_ZMQINT"));
+    BOOST_CHECK(catalogue.hasRegister("DUMMY._SVR/SVR.BPN"));
 
-  // check the properties of some registers
-  auto r8 = catalogue.getRegister("MYDUMMY/SOME_INT");
-  BOOST_CHECK(r8->getRegisterName() == "MYDUMMY/SOME_INT");
-  BOOST_CHECK(r8->getNumberOfElements() == 1);
-  BOOST_CHECK(r8->getNumberOfChannels() == 1);
-  BOOST_CHECK(r8->getNumberOfDimensions() == 0);
-  BOOST_CHECK(not r8->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+    // check the properties of some registers
+    auto r8 = catalogue.getRegister("MYDUMMY/SOME_INT");
+    BOOST_CHECK(r8->getRegisterName() == "MYDUMMY/SOME_INT");
+    BOOST_CHECK(r8->getNumberOfElements() == 1);
+    BOOST_CHECK(r8->getNumberOfChannels() == 1);
+    BOOST_CHECK(r8->getNumberOfDimensions() == 0);
+    BOOST_CHECK(not r8->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
-  auto r9 = catalogue.getRegister("DUMMY._SVR/SVR.BPN");
-  BOOST_CHECK(r9->getRegisterName() == "DUMMY._SVR/SVR.BPN");
-  BOOST_CHECK(r9->getNumberOfElements() == 1);
-  BOOST_CHECK(r9->getNumberOfChannels() == 1);
-  BOOST_CHECK(r9->getNumberOfDimensions() == 0);
-  BOOST_CHECK(not r9->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+    auto r9 = catalogue.getRegister("DUMMY._SVR/SVR.BPN");
+    BOOST_CHECK(r9->getRegisterName() == "DUMMY._SVR/SVR.BPN");
+    BOOST_CHECK(r9->getNumberOfElements() == 1);
+    BOOST_CHECK(r9->getNumberOfChannels() == 1);
+    BOOST_CHECK(r9->getNumberOfDimensions() == 0);
+    BOOST_CHECK(not r9->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
-  auto r10 = catalogue.getRegister("MYDUMMY/SOME_ZMQINT");
-  BOOST_CHECK(r10->getRegisterName() == "MYDUMMY/SOME_ZMQINT");
-  BOOST_CHECK(r10->getNumberOfElements() == 1);
-  BOOST_CHECK(r10->getNumberOfChannels() == 1);
-  BOOST_CHECK(r10->getNumberOfDimensions() == 0);
-  BOOST_CHECK(r10->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+    auto r10 = catalogue.getRegister("MYDUMMY/SOME_ZMQINT");
+    BOOST_CHECK(r10->getRegisterName() == "MYDUMMY/SOME_ZMQINT");
+    BOOST_CHECK(r10->getNumberOfElements() == 1);
+    BOOST_CHECK(r10->getNumberOfChannels() == 1);
+    BOOST_CHECK(r10->getNumberOfDimensions() == 0);
+    BOOST_CHECK(r10->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
   }
   device.close();
   device_cached.close();
-  
+
   deleteFile(DoocsLauncher::cacheFile1);
   deleteFile(DoocsLauncher::cacheFile2);
 }
@@ -1158,12 +1155,12 @@ BOOST_AUTO_TEST_CASE(testDestruction) {
 
 /**********************************************************************************************************************/
 
-bool file_exists(const std::string & name){
+bool file_exists(const std::string& name) {
   std::ifstream f(name.c_str());
   return f.good();
 }
 
-BOOST_AUTO_TEST_CASE(testCacheFileCreation){
+BOOST_AUTO_TEST_CASE(testCacheFileCreation) {
   BOOST_CHECK(file_exists(DoocsLauncher::cacheFile1) == false);
   BOOST_CHECK(file_exists(DoocsLauncher::cacheFile2) == false);
 
