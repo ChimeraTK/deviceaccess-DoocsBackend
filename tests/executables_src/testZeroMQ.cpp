@@ -37,7 +37,7 @@ struct DoocsLauncher {
     auto rc = std::system(command.c_str());
     (void)rc;
     // start the server
-    _thread = std::thread{eq_server, boost::unit_test::framework::master_test_suite().argc,
+    doocsServerThread = std::thread{eq_server, boost::unit_test::framework::master_test_suite().argc,
         boost::unit_test::framework::master_test_suite().argv};
 
     // set CDDs for the two doocs addresses used in the test
@@ -51,13 +51,23 @@ struct DoocsLauncher {
     while(eq.get(&ea, &src, &dst)) usleep(100000);
   }
 
-  std::thread _thread;
+  /**
+ * @brief For compatibility with older DOOCS versions declare our own eq_exit
+ *
+ * Can be removed once a new doocs server version is released.
+ */
+  void eq_exit() {
+    auto nativeHandle = doocsServerThread.native_handle();
+    if (nativeHandle != 0)
+      pthread_kill(nativeHandle, SIGTERM);
+  }
 
   ~DoocsLauncher() {
     eq_exit();
-    _thread.join();
+    doocsServerThread.join();
   }
 
+  std::thread doocsServerThread;
   static std::string rpc_no;
   static std::string DoocsServer1;
   static std::string DoocsServer2;
