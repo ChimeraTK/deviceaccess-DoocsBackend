@@ -1144,7 +1144,6 @@ BOOST_AUTO_TEST_CASE(testOther) {
 /**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testDestruction) {
-  DoocsLauncher::launchIfNotYetLaunched();
   auto server = find_device("MYDUMMY");
   server->lock();
   {
@@ -1164,7 +1163,6 @@ BOOST_AUTO_TEST_CASE(testCacheFileCreation) {
   BOOST_CHECK(file_exists(DoocsLauncher::cacheFile1) == false);
   BOOST_CHECK(file_exists(DoocsLauncher::cacheFile2) == false);
 
-  DoocsLauncher::launchIfNotYetLaunched();
   auto d1 = ChimeraTK::Device(DoocsLauncher::DoocsServer1_cached);
   auto d2 = ChimeraTK::Device(DoocsLauncher::DoocsServer2_cached);
 
