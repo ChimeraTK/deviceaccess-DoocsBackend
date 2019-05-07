@@ -15,6 +15,7 @@
 #include <ChimeraTK/Device.h>
 #include <ChimeraTK/TransferGroup.h>
 #include <doocs-server-test-helper/doocsServerTestHelper.h>
+#include <doocs-server-test-helper/ThreadedDoocsServer.h>
 #include <fstream>
 
 #include <eq_client.h>
@@ -24,47 +25,29 @@ using namespace ChimeraTK;
 
 /**********************************************************************************************************************/
 
-extern int eq_server(int, char**);
-
 static bool file_exists(const std::string& name);
 static void createCacheFile(const std::string& ccd);
 static void deleteFile(const std::string& filename);
 
-struct DoocsLauncher {
-  DoocsLauncher() {
-    // choose random RPC number
-    std::random_device rd;
-    std::uniform_int_distribution<int> dist(620000000, 999999999);
-    rpc_no = std::to_string(dist(rd));
-    // update config file with the RPC number
-    std::string command = "sed -i testDoocsBackend.conf -e "
-                          "'s/^SVR.RPC_NUMBER:.*$/SVR.RPC_NUMBER: " +
-        rpc_no + "/'";
-    auto rc = std::system(command.c_str());
-    (void)rc;
-    // start the server
-    _thread = std::thread{eq_server, boost::unit_test::framework::master_test_suite().argc,
-        boost::unit_test::framework::master_test_suite().argv};
+class DoocsLauncher : public ThreadedDoocsServer {
+ public:
+  DoocsLauncher() :
+    ThreadedDoocsServer("testDoocsBackend.conf", boost::unit_test::framework::master_test_suite().argc,
+        boost::unit_test::framework::master_test_suite().argv) {
 
     // set CDDs for the two doocs addresses used in the test
-    DoocsServer1 = "(doocs:doocs://localhost:" + rpc_no + "/F/D)";
-    DoocsServer1_cached = "(doocs:doocs://localhost:" + rpc_no + "/F/D?cacheFile=" + cacheFile1 + ")";
-    DoocsServer2 = "(doocs:doocs://localhost:" + rpc_no + "/F/D/MYDUMMY)";
-    DoocsServer2_cached = "(doocs:doocs://localhost:" + rpc_no + "/F/D/MYDUMMY?cacheFile=" + cacheFile2 + ")";
+    rpc_no = rpcNo();
+    DoocsServer1 = "(doocs:doocs://localhost:" + rpcNo() + "/F/D)";
+    DoocsServer1_cached = "(doocs:doocs://localhost:" + rpcNo() + "/F/D?cacheFile=" + cacheFile1 + ")";
+    DoocsServer2 = "(doocs:doocs://localhost:" + rpcNo() + "/F/D/MYDUMMY)";
+    DoocsServer2_cached = "(doocs:doocs://localhost:" + rpcNo() + "/F/D/MYDUMMY?cacheFile=" + cacheFile2 + ")";
 
     // wait until server has started (both the update thread and the rpc thread)
     EqCall eq;
     EqAdr ea;
     EqData src, dst;
-    ea.adr("doocs://localhost:" + rpc_no + "/F/D/MYDUMMY/SOME_ZMQINT");
+    ea.adr("doocs://localhost:" + rpcNo() + "/F/D/MYDUMMY/SOME_ZMQINT");
     while(eq.get(&ea, &src, &dst)) usleep(100000);
-  }
-
-  std::thread _thread;
-
-  ~DoocsLauncher() {
-    eq_exit();
-    _thread.join();
   }
 
   static std::string rpc_no;
@@ -76,6 +59,7 @@ struct DoocsLauncher {
   static std::string DoocsServer2_cached;
   static std::string cacheFile2;
 };
+
 std::string DoocsLauncher::rpc_no;
 std::string DoocsLauncher::DoocsServer1;
 std::string DoocsLauncher::DoocsServer1_cached;
@@ -961,6 +945,7 @@ void createCacheFile(const std::string& ccd) {
   d.open();
   d.getRegisterCatalogue();
 }
+
 void deleteFile(const std::string& filename) {
   std::string command = "rm " + filename;
   if(std::system(command.c_str()) != 0){
