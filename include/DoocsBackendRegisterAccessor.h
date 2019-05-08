@@ -147,8 +147,8 @@ namespace ChimeraTK {
     void replaceTransferElement(boost::shared_ptr<TransferElement> /*newElement*/) override {} // LCOV_EXCL_LINE
 
    protected:
-    DoocsBackendRegisterAccessor(DoocsBackend* backend, const std::string& path, size_t numberOfWords,
-        size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers = true);
+    DoocsBackendRegisterAccessor(DoocsBackend* backend, const std::string& path, const std::string& registerPathName,
+        size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers = true);
 
     /// internal write from EqData src
     void write_internal();
@@ -235,7 +235,8 @@ namespace ChimeraTK {
 
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(DoocsBackend* backend, const std::string& path,
-      size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
+      const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags,
+      bool allocateBuffers)
   : NDRegisterAccessor<UserType>(path), _allocateBuffers(allocateBuffers) {
     try {
       _path = path;
@@ -256,7 +257,7 @@ namespace ChimeraTK {
 
       // if the backend has not yet been openend, obtain size of the register from catalogue
       if(allocateBuffers && !backend->isOpen()) {
-        auto reg = backend->getRegisterCatalogue().getRegister(path);
+        auto reg = backend->getRegisterCatalogue().getRegister(registerPathName);
         NDRegisterAccessor<UserType>::buffer_2D.resize(1);
         NDRegisterAccessor<UserType>::buffer_2D[0].resize(reg->getNumberOfElements());
         allocateBuffers = false;

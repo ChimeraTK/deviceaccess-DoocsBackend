@@ -22,8 +22,8 @@ namespace ChimeraTK {
     virtual ~DoocsBackendFloatRegisterAccessor();
 
    protected:
-    DoocsBackendFloatRegisterAccessor(DoocsBackend* backend, const std::string& path, size_t numberOfWords,
-        size_t wordOffsetInRegister, AccessModeFlags flags);
+    DoocsBackendFloatRegisterAccessor(DoocsBackend* backend, const std::string& path,
+        const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
 
     void doPostRead() override;
 
@@ -38,8 +38,10 @@ namespace ChimeraTK {
 
   template<typename UserType>
   DoocsBackendFloatRegisterAccessor<UserType>::DoocsBackendFloatRegisterAccessor(DoocsBackend* backend,
-      const std::string& path, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
-  : DoocsBackendRegisterAccessor<UserType>(backend, path, numberOfWords, wordOffsetInRegister, flags) {
+      const std::string& path, const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister,
+      AccessModeFlags flags)
+  : DoocsBackendRegisterAccessor<UserType>(
+        backend, path, registerPathName, numberOfWords, wordOffsetInRegister, flags) {
     try {
       // initialise fully only if backend is open
       if(backend->isOpen()) {

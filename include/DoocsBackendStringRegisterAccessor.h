@@ -22,8 +22,8 @@ namespace ChimeraTK {
     virtual ~DoocsBackendStringRegisterAccessor();
 
    protected:
-    DoocsBackendStringRegisterAccessor(DoocsBackend* backend, const std::string& path, size_t numberOfWords,
-        size_t wordOffsetInRegister, AccessModeFlags flags);
+    DoocsBackendStringRegisterAccessor(DoocsBackend* backend, const std::string& path,
+        const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
 
     void doPostRead() override;
 
@@ -38,8 +38,10 @@ namespace ChimeraTK {
 
   template<typename UserType>
   DoocsBackendStringRegisterAccessor<UserType>::DoocsBackendStringRegisterAccessor(DoocsBackend* backend,
-      const std::string& path, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
-  : DoocsBackendRegisterAccessor<UserType>(backend, path, numberOfWords, wordOffsetInRegister, flags, false) {
+      const std::string& path, const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister,
+      AccessModeFlags flags)
+  : DoocsBackendRegisterAccessor<UserType>(
+        backend, path, registerPathName, numberOfWords, wordOffsetInRegister, flags, false) {
     try {
       // set buffer size (nElements will be the number of characters, so the
       // buffer allocation in the base class would be incorrect)

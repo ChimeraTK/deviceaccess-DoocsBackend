@@ -255,24 +255,30 @@ namespace ChimeraTK {
     bool extraLevelUsed = false;
     if(dst.type() == DATA_INT || dst.type() == DATA_A_INT || dst.type() == DATA_BOOL || dst.type() == DATA_A_BOOL ||
         dst.type() == DATA_A_SHORT) {
-      p = new DoocsBackendIntRegisterAccessor<UserType>(this, path, numberOfWords, wordOffsetInRegister, flags);
+      p = new DoocsBackendIntRegisterAccessor<UserType>(
+          this, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
     else if(dst.type() == DATA_A_LONG) {
-      p = new DoocsBackendLongRegisterAccessor<UserType>(this, path, numberOfWords, wordOffsetInRegister, flags);
+      p = new DoocsBackendLongRegisterAccessor<UserType>(
+          this, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
     else if(dst.type() == DATA_FLOAT || dst.type() == DATA_A_FLOAT || dst.type() == DATA_DOUBLE ||
         dst.type() == DATA_A_DOUBLE || dst.type() == DATA_SPECTRUM) {
-      p = new DoocsBackendFloatRegisterAccessor<UserType>(this, path, numberOfWords, wordOffsetInRegister, flags);
+      p = new DoocsBackendFloatRegisterAccessor<UserType>(
+          this, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
     else if(dst.type() == DATA_TEXT || dst.type() == DATA_STRING || dst.type() == DATA_STRING16) {
-      p = new DoocsBackendStringRegisterAccessor<UserType>(this, path, numberOfWords, wordOffsetInRegister, flags);
+      p = new DoocsBackendStringRegisterAccessor<UserType>(
+          this, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
     else if(dst.type() == DATA_IIII) {
-      p = new DoocsBackendIIIIRegisterAccessor<UserType>(this, path, numberOfWords, wordOffsetInRegister, flags);
+      p = new DoocsBackendIIIIRegisterAccessor<UserType>(
+          this, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
     else if(dst.type() == DATA_IFFF) {
       extraLevelUsed = true;
-      p = new DoocsBackendIFFFRegisterAccessor<UserType>(this, path, field, numberOfWords, wordOffsetInRegister, flags);
+      p = new DoocsBackendIFFFRegisterAccessor<UserType>(
+          this, path, field, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
     else {
       throw ChimeraTK::logic_error("Unsupported DOOCS data type " + std::string(dst.type_string()) + " of property '" +
