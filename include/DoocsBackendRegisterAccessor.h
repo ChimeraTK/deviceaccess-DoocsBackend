@@ -152,6 +152,14 @@ namespace ChimeraTK {
 
     /// internal write from EqData src
     void write_internal();
+
+    /** Flag whether the initialisation has been performed already */
+    bool isInitialised{false};
+
+    /** Perform initialisation (i.e. connect to server etc.) */
+    void initialise();
+
+    bool _allocateBuffers;
   };
 
   /********************************************************************************************************************/
@@ -161,79 +169,83 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   template<typename UserType>
+  void DoocsBackendRegisterAccessor<UserType>::initialise() {
+    if(isInitialised) return;
+
+    // try to read data, to check connectivity and to obtain size of the
+    // register
+    doReadTransfer();
+
+    // obtain number of elements
+    size_t actualLength = dst.array_length();
+    if(actualLength == 0 && dst.length() == 1) {
+      actualLength = 1;
+      isArray = false;
+    }
+    else {
+      if(actualLength == 0) actualLength = dst.length();
+      isArray = true;
+    }
+    if(nElements == 0) {
+      nElements = actualLength;
+    }
+    if(nElements + elementOffset > actualLength) {
+      throw ChimeraTK::logic_error("Requested number of words exceeds the "
+                                   "length of the DOOCS property!");
+    }
+    if(nElements == actualLength && elementOffset == 0) {
+      isPartial = false;
+    }
+    else {
+      isPartial = true;
+    }
+
+    // allocate buffers
+    if(_allocateBuffers) {
+      NDRegisterAccessor<UserType>::buffer_2D.resize(1);
+      NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
+    }
+
+    // set proper type information in the source EqData
+    src.set_type(dst.type());
+    if(_allocateBuffers && dst.type() != DATA_IIII) {
+      src.length(actualLength);
+    }
+
+    // use ZeroMQ with AccessMode::wait_for_new_data
+    if(useZMQ) {
+      // create notification queue and TransferFuture
+      notifications = cppext::future_queue<EqData>(3);
+      activeFuture = TransferFuture(notifications.then<void>([](EqData&) {}, std::launch::deferred), this);
+      futureCreated = true;
+
+      // subscribe via subscription manager
+      DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().subscribe(_path, this);
+    }
+
+    isInitialised = true;
+  }
+
+  /********************************************************************************************************************/
+
+  template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const std::string& path, size_t numberOfWords,
       size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
-  : NDRegisterAccessor<UserType>(path) {
+  : NDRegisterAccessor<UserType>(path), _allocateBuffers(allocateBuffers) {
     _path = path;
     elementOffset = wordOffsetInRegister;
+    nElements = numberOfWords;
     useZMQ = false;
-    try {
-      // check for unknown access mode flags
-      flags.checkForUnknownFlags({AccessMode::wait_for_new_data});
 
-      // set address
-      ea.adr(std::string(path).c_str());
+    // check for unknown access mode flags
+    flags.checkForUnknownFlags({AccessMode::wait_for_new_data});
 
-      // try to read data, to check connectivity and to obtain size of the
-      // register
-      doReadTransfer();
+    // set address
+    ea.adr(std::string(path).c_str());
 
-      // obtain number of elements
-      size_t actualLength = dst.array_length();
-      if(actualLength == 0 && dst.length() == 1) {
-        actualLength = 1;
-        isArray = false;
-      }
-      else {
-        if(actualLength == 0) actualLength = dst.length();
-        isArray = true;
-      }
-      if(numberOfWords == 0) {
-        nElements = actualLength;
-      }
-      else {
-        nElements = numberOfWords;
-      }
-      if(nElements + elementOffset > actualLength) {
-        throw ChimeraTK::logic_error("Requested number of words exceeds the "
-                                     "length of the DOOCS property!");
-      }
-      if(nElements == actualLength && elementOffset == 0) {
-        isPartial = false;
-      }
-      else {
-        isPartial = true;
-      }
-
-      // allocate buffers
-      if(allocateBuffers) {
-        NDRegisterAccessor<UserType>::buffer_2D.resize(1);
-        NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
-      }
-
-      // set proper type information in the source EqData
-      src.set_type(dst.type());
-      if(allocateBuffers && dst.type() != DATA_IIII) {
-        src.length(actualLength);
-      }
-
-      // use ZeroMQ with AccessMode::wait_for_new_data
-      if(flags.has(AccessMode::wait_for_new_data)) {
-        // set flag
-        useZMQ = true;
-
-        // create notification queue and TransferFuture
-        notifications = cppext::future_queue<EqData>(3);
-        activeFuture = TransferFuture(notifications.then<void>([](EqData&) {}, std::launch::deferred), this);
-        futureCreated = true;
-
-        // subscribe via subscription manager
-        DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().subscribe(path, this);
-      }
-    }
-    catch(...) {
-      this->shutdown();
-      throw;
+    // use zero mq subscriptiopn?
+    if(flags.has(AccessMode::wait_for_new_data)) {
+      useZMQ = true;
     }
   }
 
@@ -248,6 +260,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   bool DoocsBackendRegisterAccessor<UserType>::doReadTransferNonBlocking() {
+    initialise();
     if(!useZMQ) {
       this->doReadTransfer();
       return true;
@@ -280,6 +293,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   bool DoocsBackendRegisterAccessor<UserType>::doReadTransferLatest() {
+    initialise();
     if(!useZMQ) {
       this->doReadTransfer();
       return true;
@@ -296,6 +310,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::doReadTransfer() {
+    initialise();
     boost::this_thread::interruption_point();
     if(!useZMQ) {
       // read data
@@ -337,6 +352,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::write_internal() {
+    initialise();
     // write data
     int rc = eq.set(&ea, &src, &dst);
     // check error
@@ -349,6 +365,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   TransferFuture DoocsBackendRegisterAccessor<UserType>::doReadTransferAsync() {
+    initialise();
     // create future_queue if not already created and continue it to enusre
     // postRead is called (in the user thread, so we use the deferred launch
     // policy)
