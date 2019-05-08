@@ -58,6 +58,11 @@ namespace ChimeraTK {
       AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(backend, path, numberOfWords, wordOffsetInRegister, flags) {
     try {
+      // initialise fully only if backend is open
+      if(backend->isOpen()) {
+        this->initialise();
+      }
+
       // number of words and offset must be at fixed values
       if(numberOfWords > 1 || wordOffsetInRegister != 0) {
         throw ChimeraTK::logic_error("Register '" + this->getName() + "' is scalar.");

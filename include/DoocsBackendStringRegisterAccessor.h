@@ -51,6 +51,11 @@ namespace ChimeraTK {
         throw ChimeraTK::logic_error("Trying to access a string DOOCS property "
                                      "with a non-string user data type.");
       }
+
+      // initialise fully only if backend is open
+      if(backend->isOpen()) {
+        this->initialise();
+      }
     }
     catch(...) {
       this->shutdown();

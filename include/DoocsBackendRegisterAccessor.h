@@ -234,7 +234,7 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(DoocsBackend* backend, const std::string& path,
+  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(DoocsBackend*, const std::string& path,
       size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
   : NDRegisterAccessor<UserType>(path), _allocateBuffers(allocateBuffers) {
     try {
@@ -252,11 +252,6 @@ namespace ChimeraTK {
       // use zero mq subscriptiopn?
       if(flags.has(AccessMode::wait_for_new_data)) {
         useZMQ = true;
-      }
-
-      // initialise fully only if backend is open
-      if(backend->isOpen()) {
-        initialise();
       }
     }
     catch(...) {

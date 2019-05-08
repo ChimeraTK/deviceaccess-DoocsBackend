@@ -41,7 +41,18 @@ namespace ChimeraTK {
   template<typename UserType>
   DoocsBackendIntRegisterAccessor<UserType>::DoocsBackendIntRegisterAccessor(DoocsBackend* backend,
       const std::string& path, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
-  : DoocsBackendRegisterAccessor<UserType>(backend, path, numberOfWords, wordOffsetInRegister, flags) {}
+  : DoocsBackendRegisterAccessor<UserType>(backend, path, numberOfWords, wordOffsetInRegister, flags) {
+    try {
+      // initialise fully only if backend is open
+      if(backend->isOpen()) {
+        this->initialise();
+      }
+    }
+    catch(...) {
+      this->shutdown();
+      throw;
+    }
+  }
 
   /**********************************************************************************************************************/
 
