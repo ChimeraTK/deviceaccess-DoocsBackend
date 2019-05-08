@@ -173,9 +173,12 @@ namespace ChimeraTK {
   void DoocsBackendRegisterAccessor<UserType>::initialise() {
     if(isInitialised) return;
 
-    // try to read data, to check connectivity and to obtain size of the
-    // register
-    doReadTransfer();
+    // try to read data, to check connectivity and to obtain size of the register
+    EqData tmp;
+    int rc = eq.get(&ea, &tmp, &dst);
+    if(rc) {
+      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
+    }
 
     // obtain number of elements
     size_t actualLength = dst.array_length();
