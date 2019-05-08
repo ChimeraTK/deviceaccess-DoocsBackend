@@ -29,6 +29,8 @@ namespace ChimeraTK {
 
     void doPreWrite() override;
 
+    void initialiseImplementation() override;
+
     friend class DoocsBackend;
   };
 
@@ -37,22 +39,21 @@ namespace ChimeraTK {
   template<typename UserType>
   DoocsBackendFloatRegisterAccessor<UserType>::DoocsBackendFloatRegisterAccessor(
       const std::string& path, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
-  : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags) {
-    try {
-      // check data type
-      if(DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_FLOAT &&
-          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_FLOAT &&
-          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_DOUBLE &&
-          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_DOUBLE &&
-          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_SPECTRUM) {
-        throw ChimeraTK::logic_error("DOOCS data type not supported by "
-                                     "DoocsBackendFloatRegisterAccessor."); // LCOV_EXCL_LINE (already
-                                                                            // prevented in the Backend)
-      }
-    }
-    catch(...) {
-      this->shutdown();
-      throw;
+  : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags) {}
+
+  /**********************************************************************************************************************/
+
+  template<typename UserType>
+  void DoocsBackendFloatRegisterAccessor<UserType>::initialiseImplementation() {
+    // check data type
+    if(DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_FLOAT &&
+        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_FLOAT &&
+        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_DOUBLE &&
+        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_DOUBLE &&
+        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_SPECTRUM) {
+      throw ChimeraTK::logic_error("DOOCS data type not supported by "
+                                   "DoocsBackendFloatRegisterAccessor."); // LCOV_EXCL_LINE (already
+                                                                          // prevented in the Backend)
     }
   }
 

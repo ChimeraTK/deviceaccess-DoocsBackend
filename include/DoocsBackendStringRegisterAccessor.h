@@ -29,6 +29,8 @@ namespace ChimeraTK {
 
     void doPreWrite() override;
 
+    void initialiseImplementation() override;
+
     friend class DoocsBackend;
   };
 
@@ -44,15 +46,6 @@ namespace ChimeraTK {
       NDRegisterAccessor<UserType>::buffer_2D.resize(1);
       NDRegisterAccessor<UserType>::buffer_2D[0].resize(1);
 
-      // check data type
-      if(DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_TEXT &&
-          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING &&
-          DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING16) {
-        throw ChimeraTK::logic_error("DOOCS data type not supported by "
-                                     "DoocsBackendStringRegisterAccessor."); // LCOV_EXCL_LINE (already
-                                                                             // prevented in the Backend)
-      }
-
       // check UserType
       if(typeid(UserType) != typeid(std::string)) {
         throw ChimeraTK::logic_error("Trying to access a string DOOCS property "
@@ -62,6 +55,20 @@ namespace ChimeraTK {
     catch(...) {
       this->shutdown();
       throw;
+    }
+  }
+
+  /**********************************************************************************************************************/
+
+  template<typename UserType>
+  void DoocsBackendStringRegisterAccessor<UserType>::initialiseImplementation() {
+    // check data type
+    if(DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_TEXT &&
+        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING &&
+        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING16) {
+      throw ChimeraTK::logic_error("DOOCS data type not supported by "
+                                   "DoocsBackendStringRegisterAccessor."); // LCOV_EXCL_LINE (already
+                                                                           // prevented in the Backend)
     }
   }
 

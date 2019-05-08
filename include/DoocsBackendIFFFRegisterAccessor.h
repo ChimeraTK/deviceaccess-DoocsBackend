@@ -37,6 +37,8 @@ namespace ChimeraTK {
       return true;
     }
 
+    void initialiseImplementation() override;
+
     enum class Field { I, F1, F2, F3 };
     Field field;
 
@@ -55,11 +57,6 @@ namespace ChimeraTK {
       const std::string& fieldName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags) {
     try {
-      // check data type
-      if(dst.type() != DATA_IFFF) {
-        throw ChimeraTK::logic_error(
-            "DOOCS data type not supported by DoocsBackendIFFFRegisterAccessor."); // LCOV_EXCL_LINE (already prevented in the Backend)
-      }
       // number of words and offset must be at fixed values
       if(numberOfWords > 1 || wordOffsetInRegister != 0) {
         throw ChimeraTK::logic_error("Register '" + this->getName() + "' is scalar.");
@@ -84,6 +81,17 @@ namespace ChimeraTK {
     catch(...) {
       this->shutdown();
       throw;
+    }
+  }
+
+  /**********************************************************************************************************************/
+
+  template<typename UserType>
+  void DoocsBackendIFFFRegisterAccessor<UserType>::initialiseImplementation() {
+    // check data type
+    if(dst.type() != DATA_IFFF) {
+      throw ChimeraTK::logic_error(
+          "DOOCS data type not supported by DoocsBackendIFFFRegisterAccessor."); // LCOV_EXCL_LINE (already prevented in the Backend)
     }
   }
 

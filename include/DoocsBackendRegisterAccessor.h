@@ -158,6 +158,7 @@ namespace ChimeraTK {
 
     /** Perform initialisation (i.e. connect to server etc.) */
     void initialise();
+    virtual void initialiseImplementation() = 0;
 
     bool _allocateBuffers;
   };
@@ -223,6 +224,7 @@ namespace ChimeraTK {
       DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().subscribe(_path, this);
     }
 
+    initialiseImplementation();
     isInitialised = true;
   }
 
