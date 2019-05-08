@@ -147,8 +147,8 @@ namespace ChimeraTK {
     void replaceTransferElement(boost::shared_ptr<TransferElement> /*newElement*/) override {} // LCOV_EXCL_LINE
 
    protected:
-    DoocsBackendRegisterAccessor(const std::string& path, size_t numberOfWords, size_t wordOffsetInRegister,
-        AccessModeFlags flags, bool allocateBuffers = true);
+    DoocsBackendRegisterAccessor(DoocsBackend* backend, const std::string& path, size_t numberOfWords,
+        size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers = true);
 
     /// internal write from EqData src
     void write_internal();
@@ -234,23 +234,34 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(const std::string& path, size_t numberOfWords,
-      size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
+  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(DoocsBackend* backend, const std::string& path,
+      size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers)
   : NDRegisterAccessor<UserType>(path), _allocateBuffers(allocateBuffers) {
-    _path = path;
-    elementOffset = wordOffsetInRegister;
-    nElements = numberOfWords;
-    useZMQ = false;
+    try {
+      _path = path;
+      elementOffset = wordOffsetInRegister;
+      nElements = numberOfWords;
+      useZMQ = false;
 
-    // check for unknown access mode flags
-    flags.checkForUnknownFlags({AccessMode::wait_for_new_data});
+      // check for unknown access mode flags
+      flags.checkForUnknownFlags({AccessMode::wait_for_new_data});
 
-    // set address
-    ea.adr(std::string(path).c_str());
+      // set address
+      ea.adr(std::string(path).c_str());
 
-    // use zero mq subscriptiopn?
-    if(flags.has(AccessMode::wait_for_new_data)) {
-      useZMQ = true;
+      // use zero mq subscriptiopn?
+      if(flags.has(AccessMode::wait_for_new_data)) {
+        useZMQ = true;
+      }
+
+      // initialise fully only if backend is open
+      if(backend->isOpen()) {
+        initialise();
+      }
+    }
+    catch(...) {
+      this->shutdown();
+      throw;
     }
   }
 

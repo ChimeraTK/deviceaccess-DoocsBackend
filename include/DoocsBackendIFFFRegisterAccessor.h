@@ -22,8 +22,8 @@ namespace ChimeraTK {
     ~DoocsBackendIFFFRegisterAccessor() override;
 
    protected:
-    DoocsBackendIFFFRegisterAccessor(const std::string& path, const std::string& field, size_t numberOfWords,
-        size_t wordOffsetInRegister, AccessModeFlags flags);
+    DoocsBackendIFFFRegisterAccessor(DoocsBackend* backend, const std::string& path, const std::string& field,
+        size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
 
     void doPostRead() override;
 
@@ -53,9 +53,10 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendIFFFRegisterAccessor<UserType>::DoocsBackendIFFFRegisterAccessor(const std::string& path,
-      const std::string& fieldName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
-  : DoocsBackendRegisterAccessor<UserType>(path, numberOfWords, wordOffsetInRegister, flags) {
+  DoocsBackendIFFFRegisterAccessor<UserType>::DoocsBackendIFFFRegisterAccessor(DoocsBackend* backend,
+      const std::string& path, const std::string& fieldName, size_t numberOfWords, size_t wordOffsetInRegister,
+      AccessModeFlags flags)
+  : DoocsBackendRegisterAccessor<UserType>(backend, path, numberOfWords, wordOffsetInRegister, flags) {
     try {
       // number of words and offset must be at fixed values
       if(numberOfWords > 1 || wordOffsetInRegister != 0) {
