@@ -22,8 +22,9 @@ namespace ChimeraTK {
     ~DoocsBackendIFFFRegisterAccessor() override;
 
    protected:
-    DoocsBackendIFFFRegisterAccessor(DoocsBackend* backend, const std::string& path, const std::string& field,
-        const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
+    DoocsBackendIFFFRegisterAccessor(boost::shared_ptr<DoocsBackend> backend, const std::string& path,
+        const std::string& field, const std::string& registerPathName, size_t numberOfWords,
+        size_t wordOffsetInRegister, AccessModeFlags flags);
 
     void doPostRead() override;
 
@@ -53,7 +54,7 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendIFFFRegisterAccessor<UserType>::DoocsBackendIFFFRegisterAccessor(DoocsBackend* backend,
+  DoocsBackendIFFFRegisterAccessor<UserType>::DoocsBackendIFFFRegisterAccessor(boost::shared_ptr<DoocsBackend> backend,
       const std::string& path, const std::string& fieldName, const std::string& registerPathName, size_t numberOfWords,
       size_t wordOffsetInRegister, AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(

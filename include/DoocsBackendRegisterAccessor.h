@@ -147,8 +147,9 @@ namespace ChimeraTK {
     void replaceTransferElement(boost::shared_ptr<TransferElement> /*newElement*/) override {} // LCOV_EXCL_LINE
 
    protected:
-    DoocsBackendRegisterAccessor(DoocsBackend* backend, const std::string& path, const std::string& registerPathName,
-        size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags, bool allocateBuffers = true);
+    DoocsBackendRegisterAccessor(boost::shared_ptr<DoocsBackend> backend, const std::string& path,
+        const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags,
+        bool allocateBuffers = true);
 
     /// internal write from EqData src
     void write_internal();
@@ -161,6 +162,8 @@ namespace ChimeraTK {
     virtual void initialiseImplementation() = 0;
 
     bool _allocateBuffers;
+
+    boost::shared_ptr<DoocsBackend> _backend;
   };
 
   /********************************************************************************************************************/
@@ -234,10 +237,10 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(DoocsBackend* backend, const std::string& path,
-      const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags,
-      bool allocateBuffers)
-  : NDRegisterAccessor<UserType>(path), _allocateBuffers(allocateBuffers) {
+  DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(boost::shared_ptr<DoocsBackend> backend,
+      const std::string& path, const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister,
+      AccessModeFlags flags, bool allocateBuffers)
+  : NDRegisterAccessor<UserType>(path), _allocateBuffers(allocateBuffers), _backend(backend) {
     try {
       _path = path;
       elementOffset = wordOffsetInRegister;
@@ -280,6 +283,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   bool DoocsBackendRegisterAccessor<UserType>::doReadTransferNonBlocking() {
+    if(!_backend->isOpen()) throw ChimeraTK::logic_error("Attept to read from closed device.");
     initialise();
     if(!useZMQ) {
       this->doReadTransfer();
@@ -313,6 +317,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   bool DoocsBackendRegisterAccessor<UserType>::doReadTransferLatest() {
+    if(!_backend->isOpen()) throw ChimeraTK::logic_error("Attept to read from closed device.");
     initialise();
     if(!useZMQ) {
       this->doReadTransfer();
@@ -330,6 +335,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::doReadTransfer() {
+    if(!_backend->isOpen()) throw ChimeraTK::logic_error("Attept to read from closed device.");
     initialise();
     boost::this_thread::interruption_point();
     if(!useZMQ) {
@@ -372,6 +378,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::write_internal() {
+    if(!_backend->isOpen()) throw ChimeraTK::logic_error("Attept to write to closed device.");
     initialise();
     // write data
     int rc = eq.set(&ea, &src, &dst);
@@ -385,6 +392,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   TransferFuture DoocsBackendRegisterAccessor<UserType>::doReadTransferAsync() {
+    if(!_backend->isOpen()) throw ChimeraTK::logic_error("Attept to read from closed device.");
     initialise();
     // create future_queue if not already created and continue it to enusre
     // postRead is called (in the user thread, so we use the deferred launch

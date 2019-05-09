@@ -54,8 +54,10 @@ namespace {
     DoocsBackendRegisterInfo() = default;
 
     DoocsBackendRegisterInfo(const std::string& n, unsigned int len, ctk::RegisterInfo::DataDescriptor& descriptor,
-        ctk::AccessModeFlags& flags)
-    : name(n), length(len), dataDescriptor(descriptor), accessModeFlags(flags) {}
+        ctk::AccessModeFlags& flags, int type)
+    : name(n), length(len), dataDescriptor(descriptor), accessModeFlags(flags), doocsTypeId(type) {}
+
+    DoocsBackendRegisterInfo(const DoocsBackendRegisterInfo& other) = default;
 
     ~DoocsBackendRegisterInfo() override {}
 
@@ -79,6 +81,7 @@ namespace {
     unsigned int length;
     ChimeraTK::RegisterInfo::DataDescriptor dataDescriptor;
     ChimeraTK::AccessModeFlags accessModeFlags{};
+    int doocsTypeId;
   };
 
 } // namespace
@@ -241,54 +244,64 @@ namespace ChimeraTK {
       path = path.substr(0, path.find_last_of('/'));
     }
 
-    // read property once
-    EqAdr ea;
-    EqCall eq;
-    EqData src, dst;
-    ea.adr(std::string(path).c_str());
-    int rc = eq.get(&ea, &src, &dst);
-    if(rc) {
-      throw ChimeraTK::runtime_error("Cannot open DOOCS property '" + path + "': " + dst.get_string());
+    // if backend is open, read property once to obtain type. otherwise use the (potentially cached) catalogue
+    int doocsTypeId = DATA_NULL;
+    if(isOpen()) {
+      EqAdr ea;
+      EqCall eq;
+      EqData src, dst;
+      ea.adr(std::string(path).c_str());
+      int rc = eq.get(&ea, &src, &dst);
+      if(rc) {
+        throw ChimeraTK::runtime_error("Cannot open DOOCS property '" + path + "': " + dst.get_string());
+      }
+      doocsTypeId = dst.type();
+    }
+    else {
+      auto reg =
+          boost::dynamic_pointer_cast<DoocsBackendRegisterInfo>(getRegisterCatalogue().getRegister(registerPathName));
+      doocsTypeId = reg->doocsTypeId;
     }
 
     // check type and create matching accessor
     bool extraLevelUsed = false;
-    if(dst.type() == DATA_INT || dst.type() == DATA_A_INT || dst.type() == DATA_BOOL || dst.type() == DATA_A_BOOL ||
-        dst.type() == DATA_A_SHORT) {
+    auto sharedThis = boost::static_pointer_cast<DoocsBackend>(shared_from_this());
+    if(doocsTypeId == DATA_INT || doocsTypeId == DATA_A_INT || doocsTypeId == DATA_BOOL || doocsTypeId == DATA_A_BOOL ||
+        doocsTypeId == DATA_A_SHORT) {
       p = new DoocsBackendIntRegisterAccessor<UserType>(
-          this, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
-    else if(dst.type() == DATA_A_LONG) {
+    else if(doocsTypeId == DATA_A_LONG) {
       p = new DoocsBackendLongRegisterAccessor<UserType>(
-          this, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
-    else if(dst.type() == DATA_FLOAT || dst.type() == DATA_A_FLOAT || dst.type() == DATA_DOUBLE ||
-        dst.type() == DATA_A_DOUBLE || dst.type() == DATA_SPECTRUM) {
+    else if(doocsTypeId == DATA_FLOAT || doocsTypeId == DATA_A_FLOAT || doocsTypeId == DATA_DOUBLE ||
+        doocsTypeId == DATA_A_DOUBLE || doocsTypeId == DATA_SPECTRUM) {
       p = new DoocsBackendFloatRegisterAccessor<UserType>(
-          this, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
-    else if(dst.type() == DATA_TEXT || dst.type() == DATA_STRING || dst.type() == DATA_STRING16) {
+    else if(doocsTypeId == DATA_TEXT || doocsTypeId == DATA_STRING || doocsTypeId == DATA_STRING16) {
       p = new DoocsBackendStringRegisterAccessor<UserType>(
-          this, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
-    else if(dst.type() == DATA_IIII) {
+    else if(doocsTypeId == DATA_IIII) {
       p = new DoocsBackendIIIIRegisterAccessor<UserType>(
-          this, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
-    else if(dst.type() == DATA_IFFF) {
+    else if(doocsTypeId == DATA_IFFF) {
       extraLevelUsed = true;
       p = new DoocsBackendIFFFRegisterAccessor<UserType>(
-          this, path, field, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+          sharedThis, path, field, registerPathName, numberOfWords, wordOffsetInRegister, flags);
     }
     else {
-      throw ChimeraTK::logic_error("Unsupported DOOCS data type " + std::string(dst.type_string()) + " of property '" +
-          _serverAddress + registerPathName + "'");
+      throw ChimeraTK::logic_error("Unsupported DOOCS data type " + std::string(EqData().type_string(doocsTypeId)) +
+          " of property '" + _serverAddress + registerPathName + "'");
     }
 
     // if the field name has been specified but the data type does not use it, throw an exception
     if(hasExtraLevel && !extraLevelUsed) {
       throw ChimeraTK::logic_error("Specifiaction of field name is not supported for the DOOCS data type " +
-          std::string(dst.type_string()) + ": " + _serverAddress + registerPathName);
+          std::string(EqData().type_string(doocsTypeId)) + ": " + _serverAddress + registerPathName);
     }
 
     return boost::shared_ptr<NDRegisterAccessor<UserType>>(p);
@@ -379,6 +392,7 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
       if(checkZmqAvailability(fixedComponents, name)) info->accessModeFlags.add(ctk::AccessMode::wait_for_new_data);
 
       info->length = dst.array_length();
+      info->doocsTypeId = dst.type();
       if(info->length == 0) info->length = 1;                    // DOOCS reports 0 if not an array
       if(dst.type() == DATA_TEXT || dst.type() == DATA_STRING || // in case of strings, DOOCS reports
                                                                  // the length of the string
@@ -499,8 +513,10 @@ namespace Cache {
   static std::unique_ptr<xmlpp::DomParser> createDomParser(const std::string& xmlfile);
   static xmlpp::Element* getRootNode(xmlpp::DomParser& parser);
   static unsigned int convertToUint(const std::string& s, int line);
+  static int convertToInt(const std::string& s, int line);
   static boost::shared_ptr<DoocsBackendRegisterInfo> parseRegister(xmlpp::Element const* registerNode);
   static unsigned int parseLength(xmlpp::Element const* c);
+  static int parseTypeId(xmlpp::Element const* c);
   static ctk::RegisterInfo::DataDescriptor parseDescriptor(xmlpp::Element const* d);
   static ctk::RegisterInfo::FundamentalType parseType(xmlpp::Element const* c);
   static bool isInt(xmlpp::Element const* c);
@@ -604,6 +620,7 @@ namespace Cache {
   boost::shared_ptr<DoocsBackendRegisterInfo> parseRegister(xmlpp::Element const* registerNode) {
     std::string name;
     unsigned int len;
+    int doocsTypeId;
     ctk::RegisterInfo::DataDescriptor descriptor{};
     ctk::AccessModeFlags flags{};
 
@@ -626,8 +643,11 @@ namespace Cache {
       else if(nodeName == "access_mode") {
         flags = parseAccessMode(e);
       }
+      else if(nodeName == "doocs_type_id") {
+        doocsTypeId = parseTypeId(e);
+      }
     }
-    return boost::make_shared<DoocsBackendRegisterInfo>(name, len, descriptor, flags);
+    return boost::make_shared<DoocsBackendRegisterInfo>(name, len, descriptor, flags, doocsTypeId);
   }
 
   /********************************************************************************************************************/
@@ -635,6 +655,10 @@ namespace Cache {
   unsigned int parseLength(xmlpp::Element const* c) {
     return convertToUint(c->get_child_text()->get_content(), c->get_line());
   }
+
+  /********************************************************************************************************************/
+
+  int parseTypeId(xmlpp::Element const* c) { return convertToInt(c->get_child_text()->get_content(), c->get_line()); }
 
   /********************************************************************************************************************/
 
@@ -787,6 +811,19 @@ namespace Cache {
       throw ctk::logic_error("Failed to parse node at line " + std::to_string(line) + ":" + e.what());
     }
   }
+  /********************************************************************************************************************/
+
+  int convertToInt(const std::string& s, int line) {
+    try {
+      return std::stol(s);
+    }
+    catch(std::invalid_argument& e) {
+      throw ctk::logic_error("Failed to parse node at line " + std::to_string(line) + ":" + e.what());
+    }
+    catch(std::out_of_range& e) {
+      throw ctk::logic_error("Failed to parse node at line " + std::to_string(line) + ":" + e.what());
+    }
+  }
 
   /********************************************************************************************************************/
 
@@ -833,6 +870,9 @@ namespace Cache {
 
     auto accessMode = registerTag->add_child("access_mode");
     accessMode->set_child_text(r.accessModeFlags.serialize());
+
+    auto typeId = registerTag->add_child("doocs_type_id");
+    typeId->set_child_text(std::to_string(r.doocsTypeId));
   }
 
 } // namespace Cache

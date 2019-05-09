@@ -22,7 +22,7 @@ namespace ChimeraTK {
     virtual ~DoocsBackendStringRegisterAccessor();
 
    protected:
-    DoocsBackendStringRegisterAccessor(DoocsBackend* backend, const std::string& path,
+    DoocsBackendStringRegisterAccessor(boost::shared_ptr<DoocsBackend> backend, const std::string& path,
         const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
 
     void doPostRead() override;
@@ -37,9 +37,9 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  DoocsBackendStringRegisterAccessor<UserType>::DoocsBackendStringRegisterAccessor(DoocsBackend* backend,
-      const std::string& path, const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister,
-      AccessModeFlags flags)
+  DoocsBackendStringRegisterAccessor<UserType>::DoocsBackendStringRegisterAccessor(
+      boost::shared_ptr<DoocsBackend> backend, const std::string& path, const std::string& registerPathName,
+      size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(
         backend, path, registerPathName, numberOfWords, wordOffsetInRegister, flags, false) {
     try {
