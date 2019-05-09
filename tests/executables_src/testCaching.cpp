@@ -33,7 +33,7 @@ void generateCacheFile() {
 
 /**********************************************************************************************************************/
 
-BOOST_AUTO_TEST_CASE(testCaching) {
+BOOST_AUTO_TEST_CASE(testCacheReading) {
   generateCacheFile();
 
   // make device pick the xml we have just created
