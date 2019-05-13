@@ -197,12 +197,10 @@ namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
-  const RegisterCatalogue& DoocsBackend::getRegisterCatalogue() const {
-    if(_catalogue_mutable != nullptr){
-      // return *_catalogue_mutable;
-    } else {
+  const RegisterCatalogue &DoocsBackend::getRegisterCatalogue() const {
+    if (_catalogue_mutable == nullptr) {
       _catalogue_mutable = _catalogueFuture.get();
-      if(isCachingEnabled()) {
+      if (isCachingEnabled()) {
         Cache::saveCatalogue(*_catalogue_mutable, _cacheFile);
       }
     }
