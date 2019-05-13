@@ -8,6 +8,13 @@
 
 static std::string cacheFile = "cache.xml";
 
+static void deleteFile(const std::string& filename) {
+  std::string command = "rm " + filename;
+  if(std::system(command.c_str()) != 0){
+    throw std::runtime_error(command + "failed");
+  }
+}
+
 /**********************************************************************************************************************/
 
 void generateCacheFile() {
@@ -44,8 +51,7 @@ BOOST_AUTO_TEST_CASE(testCacheReading) {
   BOOST_CHECK(catalogue.hasRegister("/DUMMY"));
 
   // cleanup
-  std::string command = "rm " + cacheFile;
-  std::system(command.c_str());
+  deleteFile(cacheFile);
 }
 
 /**********************************************************************************************************************/
@@ -66,8 +72,7 @@ BOOST_AUTO_TEST_CASE(testGetAccessorWhileClosed) {
   BOOST_CHECK_THROW(acc.read(), ChimeraTK::logic_error); // device closed
 
   // cleanup
-  std::string command = "rm " + cacheFile;
-  std::system(command.c_str());
+  deleteFile(cacheFile);
 }
 
 /**********************************************************************************************************************/

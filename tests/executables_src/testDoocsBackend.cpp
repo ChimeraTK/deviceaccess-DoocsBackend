@@ -973,7 +973,9 @@ void createCacheFile(const std::string& ccd) {
 }
 void deleteFile(const std::string& filename) {
   std::string command = "rm " + filename;
-  std::system(command.c_str());
+  if(std::system(command.c_str()) != 0){
+    throw std::runtime_error(command + "failed");
+  }
 }
 
 BOOST_AUTO_TEST_CASE(testCatalogue) {
