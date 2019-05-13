@@ -127,24 +127,28 @@ namespace ChimeraTK {
 
   DoocsBackend::DoocsBackend(const std::string& serverAddress, const std::string& cacheFile)
   : _serverAddress(serverAddress), _cacheFile(cacheFile) {
-    if(cacheFileExists() && isCachingEnabled()) {
+    if (cacheFileExists() && isCachingEnabled()) {
       _catalogue_mutable = Cache::readCatalogue(_cacheFile);
     }
-    else {
-      _catalogueFuture = std::async(std::launch::async, fetchCatalogue, serverAddress, _cancelFlag.get_future());
-    }
+    _catalogueFuture = std::async(std::launch::async, fetchCatalogue, serverAddress, _cancelFlag.get_future());
     FILL_VIRTUAL_FUNCTION_TEMPLATE_VTABLE(getRegisterAccessor_impl);
   }
 
   /********************************************************************************************************************/
 
   DoocsBackend::~DoocsBackend() {
-    if(_catalogueFuture.valid()) {
-      try {
-        _cancelFlag.set_value(); // cancel fill catalogue async task
-        _catalogueFuture.get();
-      }
-      catch(...) {
+    if (_catalogueFuture.valid()) {
+      try { // cache catalogue if we have the information.
+        if (_catalogueFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
+          auto catalogue = _catalogueFuture.get();
+          if (isCachingEnabled() == true) {
+            Cache::saveCatalogue(*catalogue, _cacheFile);
+          }
+        } else {
+          _cancelFlag.set_value(); // cancel fill catalogue async task
+          _catalogueFuture.get();
+        }
+      } catch (...) {
         // prevent throwing in destructor (ub if it does);
       }
     }
@@ -194,7 +198,9 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   const RegisterCatalogue& DoocsBackend::getRegisterCatalogue() const {
-    if(_catalogueFuture.valid()) {
+    if(_catalogue_mutable != nullptr){
+      // return *_catalogue_mutable;
+    } else {
       _catalogue_mutable = _catalogueFuture.get();
       if(isCachingEnabled()) {
         Cache::saveCatalogue(*_catalogue_mutable, _cacheFile);
@@ -619,8 +625,8 @@ namespace Cache {
 
   boost::shared_ptr<DoocsBackendRegisterInfo> parseRegister(xmlpp::Element const* registerNode) {
     std::string name;
-    unsigned int len;
-    int doocsTypeId;
+    unsigned int len {};
+    int doocsTypeId {};
     ctk::RegisterInfo::DataDescriptor descriptor{};
     ctk::AccessModeFlags flags{};
 

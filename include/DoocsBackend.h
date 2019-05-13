@@ -72,7 +72,7 @@ namespace ChimeraTK {
 
     /** We need to make the catalogue mutable, since we fill it within
      * getRegisterCatalogue() */
-    mutable std::unique_ptr<RegisterCatalogue> _catalogue_mutable{};
+    mutable std::unique_ptr<RegisterCatalogue> _catalogue_mutable {};
 
     /** Class to register the backend type with the factory. */
     class BackendRegisterer {

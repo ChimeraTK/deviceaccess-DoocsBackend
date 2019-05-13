@@ -979,135 +979,137 @@ void deleteFile(const std::string& filename) {
 }
 
 BOOST_AUTO_TEST_CASE(testCatalogue) {
-  createCacheFile(DoocsLauncher::DoocsServer1_cached);
-  createCacheFile(DoocsLauncher::DoocsServer2_cached);
+  {
+    createCacheFile(DoocsLauncher::DoocsServer1_cached);
+    createCacheFile(DoocsLauncher::DoocsServer2_cached);
 
-  ChimeraTK::Device device;
-  device.open(DoocsLauncher::DoocsServer2);
+    ChimeraTK::Device device;
+    device.open(DoocsLauncher::DoocsServer2);
 
-  ChimeraTK::Device device_cached;
-  device_cached.open(DoocsLauncher::DoocsServer2_cached);
+    ChimeraTK::Device device_cached;
+    device_cached.open(DoocsLauncher::DoocsServer2_cached);
 
-  std::vector<ChimeraTK::RegisterCatalogue> catalogueList2;
-  catalogueList2.push_back(device.getRegisterCatalogue());
-  catalogueList2.push_back(device_cached.getRegisterCatalogue());
+    std::vector<ChimeraTK::RegisterCatalogue> catalogueList2;
+    catalogueList2.push_back(device.getRegisterCatalogue());
+    catalogueList2.push_back(device_cached.getRegisterCatalogue());
 
-  for(auto catalogue : catalogueList2) {
-    // check number of registers, but not with the exact number, since DOOCS adds
-    // some registers!
-    BOOST_CHECK(catalogue.getNumberOfRegisters() > 13);
+    for(auto catalogue : catalogueList2) {
+      // check number of registers, but not with the exact number, since DOOCS adds
+      // some registers!
+      BOOST_CHECK(catalogue.getNumberOfRegisters() > 13);
 
-    // check for the presence of known registers
-    BOOST_CHECK(catalogue.hasRegister("SOME_INT"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_FLOAT"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_DOUBLE"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_STRING"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_STATUS"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_BIT"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_INT_ARRAY"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_SHORT_ARRAY"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_LONG_ARRAY"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_FLOAT_ARRAY"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_DOUBLE_ARRAY"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_SPECTRUM"));
-    BOOST_CHECK(catalogue.hasRegister("SOME_ZMQINT"));
+      // check for the presence of known registers
+      BOOST_CHECK(catalogue.hasRegister("SOME_INT"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_FLOAT"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_DOUBLE"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_STRING"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_STATUS"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_BIT"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_INT_ARRAY"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_SHORT_ARRAY"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_LONG_ARRAY"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_FLOAT_ARRAY"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_DOUBLE_ARRAY"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_SPECTRUM"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_ZMQINT"));
 
-    // check the properties of some registers
-    auto r1 = catalogue.getRegister("SOME_INT");
-    BOOST_CHECK(r1->getRegisterName() == "SOME_INT");
-    BOOST_CHECK(r1->getNumberOfElements() == 1);
-    BOOST_CHECK(r1->getNumberOfChannels() == 1);
-    BOOST_CHECK(r1->getNumberOfDimensions() == 0);
-    BOOST_CHECK(not r1->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+      // check the properties of some registers
+      auto r1 = catalogue.getRegister("SOME_INT");
+      BOOST_CHECK(r1->getRegisterName() == "SOME_INT");
+      BOOST_CHECK(r1->getNumberOfElements() == 1);
+      BOOST_CHECK(r1->getNumberOfChannels() == 1);
+      BOOST_CHECK(r1->getNumberOfDimensions() == 0);
+      BOOST_CHECK(not r1->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
-    auto r2 = catalogue.getRegister("SOME_STRING");
-    BOOST_CHECK(r2->getRegisterName() == "SOME_STRING");
-    BOOST_CHECK(r2->getNumberOfElements() == 1);
-    BOOST_CHECK(r2->getNumberOfChannels() == 1);
-    BOOST_CHECK(r2->getNumberOfDimensions() == 0);
-    BOOST_CHECK(not r2->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+      auto r2 = catalogue.getRegister("SOME_STRING");
+      BOOST_CHECK(r2->getRegisterName() == "SOME_STRING");
+      BOOST_CHECK(r2->getNumberOfElements() == 1);
+      BOOST_CHECK(r2->getNumberOfChannels() == 1);
+      BOOST_CHECK(r2->getNumberOfDimensions() == 0);
+      BOOST_CHECK(not r2->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
-    auto r3 = catalogue.getRegister("SOME_INT_ARRAY");
-    BOOST_CHECK(r3->getRegisterName() == "SOME_INT_ARRAY");
-    BOOST_CHECK(r3->getNumberOfElements() == 42);
-    BOOST_CHECK(r3->getNumberOfChannels() == 1);
-    BOOST_CHECK(r3->getNumberOfDimensions() == 1);
-    BOOST_CHECK(not r3->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+      auto r3 = catalogue.getRegister("SOME_INT_ARRAY");
+      BOOST_CHECK(r3->getRegisterName() == "SOME_INT_ARRAY");
+      BOOST_CHECK(r3->getNumberOfElements() == 42);
+      BOOST_CHECK(r3->getNumberOfChannels() == 1);
+      BOOST_CHECK(r3->getNumberOfDimensions() == 1);
+      BOOST_CHECK(not r3->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
-    auto r4 = catalogue.getRegister("SOME_FLOAT_ARRAY");
-    BOOST_CHECK(r4->getRegisterName() == "SOME_FLOAT_ARRAY");
-    BOOST_CHECK(r4->getNumberOfElements() == 5);
-    BOOST_CHECK(r4->getNumberOfChannels() == 1);
-    BOOST_CHECK(r4->getNumberOfDimensions() == 1);
-    BOOST_CHECK(not r4->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+      auto r4 = catalogue.getRegister("SOME_FLOAT_ARRAY");
+      BOOST_CHECK(r4->getRegisterName() == "SOME_FLOAT_ARRAY");
+      BOOST_CHECK(r4->getNumberOfElements() == 5);
+      BOOST_CHECK(r4->getNumberOfChannels() == 1);
+      BOOST_CHECK(r4->getNumberOfDimensions() == 1);
+      BOOST_CHECK(not r4->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
-    auto r5 = catalogue.getRegister("SOME_SPECTRUM");
-    BOOST_CHECK(r5->getRegisterName() == "SOME_SPECTRUM");
-    BOOST_CHECK(r5->getNumberOfElements() == 100);
-    BOOST_CHECK(r5->getNumberOfChannels() == 1);
-    BOOST_CHECK(r5->getNumberOfDimensions() == 1);
-    BOOST_CHECK(not r5->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+      auto r5 = catalogue.getRegister("SOME_SPECTRUM");
+      BOOST_CHECK(r5->getRegisterName() == "SOME_SPECTRUM");
+      BOOST_CHECK(r5->getNumberOfElements() == 100);
+      BOOST_CHECK(r5->getNumberOfChannels() == 1);
+      BOOST_CHECK(r5->getNumberOfDimensions() == 1);
+      BOOST_CHECK(not r5->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
-    auto r6 = catalogue.getRegister("SOME_ZMQINT");
-    BOOST_CHECK(r6->getRegisterName() == "SOME_ZMQINT");
-    BOOST_CHECK(r6->getNumberOfElements() == 1);
-    BOOST_CHECK(r6->getNumberOfChannels() == 1);
-    BOOST_CHECK(r6->getNumberOfDimensions() == 0);
-    BOOST_CHECK(r6->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+      auto r6 = catalogue.getRegister("SOME_ZMQINT");
+      BOOST_CHECK(r6->getRegisterName() == "SOME_ZMQINT");
+      BOOST_CHECK(r6->getNumberOfElements() == 1);
+      BOOST_CHECK(r6->getNumberOfChannels() == 1);
+      BOOST_CHECK(r6->getNumberOfDimensions() == 0);
+      BOOST_CHECK(r6->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
-    auto r7 = catalogue.getRegister("SOME_IIII");
-    BOOST_CHECK(r7->getRegisterName() == "SOME_IIII");
-    BOOST_CHECK(r7->getNumberOfElements() == 4);
-    BOOST_CHECK(r7->getNumberOfChannels() == 1);
-    BOOST_CHECK(r7->getNumberOfDimensions() == 1);
-    BOOST_CHECK(not r7->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
-  }
-  device.close();
-  device_cached.close();
+      auto r7 = catalogue.getRegister("SOME_IIII");
+      BOOST_CHECK(r7->getRegisterName() == "SOME_IIII");
+      BOOST_CHECK(r7->getNumberOfElements() == 4);
+      BOOST_CHECK(r7->getNumberOfChannels() == 1);
+      BOOST_CHECK(r7->getNumberOfDimensions() == 1);
+      BOOST_CHECK(not r7->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+    }
+    device.close();
+    device_cached.close();
 
-  // quick check with the other level (location is included in the register
-  // name)
-  device.open(DoocsLauncher::DoocsServer1);
-  device_cached.open(DoocsLauncher::DoocsServer1_cached);
+    // quick check with the other level (location is included in the register
+    // name)
+    device.open(DoocsLauncher::DoocsServer1);
+    device_cached.open(DoocsLauncher::DoocsServer1_cached);
 
-  std::vector<ChimeraTK::RegisterCatalogue> catalogueList1;
-  catalogueList1.push_back(device.getRegisterCatalogue());
-  catalogueList1.push_back(device_cached.getRegisterCatalogue());
+    std::vector<ChimeraTK::RegisterCatalogue> catalogueList1;
+    catalogueList1.push_back(device.getRegisterCatalogue());
+    catalogueList1.push_back(device_cached.getRegisterCatalogue());
 
-  for(auto catalogue : catalogueList1) {
-    // check number of registers, but not with the exact number, since DOOCS adds
-    // some registers!
-    BOOST_CHECK(catalogue.getNumberOfRegisters() > 13);
+    for(auto catalogue : catalogueList1) {
+      // check number of registers, but not with the exact number, since DOOCS adds
+      // some registers!
+      BOOST_CHECK(catalogue.getNumberOfRegisters() > 13);
 
-    // check for the presence of known registers
-    BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_INT"));
-    BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_ZMQINT"));
-    BOOST_CHECK(catalogue.hasRegister("DUMMY._SVR/SVR.BPN"));
+      // check for the presence of known registers
+      BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_INT"));
+      BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_ZMQINT"));
+      BOOST_CHECK(catalogue.hasRegister("DUMMY._SVR/SVR.BPN"));
 
-    // check the properties of some registers
-    auto r8 = catalogue.getRegister("MYDUMMY/SOME_INT");
-    BOOST_CHECK(r8->getRegisterName() == "MYDUMMY/SOME_INT");
-    BOOST_CHECK(r8->getNumberOfElements() == 1);
-    BOOST_CHECK(r8->getNumberOfChannels() == 1);
-    BOOST_CHECK(r8->getNumberOfDimensions() == 0);
-    BOOST_CHECK(not r8->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+      // check the properties of some registers
+      auto r8 = catalogue.getRegister("MYDUMMY/SOME_INT");
+      BOOST_CHECK(r8->getRegisterName() == "MYDUMMY/SOME_INT");
+      BOOST_CHECK(r8->getNumberOfElements() == 1);
+      BOOST_CHECK(r8->getNumberOfChannels() == 1);
+      BOOST_CHECK(r8->getNumberOfDimensions() == 0);
+      BOOST_CHECK(not r8->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
-    auto r9 = catalogue.getRegister("DUMMY._SVR/SVR.BPN");
-    BOOST_CHECK(r9->getRegisterName() == "DUMMY._SVR/SVR.BPN");
-    BOOST_CHECK(r9->getNumberOfElements() == 1);
-    BOOST_CHECK(r9->getNumberOfChannels() == 1);
-    BOOST_CHECK(r9->getNumberOfDimensions() == 0);
-    BOOST_CHECK(not r9->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+      auto r9 = catalogue.getRegister("DUMMY._SVR/SVR.BPN");
+      BOOST_CHECK(r9->getRegisterName() == "DUMMY._SVR/SVR.BPN");
+      BOOST_CHECK(r9->getNumberOfElements() == 1);
+      BOOST_CHECK(r9->getNumberOfChannels() == 1);
+      BOOST_CHECK(r9->getNumberOfDimensions() == 0);
+      BOOST_CHECK(not r9->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
 
-    auto r10 = catalogue.getRegister("MYDUMMY/SOME_ZMQINT");
-    BOOST_CHECK(r10->getRegisterName() == "MYDUMMY/SOME_ZMQINT");
-    BOOST_CHECK(r10->getNumberOfElements() == 1);
-    BOOST_CHECK(r10->getNumberOfChannels() == 1);
-    BOOST_CHECK(r10->getNumberOfDimensions() == 0);
-    BOOST_CHECK(r10->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
-  }
-  device.close();
-  device_cached.close();
+      auto r10 = catalogue.getRegister("MYDUMMY/SOME_ZMQINT");
+      BOOST_CHECK(r10->getRegisterName() == "MYDUMMY/SOME_ZMQINT");
+      BOOST_CHECK(r10->getNumberOfElements() == 1);
+      BOOST_CHECK(r10->getNumberOfChannels() == 1);
+      BOOST_CHECK(r10->getNumberOfDimensions() == 0);
+      BOOST_CHECK(r10->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+    }
+    device.close();
+    device_cached.close();
+  } // ensure we delete the cache file written on destruction
 
   deleteFile(DoocsLauncher::cacheFile1);
   deleteFile(DoocsLauncher::cacheFile2);
@@ -1162,18 +1164,19 @@ bool file_exists(const std::string& name) {
 }
 
 BOOST_AUTO_TEST_CASE(testCacheFileCreation) {
-  BOOST_CHECK(file_exists(DoocsLauncher::cacheFile1) == false);
-  BOOST_CHECK(file_exists(DoocsLauncher::cacheFile2) == false);
+  {
+    BOOST_CHECK(file_exists(DoocsLauncher::cacheFile1) == false);
+    BOOST_CHECK(file_exists(DoocsLauncher::cacheFile2) == false);
 
-  auto d1 = ChimeraTK::Device(DoocsLauncher::DoocsServer1_cached);
-  auto d2 = ChimeraTK::Device(DoocsLauncher::DoocsServer2_cached);
+    auto d1 = ChimeraTK::Device(DoocsLauncher::DoocsServer1_cached);
+    auto d2 = ChimeraTK::Device(DoocsLauncher::DoocsServer2_cached);
 
-  d1.getRegisterCatalogue();
-  d2.getRegisterCatalogue();
+    d1.getRegisterCatalogue();
+    d2.getRegisterCatalogue();
 
-  BOOST_CHECK(file_exists(DoocsLauncher::cacheFile1) == true);
-  BOOST_CHECK(file_exists(DoocsLauncher::cacheFile2) == true);
-
+    BOOST_CHECK(file_exists(DoocsLauncher::cacheFile1) == true);
+    BOOST_CHECK(file_exists(DoocsLauncher::cacheFile2) == true);
+  }
   deleteFile(DoocsLauncher::cacheFile1);
   deleteFile(DoocsLauncher::cacheFile2);
 }

@@ -43,14 +43,15 @@ void generateCacheFile() {
 BOOST_AUTO_TEST_CASE(testCacheReading) {
   generateCacheFile();
 
-  // make device pick the xml we have just created
-  std::string address = "(doocs:doocs://localhost:212/F/D/L?cacheFile=" + cacheFile + ")";
-  auto d = ChimeraTK::Device(address);
-  auto catalogue = d.getRegisterCatalogue();
+  {
+    // make device pick the xml we have just created
+    std::string address = "(doocs:doocs://localhost:212/F/D/L?cacheFile=" + cacheFile + ")";
+    auto d = ChimeraTK::Device(address);
+    auto catalogue = d.getRegisterCatalogue();
 
-  BOOST_CHECK(catalogue.hasRegister("/DUMMY"));
+    BOOST_CHECK(catalogue.hasRegister("/DUMMY"));
+  } // d writes cache file on destruction; pick this up for cleanup
 
-  // cleanup
   deleteFile(cacheFile);
 }
 
@@ -59,17 +60,19 @@ BOOST_AUTO_TEST_CASE(testCacheReading) {
 BOOST_AUTO_TEST_CASE(testGetAccessorWhileClosed) {
   generateCacheFile();
 
-  // make device pick the xml we have just created
-  std::string address = "(doocs:doocs://localhost:212/F/D/L?cacheFile=" + cacheFile + ")";
-  auto d = ChimeraTK::Device(address);
-  auto catalogue = d.getRegisterCatalogue();
+  {
+    // make device pick the xml we have just created
+    std::string address = "(doocs:doocs://localhost:212/F/D/L?cacheFile=" + cacheFile + ")";
+    auto d = ChimeraTK::Device(address);
+    auto catalogue = d.getRegisterCatalogue();
 
-  BOOST_CHECK(catalogue.hasRegister("/DUMMY"));
+    BOOST_CHECK(catalogue.hasRegister("/DUMMY"));
 
-  // obtain accessor
-  auto acc = d.getOneDRegisterAccessor<std::string>("DUMMY");
-  BOOST_CHECK(acc.getNElements() == 1);
-  BOOST_CHECK_THROW(acc.read(), ChimeraTK::logic_error); // device closed
+    // obtain accessor
+    auto acc = d.getOneDRegisterAccessor<std::string>("DUMMY");
+    BOOST_CHECK(acc.getNElements() == 1);
+    BOOST_CHECK_THROW(acc.read(), ChimeraTK::logic_error); // device closed
+  }
 
   // cleanup
   deleteFile(cacheFile);
