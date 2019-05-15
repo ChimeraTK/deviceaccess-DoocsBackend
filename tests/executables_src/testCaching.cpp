@@ -24,13 +24,9 @@ void generateCacheFile() {
                     "  <register>\n"
                     "    <name>/DUMMY</name>\n"
                     "    <length>1</length>\n"
-                    "    <descriptor>\n"
-                    "      <type>string</type>\n"
-                    "      <raw_type>none</raw_type>\n"
-                    "      <transport_type>none</transport_type>\n"
-                    "    </descriptor>\n"
                     "    <access_mode></access_mode>\n"
                     "    <doocs_type_id>7</doocs_type_id>\n" // DATA_TEXT
+                    "    <!--doocs id: INT-->\n"
                     "  </register>\n"
                     "</catalogue>\n";
   std::ofstream o(cacheFile);

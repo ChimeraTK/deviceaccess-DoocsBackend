@@ -93,6 +93,7 @@ class CatalogueFetcher {
 
   std::unique_ptr<ctk::RegisterCatalogue> fetch();
   static std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>>getRegInfo(const std::string &name, unsigned int length, int doocsType);
+  static bool endsWith(std::string const &s, const std::vector<std::string>& patterns);
 
  private:
   std::string serverAddress_;
@@ -103,7 +104,6 @@ class CatalogueFetcher {
   static long slashes(const std::string& s);
   bool isCancelled() const { return (cancelFlag_.wait_for(std::chrono::microseconds(0)) == std::future_status::ready); }
   bool checkZmqAvailability(const std::string& fullLocationPath, const std::string& propertyName) const;
-  static bool endsWith(std::string const &s, const std::vector<std::string>& patterns);
 };
 
 /********************************************************************************************************************/
@@ -535,71 +535,11 @@ namespace Cache {
   static xmlpp::Element* getRootNode(xmlpp::DomParser& parser);
   static unsigned int convertToUint(const std::string& s, int line);
   static int convertToInt(const std::string& s, int line);
-  static boost::shared_ptr<DoocsBackendRegisterInfo> parseRegister(xmlpp::Element const* registerNode);
+  static std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>> parseRegister(xmlpp::Element const* registerNode);
   static unsigned int parseLength(xmlpp::Element const* c);
   static int parseTypeId(xmlpp::Element const* c);
-  static ctk::RegisterInfo::DataDescriptor parseDescriptor(xmlpp::Element const* d);
-  static ctk::RegisterInfo::FundamentalType parseType(xmlpp::Element const* c);
-  static bool isInt(xmlpp::Element const* c);
-  static bool isSigned(xmlpp::Element const* c);
-  static size_t parseDigits(xmlpp::Element const* c);
-  static size_t parseFractionalDigits(xmlpp::Element const* c);
   static ctk::AccessModeFlags parseAccessMode(xmlpp::Element const* c);
-  static ctk::DataType parseRawType(xmlpp::Element const* c);
-  static ctk::DataType parseTransportType(xmlpp::Element const* c);
   static void addRegInfoXmlNode(DoocsBackendRegisterInfo& r, xmlpp::Node* rootNode);
-  static void addDescriptorTagToXmlNode(ctk::RegisterInfo::DataDescriptor const& d, xmlpp::Element* registerNode);
-
-  /********************************************************************************************************************
-   * NOTE: Enum entries for below functions must be kept in sync with DeviceAccess changes.
-   * */
-  static std::string fundamentalTypeToString(ctk::RegisterInfo::FundamentalType t) {
-    using ctk_type = ctk::RegisterInfo::FundamentalType;
-    static std::map<ctk::RegisterInfo::FundamentalType, std::string> m_{{ctk_type::numeric, "numeric"},
-        {ctk_type::string, "string"}, {ctk_type::boolean, "boolean"}, {ctk_type::nodata, "nodata"},
-        {ctk_type::undefined, "undefined"}};
-    return m_.at(t);
-  }
-
-  static ctk::RegisterInfo::FundamentalType stringToFundamentalType(const std::string& s) {
-    using ctk_type = ctk::RegisterInfo::FundamentalType;
-    static std::map<std::string, ctk::RegisterInfo::FundamentalType> m_{{"numeric", ctk_type::numeric},
-        {"string", ctk_type::string}, {"boolean", ctk_type::boolean}, {"nodata", ctk_type::nodata},
-        {"undefined", ctk_type::undefined}};
-    return m_.at(s);
-  }
-
-  static std::string dataTypeToString(ctk::DataType d) {
-    static std::map<ctk::DataType::TheType, std::string> typeMapReverse{
-        {ctk::DataType::int8, "int8"},
-        {ctk::DataType::uint8, "uint8"},
-        {ctk::DataType::int16, "int16"},
-        {ctk::DataType::uint16, "uint16"},
-        {ctk::DataType::int32, "int32"},
-        {ctk::DataType::uint32, "uint32"},
-        {ctk::DataType::int64, "int64"},
-        {ctk::DataType::uint64, "uint64"},
-        {ctk::DataType::float32, "float32"},
-        {ctk::DataType::float64, "float64"},
-        {ctk::DataType::string, "string"},
-        {ctk::DataType::none, "none"},
-    };
-    return typeMapReverse.at(d);
-  }
-
-  static ctk::DataType stringToDataType(const std::string& t, int line) {
-    static std::map<std::string, ctk::DataType::TheType> typeMap{{"int8", ctk::DataType::int8},
-        {"uint8", ctk::DataType::uint8}, {"int16", ctk::DataType::int16}, {"uint16", ctk::DataType::uint16},
-        {"int32", ctk::DataType::int32}, {"uint32", ctk::DataType::uint32}, {"int64", ctk::DataType::int64},
-        {"uint64", ctk::DataType::uint64}, {"float32", ctk::DataType::float32}, {"float64", ctk::DataType::float64},
-        {"string", ctk::DataType::string}, {"none", ctk::DataType::none}};
-    try {
-      return typeMap.at(t);
-    }
-    catch(std::out_of_range& e) {
-      throw ctk::logic_error("Unrecognized type on line " + std::to_string(line) + ": " + e.what());
-    }
-  }
 
   /********************************************************************************************************************/
 
@@ -613,7 +553,10 @@ namespace Cache {
       if(reg == nullptr) {
         continue;
       }
-      catalogue->addRegister(parseRegister(reg));
+      auto regInfolist = parseRegister(reg);
+      for (auto & regInfo: regInfolist){
+        catalogue->addRegister(regInfo);
+      }
     }
     return catalogue;
   }
@@ -638,7 +581,7 @@ namespace Cache {
 
   /********************************************************************************************************************/
 
-  boost::shared_ptr<DoocsBackendRegisterInfo> parseRegister(xmlpp::Element const* registerNode) {
+ std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>> parseRegister(xmlpp::Element const* registerNode) {
     std::string name;
     unsigned int len {};
     int doocsTypeId {};
@@ -658,9 +601,6 @@ namespace Cache {
       else if(nodeName == "length") {
         len = parseLength(e);
       }
-      else if(nodeName == "descriptor") {
-        descriptor = parseDescriptor(e);
-      }
       else if(nodeName == "access_mode") {
         flags = parseAccessMode(e);
       }
@@ -668,7 +608,20 @@ namespace Cache {
         doocsTypeId = parseTypeId(e);
       }
     }
-    return boost::make_shared<DoocsBackendRegisterInfo>(name, len, descriptor, flags, doocsTypeId);
+
+    if(doocsTypeId == DATA_IFFF){ // unfortunate special case handling
+        if(CatalogueFetcher::endsWith(name, {"/I"})){
+           boost::trim_right_if(name, boost::is_any_of("/I"));
+        } else {
+          // return nothing for "/F1", "/F2", "/F3", "F4"
+          // Has to do with CatalogueFetcher::getRegInfo returning a total of 4
+          // RegInfo entries for "/I1".
+          return {};
+        }
+    }
+    auto list = CatalogueFetcher::getRegInfo(name, len, doocsTypeId);
+    for (auto e: list){ e->accessModeFlags = flags;}
+    return list;
   }
 
   /********************************************************************************************************************/
@@ -680,112 +633,6 @@ namespace Cache {
   /********************************************************************************************************************/
 
   int parseTypeId(xmlpp::Element const* c) { return convertToInt(c->get_child_text()->get_content(), c->get_line()); }
-
-  /********************************************************************************************************************/
-
-  ctk::RegisterInfo::DataDescriptor parseDescriptor(xmlpp::Element const* d) {
-    ctk::RegisterInfo::FundamentalType t{};
-    bool isInteger{false};
-    bool sign{false};
-    size_t nDigits{0};
-    size_t nFractional{0};
-    ctk::DataType raw{ctk::DataType::none};
-    ctk::DataType transport{ctk::DataType::none};
-
-    for(auto& child : d->get_children()) {
-      auto c = dynamic_cast<const xmlpp::Element*>(child);
-      if(c == nullptr) {
-        continue;
-      }
-      auto nodeName = c->get_name();
-      if(nodeName == "type") {
-        t = parseType(c);
-      }
-      else if(nodeName == "integral") {
-        isInteger = isInt(c);
-      }
-      else if(nodeName == "signed") {
-        sign = isSigned(c);
-      }
-      else if(nodeName == "digits") {
-        nDigits = parseDigits(c);
-      }
-      else if(nodeName == "fractional_digits") {
-        nFractional = parseFractionalDigits(c);
-      }
-      else if(nodeName == "raw_type") {
-        raw = parseRawType(c);
-      }
-      else if(nodeName == "transport_type") {
-        transport = parseTransportType(c);
-      }
-    }
-    return ctk::RegisterInfo::DataDescriptor{t, isInteger, sign, nDigits, nFractional, raw, transport};
-  }
-
-  /********************************************************************************************************************/
-
-  ctk::RegisterInfo::FundamentalType parseType(xmlpp::Element const* c) {
-    std::string text = c->get_child_text()->get_content();
-    try {
-      return stringToFundamentalType(text);
-    }
-    catch(std::out_of_range& e) {
-      throw ctk::logic_error("Unrecognized type on line " + std::to_string(c->get_line()) + ": " + e.what());
-    }
-  }
-
-  /********************************************************************************************************************/
-
-  bool isInt(xmlpp::Element const* c) {
-    std::string text = c->get_child_text()->get_content();
-    if(text == "true") {
-      return true;
-    }
-    else if(text == "false") {
-      return false;
-    }
-    throw ctk::logic_error(
-        "Unrecognized value on line " + std::to_string(c->get_line()) + ". Expected string: true/false");
-  }
-
-  /********************************************************************************************************************/
-
-  bool isSigned(xmlpp::Element const* c) {
-    std::string text = c->get_child_text()->get_content();
-    if(text == "true") {
-      return true;
-    }
-    else if(text == "false") {
-      return false;
-    }
-    throw ctk::logic_error(
-        "Unrecognized value on line " + std::to_string(c->get_line()) + ". Expected string: true/false");
-  }
-
-  /********************************************************************************************************************/
-
-  size_t parseDigits(xmlpp::Element const* c) {
-    return convertToUint(c->get_child_text()->get_content(), c->get_line());
-  }
-
-  /********************************************************************************************************************/
-
-  size_t parseFractionalDigits(xmlpp::Element const* c) {
-    return convertToUint(c->get_child_text()->get_content(), c->get_line());
-  }
-
-  /********************************************************************************************************************/
-
-  ctk::DataType parseRawType(xmlpp::Element const* c) {
-    return stringToDataType(c->get_child_text()->get_content(), c->get_line());
-  }
-
-  /********************************************************************************************************************/
-
-  ctk::DataType parseTransportType(xmlpp::Element const* c) {
-    return stringToDataType(c->get_child_text()->get_content(), c->get_line());
-  }
 
   /********************************************************************************************************************/
 
@@ -848,36 +695,6 @@ namespace Cache {
 
   /********************************************************************************************************************/
 
-  void addDescriptorTagToXmlNode(ctk::RegisterInfo::DataDescriptor const& d, xmlpp::Element* registerNode) {
-    auto descriptorNode = registerNode->add_child("descriptor");
-
-    auto typeNode = descriptorNode->add_child("type");
-    typeNode->set_child_text(fundamentalTypeToString(d.fundamentalType()));
-
-    if(d.fundamentalType() == ctk::RegisterInfo::FundamentalType::numeric) {
-      auto isIntegral = descriptorNode->add_child("integral");
-      isIntegral->set_child_text(d.isIntegral() ? "true" : "false");
-
-      auto isSigned = descriptorNode->add_child("signed");
-      isSigned->set_child_text(d.isSigned() ? "true" : "false");
-
-      auto digits = descriptorNode->add_child("digits");
-      digits->set_child_text(std::to_string(d.nDigits()));
-
-      if(!d.isIntegral()) {
-        auto fractionalDigits = descriptorNode->add_child("fractional_digits");
-        fractionalDigits->set_child_text(std::to_string(d.nFractionalDigits()));
-      }
-    }
-    auto rawType = descriptorNode->add_child("raw_type");
-    rawType->set_child_text(dataTypeToString(d.rawDataType()));
-
-    auto transportType = descriptorNode->add_child("transport_type");
-    transportType->set_child_text(dataTypeToString(d.transportLayerDataType()));
-  }
-
-  /********************************************************************************************************************/
-
   void addRegInfoXmlNode(DoocsBackendRegisterInfo& r, xmlpp::Node* rootNode) {
     auto registerTag = rootNode->add_child("register");
 
@@ -887,13 +704,14 @@ namespace Cache {
     auto lengthTag = registerTag->add_child("length");
     lengthTag->set_child_text(std::to_string(r.length));
 
-    addDescriptorTagToXmlNode(r.dataDescriptor, registerTag);
-
     auto accessMode = registerTag->add_child("access_mode");
     accessMode->set_child_text(r.accessModeFlags.serialize());
 
     auto typeId = registerTag->add_child("doocs_type_id");
     typeId->set_child_text(std::to_string(r.doocsTypeId));
+
+    std::string comment_text = std::string("doocs id: ") + EqData().type_string(r.doocsTypeId);
+    registerTag->add_child_comment(comment_text);
   }
 
 } // namespace Cache

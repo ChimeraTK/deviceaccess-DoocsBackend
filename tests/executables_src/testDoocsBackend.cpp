@@ -1011,7 +1011,10 @@ BOOST_AUTO_TEST_CASE(testCatalogue) {
       BOOST_CHECK(catalogue.hasRegister("SOME_FLOAT_ARRAY"));
       BOOST_CHECK(catalogue.hasRegister("SOME_DOUBLE_ARRAY"));
       BOOST_CHECK(catalogue.hasRegister("SOME_SPECTRUM"));
-      BOOST_CHECK(catalogue.hasRegister("SOME_ZMQINT"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_IFFF/I"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_IFFF/F1"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_IFFF/F2"));
+      BOOST_CHECK(catalogue.hasRegister("SOME_IFFF/F3"));
 
       // check the properties of some registers
       auto r1 = catalogue.getRegister("SOME_INT");
@@ -1062,6 +1065,20 @@ BOOST_AUTO_TEST_CASE(testCatalogue) {
       BOOST_CHECK(r7->getNumberOfChannels() == 1);
       BOOST_CHECK(r7->getNumberOfDimensions() == 1);
       BOOST_CHECK(not r7->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+
+      auto regI = catalogue.getRegister("SOME_IFFF/I");
+      auto regF1 = catalogue.getRegister("SOME_IFFF/F1");
+      auto regF2 = catalogue.getRegister("SOME_IFFF/F2");
+      auto regF3 = catalogue.getRegister("SOME_IFFF/F3");
+      BOOST_CHECK(regI->getDataDescriptor().isIntegral());
+      BOOST_CHECK(regI->getDataDescriptor().isSigned());
+      BOOST_CHECK(regI->getDataDescriptor().nDigits() == 11);
+      BOOST_CHECK(!regF1->getDataDescriptor().isIntegral());
+      BOOST_CHECK(regF1->getDataDescriptor().isSigned());
+      BOOST_CHECK(!regF2->getDataDescriptor().isIntegral());
+      BOOST_CHECK(regF2->getDataDescriptor().isSigned());
+      BOOST_CHECK(!regF3->getDataDescriptor().isIntegral());
+      BOOST_CHECK(regF3->getDataDescriptor().isSigned());
     }
     device.close();
     device_cached.close();
@@ -1084,6 +1101,10 @@ BOOST_AUTO_TEST_CASE(testCatalogue) {
       BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_INT"));
       BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_ZMQINT"));
       BOOST_CHECK(catalogue.hasRegister("DUMMY._SVR/SVR.BPN"));
+      BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_IFFF/I"));
+      BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_IFFF/F1"));
+      BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_IFFF/F2"));
+      BOOST_CHECK(catalogue.hasRegister("MYDUMMY/SOME_IFFF/F3"));
 
       // check the properties of some registers
       auto r8 = catalogue.getRegister("MYDUMMY/SOME_INT");
@@ -1106,6 +1127,20 @@ BOOST_AUTO_TEST_CASE(testCatalogue) {
       BOOST_CHECK(r10->getNumberOfChannels() == 1);
       BOOST_CHECK(r10->getNumberOfDimensions() == 0);
       BOOST_CHECK(r10->getSupportedAccessModes().has(ChimeraTK::AccessMode::wait_for_new_data));
+
+      auto regI = catalogue.getRegister("MYDUMMY/SOME_IFFF/I");
+      auto regF1 = catalogue.getRegister("MYDUMMY/SOME_IFFF/F1");
+      auto regF2 = catalogue.getRegister("MYDUMMY/SOME_IFFF/F2");
+      auto regF3 = catalogue.getRegister("MYDUMMY/SOME_IFFF/F3");
+      BOOST_CHECK(regI->getDataDescriptor().isIntegral());
+      BOOST_CHECK(regI->getDataDescriptor().isSigned());
+      BOOST_CHECK(regI->getDataDescriptor().nDigits() == 11);
+      BOOST_CHECK(!regF1->getDataDescriptor().isIntegral());
+      BOOST_CHECK(regF1->getDataDescriptor().isSigned());
+      BOOST_CHECK(!regF2->getDataDescriptor().isIntegral());
+      BOOST_CHECK(regF2->getDataDescriptor().isSigned());
+      BOOST_CHECK(!regF3->getDataDescriptor().isIntegral());
+      BOOST_CHECK(regF3->getDataDescriptor().isSigned());
     }
     device.close();
     device_cached.close();
