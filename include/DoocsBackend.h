@@ -17,9 +17,8 @@ namespace ChimeraTK {
 
   class DoocsBackendRegisterAccessorBase;
 
-  const std::string IGNORE_PATTERNS[] = {".HIST", ".FILT", "._FILT", ".EGU", ".DESC", ".HSTAT", "._HSTAT", "._HIST",
+  const std::vector<std::string> IGNORE_PATTERNS = {".HIST", ".FILT", "._FILT", ".EGU", ".DESC", ".HSTAT", "._HSTAT", "._HIST",
       ".LIST", ".SAVE", ".COMMENT", ".XEGU", ".POLYPARA"};
-  const size_t SIZE_IGNORE_PATTERNS = std::extent<decltype(IGNORE_PATTERNS)>::value;
 
   /** Backend to access DOOCS control system servers.
    *

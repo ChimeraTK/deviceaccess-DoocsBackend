@@ -92,6 +92,7 @@ class CatalogueFetcher {
   : serverAddress_(serverAddress), cancelFlag_(std::move(cancelIndicator)) {}
 
   std::unique_ptr<ctk::RegisterCatalogue> fetch();
+  static std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>>getRegInfo(const std::string &name, unsigned int length, int doocsType);
 
  private:
   std::string serverAddress_;
@@ -102,7 +103,7 @@ class CatalogueFetcher {
   static long slashes(const std::string& s);
   bool isCancelled() const { return (cancelFlag_.wait_for(std::chrono::microseconds(0)) == std::future_status::ready); }
   bool checkZmqAvailability(const std::string& fullLocationPath, const std::string& propertyName) const;
-  bool ignorePattern(std::string name, std::string pattern) const;
+  static bool endsWith(std::string const &s, const std::vector<std::string>& patterns);
 };
 
 /********************************************************************************************************************/
@@ -339,6 +340,18 @@ long CatalogueFetcher::slashes(const std::string& s) {
 
 /********************************************************************************************************************/
 
+bool CatalogueFetcher::endsWith(std::string const &s,
+                                const std::vector<std::string> &patterns) {
+  for (auto &p : patterns) {
+    if (boost::algorithm::ends_with(s, p)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/********************************************************************************************************************/
+
 void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) const {
   // obtain list of elements within the given partial address
   EqAdr ea;
@@ -365,25 +378,17 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
     if(level < 2) {
       fillCatalogue(fixedComponents + "/" + name, level + 1);
     }
-    else {
-      // this is a property: create RegisterInfo entry and set its name
-      bool skipRegister = false;
-      for(uint i = 0; i < ctk::SIZE_IGNORE_PATTERNS; i++) {
-        std::string pattern = ctk::IGNORE_PATTERNS[i];
-        if(ignorePattern(name, pattern)) {
-          skipRegister = true;
-          break;
-        }
-      }
+    else { // this is a property: create RegisterInfo entry and set its name
+
+      // skip unwanted properties.
+      bool skipRegister = endsWith(name, ctk::IGNORE_PATTERNS);
       if(skipRegister) {
         continue;
       }
-      boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
-      std::string fqn = fixedComponents + "/" + name;
-      info->name = fqn.substr(std::string(serverAddress_).length());
 
       // read property once to determine its length and data type
       ///@todo Is there a more efficient way to do this?
+      std::string fqn = fixedComponents + "/" + name;
       EqData dst;
       ea.adr(fqn.c_str()); // strip leading slash
       rc = eq.get(&ea, &src, &dst);
@@ -393,68 +398,86 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
         continue;
       }
 
-      if(checkZmqAvailability(fixedComponents, name)) info->accessModeFlags.add(ctk::AccessMode::wait_for_new_data);
+      auto regPath = fqn.substr(std::string(serverAddress_).length());
+      auto length = dst.array_length();
+      auto doocsTypeId = dst.type();
 
-      info->length = dst.array_length();
-      info->doocsTypeId = dst.type();
-      if(info->length == 0) info->length = 1;                    // DOOCS reports 0 if not an array
-      if(dst.type() == DATA_TEXT || dst.type() == DATA_STRING || // in case of strings, DOOCS reports
-                                                                 // the length of the string
-          dst.type() == DATA_STRING16 || dst.type() == DATA_USTR) {
-        info->length = 1;
-        info->dataDescriptor =
-            ChimeraTK::RegisterInfo::DataDescriptor(ChimeraTK::RegisterInfo::FundamentalType::string);
+      auto regInfolist = getRegInfo(regPath, length, doocsTypeId);
+      for(auto &r: regInfolist){
+          if(checkZmqAvailability(fixedComponents, name)) {r->accessModeFlags.add(ctk::AccessMode::wait_for_new_data);}
+          catalogue_->addRegister(r);
       }
-      else if(dst.type() == DATA_INT || dst.type() == DATA_A_INT || dst.type() == DATA_A_SHORT ||
-          dst.type() == DATA_A_LONG || dst.type() == DATA_A_BYTE || dst.type() == DATA_IIII) { // integral data types
-        size_t digits;
-        if(dst.type() == DATA_A_SHORT) { // 16 bit signed
-          digits = 6;
-        }
-        else if(dst.type() == DATA_A_BYTE) { // 8 bit signed
-          digits = 4;
-        }
-        else if(dst.type() == DATA_A_LONG) { // 64 bit signed
-          digits = 20;
-        }
-        else { // 32 bit signed
-          digits = 11;
-        }
-        if(dst.type() == DATA_IIII) info->length = 4;
-
-        info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-            ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, digits);
-      }
-      else if(dst.type() == DATA_IFFF) {
-        info->name = fqn.substr(std::string(serverAddress_).length()) + "/I";
-        info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-            ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, 11); // 32 bit integer
-
-        boost::shared_ptr<DoocsBackendRegisterInfo> infoF1(new DoocsBackendRegisterInfo(*info));
-        infoF1->name = fqn.substr(std::string(serverAddress_).length()) + "/F1";
-        infoF1->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-            ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300); // float
-
-        boost::shared_ptr<DoocsBackendRegisterInfo> infoF2(new DoocsBackendRegisterInfo(*infoF1));
-        infoF2->name = fqn.substr(std::string(serverAddress_).length()) + "/F2";
-
-        boost::shared_ptr<DoocsBackendRegisterInfo> infoF3(new DoocsBackendRegisterInfo(*infoF1));
-        infoF3->name = fqn.substr(std::string(serverAddress_).length()) + "/F3";
-
-        catalogue_->addRegister(infoF1);
-        catalogue_->addRegister(infoF2);
-        catalogue_->addRegister(infoF3);
-        // the info for the integer is added below
-      }
-      else { // floating point data types: always treat like double
-        info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-            ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300);
-      }
-
-      // add info to catalogue
-      catalogue_->addRegister(info);
     }
   }
+}
+
+/********************************************************************************************************************/
+
+std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>>CatalogueFetcher::getRegInfo(const std::string &name, unsigned int length, int doocsType){
+  std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>> list;
+  boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
+
+  info->name = name;
+  info->length = length;
+  info->doocsTypeId = doocsType;
+
+  if (info->length == 0)
+    info->length = 1; // DOOCS reports 0 if not an array
+  if (doocsType == DATA_TEXT || doocsType == DATA_STRING || doocsType == DATA_STRING16 ||
+      doocsType == DATA_USTR) { // in case of strings, DOOCS reports the length
+                                // of the string
+    info->length = 1;
+    info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(ChimeraTK::RegisterInfo::FundamentalType::string);
+    list.push_back(info);
+
+  } else if (doocsType == DATA_INT || doocsType == DATA_A_INT ||
+             doocsType == DATA_A_SHORT || doocsType == DATA_A_LONG ||
+             doocsType == DATA_A_BYTE ||
+             doocsType == DATA_IIII) { // integral data types
+    size_t digits;
+    if (doocsType == DATA_A_SHORT) { // 16 bit signed
+      digits = 6;
+    } else if (doocsType == DATA_A_BYTE) { // 8 bit signed
+      digits = 4;
+    } else if (doocsType == DATA_A_LONG) { // 64 bit signed
+      digits = 20;
+    } else { // 32 bit signed
+      digits = 11;
+    }
+    if (doocsType == DATA_IIII)
+      info->length = 4;
+
+    info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+        ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, digits);
+    list.push_back(info);
+
+  } else if (doocsType == DATA_IFFF) {
+    info->name = name + "/I";
+    info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+        ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, 11); // 32 bit integer
+
+    boost::shared_ptr<DoocsBackendRegisterInfo> infoF1(new DoocsBackendRegisterInfo(*info));
+    infoF1->name = name + "/F1";
+    infoF1->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+        ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300); // float
+
+    boost::shared_ptr<DoocsBackendRegisterInfo> infoF2(new DoocsBackendRegisterInfo(*infoF1));
+    infoF2->name = name + "/F2";
+
+    boost::shared_ptr<DoocsBackendRegisterInfo> infoF3(new DoocsBackendRegisterInfo(*infoF1));
+    infoF3->name = name + "/F3";
+
+    list.push_back(info);
+    list.push_back(infoF1);
+    list.push_back(infoF2);
+    list.push_back(infoF3);
+
+  } else { // floating point data types: always treat like double
+    info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
+        ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300);
+    list.push_back(info);
+  }
+  return list;
 }
 
 /********************************************************************************************************************/
@@ -502,12 +525,6 @@ bool CatalogueFetcher::checkZmqAvailability(
     dst.get_ustr(&portp, &f1, &f2, &tm, &sp, 0);
   }
   return portp != 0;
-}
-
-/********************************************************************************************************************/
-
-bool CatalogueFetcher::ignorePattern(std::string name, std::string pattern) const {
-  return boost::algorithm::ends_with(name, pattern);
 }
 
 /********************************************************************************************************************/
