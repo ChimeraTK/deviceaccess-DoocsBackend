@@ -93,7 +93,7 @@ class CatalogueFetcher {
 
   std::unique_ptr<ctk::RegisterCatalogue> fetch();
   static std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>>getRegInfo(const std::string &name, unsigned int length, int doocsType);
-  static bool endsWith(std::string const &s, const std::vector<std::string>& patterns);
+  static std::tuple<bool, std::string> endsWith(std::string const &s, const std::vector<std::string>& patterns);
 
  private:
   std::string serverAddress_;
@@ -340,14 +340,14 @@ long CatalogueFetcher::slashes(const std::string& s) {
 
 /********************************************************************************************************************/
 
-bool CatalogueFetcher::endsWith(std::string const &s,
+std::tuple<bool, std::string> CatalogueFetcher::endsWith(std::string const &s,
                                 const std::vector<std::string> &patterns) {
   for (auto &p : patterns) {
     if (boost::algorithm::ends_with(s, p)) {
-      return true;
+      return std::tuple<bool, std::string>{true, p};
     }
   }
-  return false;
+  return std::tuple<bool, std::string>{false, ""};
 }
 
 /********************************************************************************************************************/
@@ -380,8 +380,11 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
     }
     else { // this is a property: create RegisterInfo entry and set its name
 
+      bool skipRegister;
+      std::string pattern="";
+
       // skip unwanted properties.
-      bool skipRegister = endsWith(name, ctk::IGNORE_PATTERNS);
+      std::tie(skipRegister, pattern) = endsWith(name, ctk::IGNORE_PATTERNS);
       if(skipRegister) {
         continue;
       }
@@ -581,46 +584,57 @@ namespace Cache {
 
   /********************************************************************************************************************/
 
- std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>> parseRegister(xmlpp::Element const* registerNode) {
+  std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>>
+  parseRegister(xmlpp::Element const *registerNode) {
     std::string name;
-    unsigned int len {};
-    int doocsTypeId {};
+    unsigned int len{};
+    int doocsTypeId{};
     ctk::RegisterInfo::DataDescriptor descriptor{};
     ctk::AccessModeFlags flags{};
 
-    for(auto& node : registerNode->get_children()) {
-      auto e = dynamic_cast<const xmlpp::Element*>(node);
-      if(e == nullptr) {
+    for (auto &node : registerNode->get_children()) {
+      auto e = dynamic_cast<const xmlpp::Element *>(node);
+      if (e == nullptr) {
         continue;
       }
       std::string nodeName = e->get_name();
 
-      if(nodeName == "name") {
+      if (nodeName == "name") {
         name = e->get_child_text()->get_content();
-      }
-      else if(nodeName == "length") {
+      } else if (nodeName == "length") {
         len = parseLength(e);
-      }
-      else if(nodeName == "access_mode") {
+      } else if (nodeName == "access_mode") {
         flags = parseAccessMode(e);
-      }
-      else if(nodeName == "doocs_type_id") {
+      } else if (nodeName == "doocs_type_id") {
         doocsTypeId = parseTypeId(e);
       }
     }
 
-    if(doocsTypeId == DATA_IFFF){ // unfortunate special case handling
-        if(CatalogueFetcher::endsWith(name, {"/I"})){
-           boost::trim_right_if(name, boost::is_any_of("/I"));
-        } else {
-          // return nothing for "/F1", "/F2", "/F3", "F4"
-          // Has to do with CatalogueFetcher::getRegInfo returning a total of 4
-          // RegInfo entries for "/I1".
-          return {};
-        }
+    bool is_ifff = (doocsTypeId == DATA_IFFF);
+    std::string pattern;
+    std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>> list;
+
+    if (is_ifff) {
+      std::tie(is_ifff, pattern) = CatalogueFetcher::endsWith(name, {"/I", "/F1", "/F2", "/F3"});
+      // remove pattern from name for getRegInfo to work correctly;
+      // precondition: patten is contained in name.
+      name.erase(name.end() - pattern.length(), name.end());
+
+      list = CatalogueFetcher::getRegInfo(name, len, doocsTypeId);
+      // !!!
+      list.erase(
+          std::remove_if(list.begin(), list.end(), //
+                         [&](boost::shared_ptr<DoocsBackendRegisterInfo> &e) {
+                           return !boost::algorithm::ends_with(
+                               static_cast<std::string>(e->name), pattern);
+                         }),
+          list.end());
+    } else {
+      list = CatalogueFetcher::getRegInfo(name, len, doocsTypeId);
     }
-    auto list = CatalogueFetcher::getRegInfo(name, len, doocsTypeId);
-    for (auto e: list){ e->accessModeFlags = flags;}
+    for (auto e : list) {
+      e->accessModeFlags = flags;
+    }
     return list;
   }
 
