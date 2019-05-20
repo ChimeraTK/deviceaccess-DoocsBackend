@@ -38,7 +38,8 @@ std::string ChimeraTK_DeviceAccess_version{CHIMERATK_DEVICEACCESS_VERSION};
 std::string backend_name = "doocs";
 }
 
-static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::future<void> cancelFlag);
+static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::string cacheFile, std::future<void> cancelFlag);
+
 namespace Cache {
   static std::unique_ptr<ctk::RegisterCatalogue> readCatalogue(const std::string& xmlfile);
   static void saveCatalogue(ctk::RegisterCatalogue& c, const std::string& xmlfile);
@@ -108,8 +109,14 @@ class CatalogueFetcher {
 
 /********************************************************************************************************************/
 
-static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::future<void> cancelFlag) {
-  return CatalogueFetcher(serverAddress, std::move(cancelFlag)).fetch();
+static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::string cacheFile, std::future<void> cancelFlag) {
+  auto catalogue =  CatalogueFetcher(serverAddress, std::move(cancelFlag)).fetch();
+
+  // catalogue == nullptr when fetch is canceled.
+  if (catalogue != nullptr && cacheFile.empty() == false ){
+      Cache::saveCatalogue(*catalogue, cacheFile);
+  }
+  return catalogue;
 }
 
 namespace ChimeraTK {
@@ -131,7 +138,7 @@ namespace ChimeraTK {
     if (cacheFileExists() && isCachingEnabled()) {
       _catalogue_mutable = Cache::readCatalogue(_cacheFile);
     }
-    _catalogueFuture = std::async(std::launch::async, fetchCatalogue, serverAddress, _cancelFlag.get_future());
+    _catalogueFuture = std::async(std::launch::async, fetchCatalogue, serverAddress, cacheFile, _cancelFlag.get_future());
     FILL_VIRTUAL_FUNCTION_TEMPLATE_VTABLE(getRegisterAccessor_impl);
   }
 
@@ -139,12 +146,9 @@ namespace ChimeraTK {
 
   DoocsBackend::~DoocsBackend() {
     if (_catalogueFuture.valid()) {
-      try { // cache catalogue if we have the information.
+      try {
         if (_catalogueFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
           auto catalogue = _catalogueFuture.get();
-          if (isCachingEnabled() == true) {
-            Cache::saveCatalogue(*catalogue, _cacheFile);
-          }
         } else {
           _cancelFlag.set_value(); // cancel fill catalogue async task
           _catalogueFuture.get();
@@ -201,9 +205,6 @@ namespace ChimeraTK {
   const RegisterCatalogue &DoocsBackend::getRegisterCatalogue() const {
     if (_catalogue_mutable == nullptr) {
       _catalogue_mutable = _catalogueFuture.get();
-      if (isCachingEnabled()) {
-        Cache::saveCatalogue(*_catalogue_mutable, _cacheFile);
-      }
     }
     return *_catalogue_mutable;
   }
