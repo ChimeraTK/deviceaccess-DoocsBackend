@@ -6,6 +6,7 @@
  */
 
 #include <cstdlib>
+#include <unistd.h>
 #include <random>
 #include <thread>
 
@@ -947,10 +948,9 @@ void createCacheFile(const std::string& ccd) {
 }
 
 void deleteFile(const std::string& filename) {
-  std::string command = "rm " + filename;
-  if(std::system(command.c_str()) != 0){
-    throw std::runtime_error(command + "failed");
-  }
+  errno = 0;
+  if (unlink(filename.c_str()) < 0)
+    throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)));
 }
 
 BOOST_AUTO_TEST_CASE(testCatalogue) {
