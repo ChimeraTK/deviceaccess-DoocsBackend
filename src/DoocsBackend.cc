@@ -147,12 +147,8 @@ namespace ChimeraTK {
   DoocsBackend::~DoocsBackend() {
     if (_catalogueFuture.valid()) {
       try {
-        if (_catalogueFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready) {
-          auto catalogue = _catalogueFuture.get();
-        } else {
           _cancelFlag.set_value(); // cancel fill catalogue async task
           _catalogueFuture.get();
-        }
       } catch (...) {
         // prevent throwing in destructor (ub if it does);
       }
