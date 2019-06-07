@@ -14,13 +14,6 @@
     DoocsBackendRegisterInfo() = default;
 
    public:
-
-    /*
-    DoocsBackendRegisterInfo(const std::string& n, unsigned int len, ChimeraTK::RegisterInfo::DataDescriptor& descriptor,
-        ChimeraTK::AccessModeFlags& flags, int type)
-    : name(n), length(len), dataDescriptor(descriptor), accessModeFlags(flags), doocsTypeId(type) {}
-*/
-
     DoocsBackendRegisterInfo(const DoocsBackendRegisterInfo& other) = default;
 
     ~DoocsBackendRegisterInfo() override {}
