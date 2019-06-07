@@ -13,7 +13,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       // subscribe to property
       EqData dst;
       EqAdr ea;
-      ea.adr(std::string(path).c_str());
+      ea.adr(path);
       int err = dmsg_attach(&ea, &dst, (void*)&(subscriptionMap[path]), &zmq_callback, &subscriptionMap[path].tag);
       if(err) {
         throw ChimeraTK::runtime_error(
@@ -46,7 +46,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
     // if no listener left, delete the subscription
     if(subscriptionMap[path].listeners.empty()) {
       EqAdr ea;
-      ea.adr(std::string(path).c_str());
+      ea.adr(path);
       dmsg_detach(&ea, subscriptionMap[path].tag);
       subscriptionMap.erase(subscriptionMap.find(path));
     }

@@ -251,7 +251,7 @@ namespace ChimeraTK {
       flags.checkForUnknownFlags({AccessMode::wait_for_new_data});
 
       // set address
-      ea.adr(std::string(path).c_str());
+      ea.adr(path);
 
       // use zero mq subscriptiopn?
       if(flags.has(AccessMode::wait_for_new_data)) {

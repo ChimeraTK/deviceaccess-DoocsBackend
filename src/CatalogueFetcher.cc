@@ -27,7 +27,7 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
   EqAdr ea;
   EqCall eq;
   EqData src, propList;
-  ea.adr((fixedComponents + "/*").c_str());
+  ea.adr(fixedComponents + "/*");
   int rc = eq.names(&ea, &propList);
   if(rc) {
     // if the enumeration failes, maybe the server is not available (but
@@ -63,7 +63,7 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
       ///@todo Is there a more efficient way to do this?
       std::string fqn = fixedComponents + "/" + name;
       EqData dst;
-      ea.adr(fqn.c_str()); // strip leading slash
+      ea.adr(fqn); // strip leading slash
       rc = eq.get(&ea, &src, &dst);
       if(rc) {
         // if the property is not accessible, ignore it. This happens

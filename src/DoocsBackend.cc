@@ -190,7 +190,7 @@ namespace ChimeraTK {
       EqAdr ea;
       EqCall eq;
       EqData src, dst;
-      ea.adr(std::string(path).c_str());
+      ea.adr(path);
       int rc = eq.get(&ea, &src, &dst);
       if(rc) {
         throw ChimeraTK::runtime_error("Cannot open DOOCS property '" + path + "': " + dst.get_string());
