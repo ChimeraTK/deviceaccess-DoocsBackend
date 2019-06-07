@@ -38,13 +38,16 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
     std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
 
     // ignore if no subscription exists
-    if(subscriptionMap.find(path) == subscriptionMap.end()) return;
+    auto it = subscriptionMap.find(path);
+    if(it == subscriptionMap.end()) return;
+
+    auto& listeners = it->second.listeners;
 
     // remove accessor from list of listeners
-    std::remove(subscriptionMap[path].listeners.begin(), subscriptionMap[path].listeners.end(), accessor);
+    listeners.erase(std::remove(listeners.begin(), listeners.end(), accessor), listeners.end());
 
     // if no listener left, delete the subscription
-    if(subscriptionMap[path].listeners.empty()) {
+    if(listeners.empty()) {
       EqAdr ea;
       ea.adr(path);
       dmsg_detach(&ea, subscriptionMap[path].tag);
