@@ -19,6 +19,7 @@
 #include "DoocsBackendIntRegisterAccessor.h"
 #include "DoocsBackendLongRegisterAccessor.h"
 #include "DoocsBackendStringRegisterAccessor.h"
+#include "RegisterInfo.h"
 
 // this is required since we link against the DOOCS libEqServer.so
 const char* object_name = "DoocsBackend";
@@ -45,55 +46,12 @@ namespace Cache {
   static void saveCatalogue(ctk::RegisterCatalogue& c, const std::string& xmlfile);
 } // namespace Cache
 
-/**
- *  RegisterInfo-derived class to be put into the RegisterCatalogue
- */
-namespace {
-
-  class DoocsBackendRegisterInfo : public ChimeraTK::RegisterInfo {
-   public:
-    DoocsBackendRegisterInfo() = default;
-
-    DoocsBackendRegisterInfo(const std::string& n, unsigned int len, ctk::RegisterInfo::DataDescriptor& descriptor,
-        ctk::AccessModeFlags& flags, int type)
-    : name(n), length(len), dataDescriptor(descriptor), accessModeFlags(flags), doocsTypeId(type) {}
-
-    DoocsBackendRegisterInfo(const DoocsBackendRegisterInfo& other) = default;
-
-    ~DoocsBackendRegisterInfo() override {}
-
-    ChimeraTK::RegisterPath getRegisterName() const override { return name; }
-
-    unsigned int getNumberOfElements() const override { return length; }
-
-    unsigned int getNumberOfChannels() const override { return 1; }
-
-    unsigned int getNumberOfDimensions() const override { return length > 1 ? 1 : 0; }
-
-    bool isReadable() const override { return true; }
-
-    bool isWriteable() const override { return true; } /// @todo fixme: return true for read-only properties
-
-    ChimeraTK::AccessModeFlags getSupportedAccessModes() const override { return accessModeFlags; }
-
-    const ChimeraTK::RegisterInfo::DataDescriptor& getDataDescriptor() const override { return dataDescriptor; }
-
-    ChimeraTK::RegisterPath name;
-    unsigned int length;
-    ChimeraTK::RegisterInfo::DataDescriptor dataDescriptor;
-    ChimeraTK::AccessModeFlags accessModeFlags{};
-    int doocsTypeId;
-  };
-
-} // namespace
-
 class CatalogueFetcher {
  public:
   CatalogueFetcher(const std::string& serverAddress, std::future<void> cancelIndicator)
   : serverAddress_(serverAddress), cancelFlag_(std::move(cancelIndicator)) {}
 
   std::unique_ptr<ctk::RegisterCatalogue> fetch();
-  static std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>>getRegInfo(const std::string &name, unsigned int length, int doocsType);
   static std::tuple<bool, std::string> endsWith(std::string const &s, const std::vector<std::string>& patterns);
 
  private:
@@ -402,7 +360,7 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
       auto length = dst.array_length();
       auto doocsTypeId = dst.type();
 
-      auto regInfolist = getRegInfo(regPath, length, doocsTypeId);
+      auto regInfolist = DoocsBackendRegisterInfo::create(regPath, length, doocsTypeId);
       for(auto &r: regInfolist){
           if(checkZmqAvailability(fixedComponents, name)) {r->accessModeFlags.add(ctk::AccessMode::wait_for_new_data);}
           catalogue_->addRegister(r);
@@ -413,72 +371,6 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
 
 /********************************************************************************************************************/
 
-std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>>CatalogueFetcher::getRegInfo(const std::string &name, unsigned int length, int doocsType){
-  std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>> list;
-  boost::shared_ptr<DoocsBackendRegisterInfo> info(new DoocsBackendRegisterInfo());
-
-  info->name = name;
-  info->length = length;
-  info->doocsTypeId = doocsType;
-
-  if (info->length == 0)
-    info->length = 1; // DOOCS reports 0 if not an array
-  if (doocsType == DATA_TEXT || doocsType == DATA_STRING || doocsType == DATA_STRING16 ||
-      doocsType == DATA_USTR) { // in case of strings, DOOCS reports the length
-                                // of the string
-    info->length = 1;
-    info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(ChimeraTK::RegisterInfo::FundamentalType::string);
-    list.push_back(info);
-
-  } else if (doocsType == DATA_INT || doocsType == DATA_A_INT ||
-             doocsType == DATA_A_SHORT || doocsType == DATA_A_LONG ||
-             doocsType == DATA_A_BYTE ||
-             doocsType == DATA_IIII) { // integral data types
-    size_t digits;
-    if (doocsType == DATA_A_SHORT) { // 16 bit signed
-      digits = 6;
-    } else if (doocsType == DATA_A_BYTE) { // 8 bit signed
-      digits = 4;
-    } else if (doocsType == DATA_A_LONG) { // 64 bit signed
-      digits = 20;
-    } else { // 32 bit signed
-      digits = 11;
-    }
-    if (doocsType == DATA_IIII)
-      info->length = 4;
-
-    info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-        ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, digits);
-    list.push_back(info);
-
-  } else if (doocsType == DATA_IFFF) {
-    info->name = name + "/I";
-    info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-        ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, 11); // 32 bit integer
-
-    boost::shared_ptr<DoocsBackendRegisterInfo> infoF1(new DoocsBackendRegisterInfo(*info));
-    infoF1->name = name + "/F1";
-    infoF1->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-        ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300); // float
-
-    boost::shared_ptr<DoocsBackendRegisterInfo> infoF2(new DoocsBackendRegisterInfo(*infoF1));
-    infoF2->name = name + "/F2";
-
-    boost::shared_ptr<DoocsBackendRegisterInfo> infoF3(new DoocsBackendRegisterInfo(*infoF1));
-    infoF3->name = name + "/F3";
-
-    list.push_back(info);
-    list.push_back(infoF1);
-    list.push_back(infoF2);
-    list.push_back(infoF3);
-
-  } else { // floating point data types: always treat like double
-    info->dataDescriptor = ChimeraTK::RegisterInfo::DataDescriptor(
-        ChimeraTK::RegisterInfo::FundamentalType::numeric, false, true, 320, 300);
-    list.push_back(info);
-  }
-  return list;
-}
 
 /********************************************************************************************************************/
 
@@ -617,17 +509,17 @@ namespace Cache {
       // precondition: patten is contained in name.
       name.erase(name.end() - pattern.length(), name.end());
 
-      list = CatalogueFetcher::getRegInfo(name, len, doocsTypeId);
+      list = DoocsBackendRegisterInfo::create(name, len, doocsTypeId);
       // !!!
       list.erase(
           std::remove_if(list.begin(), list.end(), //
                          [&](boost::shared_ptr<DoocsBackendRegisterInfo> &e) {
                            return !boost::algorithm::ends_with(
-                               static_cast<std::string>(e->name), pattern);
+                               static_cast<std::string>(e->getRegisterName()), pattern);
                          }),
           list.end());
     } else {
-      list = CatalogueFetcher::getRegInfo(name, len, doocsTypeId);
+      list = DoocsBackendRegisterInfo::create(name, len, doocsTypeId);
     }
     for (auto e : list) {
       e->accessModeFlags = flags;
@@ -710,10 +602,10 @@ namespace Cache {
     auto registerTag = rootNode->add_child("register");
 
     auto nameTag = registerTag->add_child("name");
-    nameTag->set_child_text(static_cast<std::string>(r.name));
+    nameTag->set_child_text(static_cast<std::string>(r.getRegisterName()));
 
     auto lengthTag = registerTag->add_child("length");
-    lengthTag->set_child_text(std::to_string(r.length));
+    lengthTag->set_child_text(std::to_string(r.getNumberOfElements()));
 
     auto accessMode = registerTag->add_child("access_mode");
     accessMode->set_child_text(r.accessModeFlags.serialize());
