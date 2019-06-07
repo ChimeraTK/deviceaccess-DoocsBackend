@@ -214,7 +214,7 @@ namespace ChimeraTK {
   template<typename UserType>
   boost::shared_ptr<NDRegisterAccessor<UserType>> DoocsBackend::getRegisterAccessor_impl(
       const RegisterPath& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags) {
-    NDRegisterAccessor<UserType>* p;
+    boost::shared_ptr<NDRegisterAccessor<UserType>> p;
     std::string path = _serverAddress + registerPathName;
 
     // check for additional hierarchy level, which indicates an access to a field of a complex property data type
@@ -270,30 +270,30 @@ namespace ChimeraTK {
     auto sharedThis = boost::static_pointer_cast<DoocsBackend>(shared_from_this());
     if(doocsTypeId == DATA_INT || doocsTypeId == DATA_A_INT || doocsTypeId == DATA_BOOL || doocsTypeId == DATA_A_BOOL ||
         doocsTypeId == DATA_A_SHORT) {
-      p = new DoocsBackendIntRegisterAccessor<UserType>(
-          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+      p.reset(new DoocsBackendIntRegisterAccessor<UserType>(
+          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags));
     }
     else if(doocsTypeId == DATA_A_LONG) {
-      p = new DoocsBackendLongRegisterAccessor<UserType>(
-          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+      p.reset(new DoocsBackendLongRegisterAccessor<UserType>(
+          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags));
     }
     else if(doocsTypeId == DATA_FLOAT || doocsTypeId == DATA_A_FLOAT || doocsTypeId == DATA_DOUBLE ||
         doocsTypeId == DATA_A_DOUBLE || doocsTypeId == DATA_SPECTRUM) {
-      p = new DoocsBackendFloatRegisterAccessor<UserType>(
-          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+      p.reset(new DoocsBackendFloatRegisterAccessor<UserType>(
+          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags));
     }
     else if(doocsTypeId == DATA_TEXT || doocsTypeId == DATA_STRING || doocsTypeId == DATA_STRING16) {
-      p = new DoocsBackendStringRegisterAccessor<UserType>(
-          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+      p.reset(new DoocsBackendStringRegisterAccessor<UserType>(
+          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags));
     }
     else if(doocsTypeId == DATA_IIII) {
-      p = new DoocsBackendIIIIRegisterAccessor<UserType>(
-          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+      p.reset(new DoocsBackendIIIIRegisterAccessor<UserType>(
+          sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags));
     }
     else if(doocsTypeId == DATA_IFFF) {
       extraLevelUsed = true;
-      p = new DoocsBackendIFFFRegisterAccessor<UserType>(
-          sharedThis, path, field, registerPathName, numberOfWords, wordOffsetInRegister, flags);
+      p.reset(new DoocsBackendIFFFRegisterAccessor<UserType>(
+          sharedThis, path, field, registerPathName, numberOfWords, wordOffsetInRegister, flags));
     }
     else {
       throw ChimeraTK::logic_error("Unsupported DOOCS data type " + std::string(EqData().type_string(doocsTypeId)) +
@@ -306,7 +306,7 @@ namespace ChimeraTK {
           std::string(EqData().type_string(doocsTypeId)) + ": " + _serverAddress + registerPathName);
     }
 
-    return boost::shared_ptr<NDRegisterAccessor<UserType>>(p);
+    return p;
   }
 
 } /* namespace ChimeraTK */
