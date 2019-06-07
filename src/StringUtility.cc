@@ -6,14 +6,14 @@
 
 namespace detail {
 
-std::tuple<bool, std::string> endsWith(std::string const &s,
+std::pair<bool, std::string> endsWith(std::string const &s,
     const std::vector<std::string> &patterns) {
   for (auto &p : patterns) {
     if (boost::algorithm::ends_with(s, p)) {
-      return std::tuple<bool, std::string>{true, p};
+      return std::pair<bool, std::string>{true, p};
     }
   }
-  return std::tuple<bool, std::string>{false, ""};
+  return std::pair<bool, std::string>{false, ""};
 }
 
 /********************************************************************************************************************/

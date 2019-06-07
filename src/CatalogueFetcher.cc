@@ -50,12 +50,8 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
     }
     else { // this is a property: create RegisterInfo entry and set its name
 
-      bool skipRegister;
-      std::string pattern="";
-
-      // skip unwanted properties.
-      std::tie(skipRegister, pattern) = detail::endsWith(name, IGNORE_PATTERNS);
-      if(skipRegister) {
+      // It matches one of DOOCS's internal properties; skip
+      if(detail::endsWith(name, IGNORE_PATTERNS).first) {
         continue;
       }
 

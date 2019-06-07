@@ -88,11 +88,10 @@ namespace Cache {
     }
 
     bool is_ifff = (doocsTypeId == DATA_IFFF);
-    std::string pattern;
     std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>> list;
 
     if (is_ifff) {
-      std::tie(is_ifff, pattern) = detail::endsWith(name, {"/I", "/F1", "/F2", "/F3"});
+      auto pattern = detail::endsWith(name, {"/I", "/F1", "/F2", "/F3"}).second;
       // remove pattern from name for getRegInfo to work correctly;
       // precondition: patten is contained in name.
       name.erase(name.end() - pattern.length(), name.end());
@@ -101,7 +100,7 @@ namespace Cache {
       // !!!
       list.erase(
           std::remove_if(list.begin(), list.end(), //
-              [&](boost::shared_ptr<DoocsBackendRegisterInfo> &e) {
+              [&pattern](boost::shared_ptr<DoocsBackendRegisterInfo> &e) {
                 return !boost::algorithm::ends_with(
                     static_cast<std::string>(e->_name), pattern);
               }),
