@@ -319,7 +319,7 @@ std::unique_ptr<ctk::RegisterCatalogue> CatalogueFetcher::fetch() {
   auto nSlashes = slashes(serverAddress_);
   fillCatalogue(serverAddress_, nSlashes);
 
-  return isCancelled() ? std::make_unique<ctk::RegisterCatalogue>() : std::move(catalogue_);
+  return isCancelled() ? std::unique_ptr<ctk::RegisterCatalogue>{nullptr} : std::move(catalogue_);
 }
 
 /********************************************************************************************************************/
