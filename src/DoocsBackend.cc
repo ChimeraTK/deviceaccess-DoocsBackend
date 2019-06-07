@@ -20,6 +20,7 @@
 #include "DoocsBackendLongRegisterAccessor.h"
 #include "DoocsBackendStringRegisterAccessor.h"
 #include "RegisterInfo.h"
+#include "StringUtility.h"
 
 // this is required since we link against the DOOCS libEqServer.so
 const char* object_name = "DoocsBackend";
@@ -52,7 +53,6 @@ class CatalogueFetcher {
   : serverAddress_(serverAddress), cancelFlag_(std::move(cancelIndicator)) {}
 
   std::unique_ptr<ctk::RegisterCatalogue> fetch();
-  static std::tuple<bool, std::string> endsWith(std::string const &s, const std::vector<std::string>& patterns);
 
  private:
   std::string serverAddress_;
@@ -60,7 +60,6 @@ class CatalogueFetcher {
   std::unique_ptr<ctk::RegisterCatalogue> catalogue_{};
 
   void fillCatalogue(std::string fixedComponents, long level) const;
-  static long slashes(const std::string& s);
   bool isCancelled() const { return (cancelFlag_.wait_for(std::chrono::microseconds(0)) == std::future_status::ready); }
   bool checkZmqAvailability(const std::string& fullLocationPath, const std::string& propertyName) const;
 };
@@ -274,36 +273,12 @@ namespace ChimeraTK {
 std::unique_ptr<ctk::RegisterCatalogue> CatalogueFetcher::fetch() {
   catalogue_ = std::make_unique<ctk::RegisterCatalogue>();
 
-  auto nSlashes = slashes(serverAddress_);
+  auto nSlashes = detail::slashes(serverAddress_);
   fillCatalogue(serverAddress_, nSlashes);
 
   return isCancelled() ? std::unique_ptr<ctk::RegisterCatalogue>{nullptr} : std::move(catalogue_);
 }
 
-/********************************************************************************************************************/
-
-long CatalogueFetcher::slashes(const std::string& s) {
-  long nSlashes;
-  if(!boost::starts_with(s, "doocs://")) {
-    nSlashes = std::count(s.begin(), s.end(), '/');
-  }
-  else {
-    nSlashes = std::count(s.begin(), s.end(), '/') - 3;
-  }
-  return nSlashes;
-}
-
-/********************************************************************************************************************/
-
-std::tuple<bool, std::string> CatalogueFetcher::endsWith(std::string const &s,
-                                const std::vector<std::string> &patterns) {
-  for (auto &p : patterns) {
-    if (boost::algorithm::ends_with(s, p)) {
-      return std::tuple<bool, std::string>{true, p};
-    }
-  }
-  return std::tuple<bool, std::string>{false, ""};
-}
 
 /********************************************************************************************************************/
 
@@ -339,7 +314,7 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
       std::string pattern="";
 
       // skip unwanted properties.
-      std::tie(skipRegister, pattern) = endsWith(name, ctk::IGNORE_PATTERNS);
+      std::tie(skipRegister, pattern) = detail::endsWith(name, ctk::IGNORE_PATTERNS);
       if(skipRegister) {
         continue;
       }
@@ -504,7 +479,7 @@ namespace Cache {
     std::vector<boost::shared_ptr<DoocsBackendRegisterInfo>> list;
 
     if (is_ifff) {
-      std::tie(is_ifff, pattern) = CatalogueFetcher::endsWith(name, {"/I", "/F1", "/F2", "/F3"});
+      std::tie(is_ifff, pattern) = detail::endsWith(name, {"/I", "/F1", "/F2", "/F3"});
       // remove pattern from name for getRegInfo to work correctly;
       // precondition: patten is contained in name.
       name.erase(name.end() - pattern.length(), name.end());
