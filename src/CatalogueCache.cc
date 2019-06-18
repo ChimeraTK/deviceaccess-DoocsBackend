@@ -65,7 +65,7 @@ namespace Cache {
     if(std::rename(temporary_name.c_str(), xmlfile.c_str()) < 0) {
       int savedErrno = errno;
       char reason[255] = {0};
-      strerror_r(savedErrno, reason, std::size(reason));
+      strerror_r(savedErrno, reason, sizeof(reason) - 1);
       throw ChimeraTK::runtime_error(std::string{"Failed to replace cache file: "} + reason);
     }
   }
