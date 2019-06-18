@@ -7,6 +7,10 @@
 #include <eq_types.h>
 #include <eq_data.h>
 
+#include <cstdlib>
+#include <cerrno>
+#include <exception>
+
 /********************************************************************************************************************/
 
 namespace Cache {
@@ -56,7 +60,12 @@ namespace Cache {
         addRegInfoXmlNode(*doocsRegInfo, rootNode);
       }
     }
-    doc.write_to_file_formatted(xmlfile);
+    std::string temporary_name = xmlfile + ".new";
+    doc.write_to_file_formatted(temporary_name);
+    if(std::rename(temporary_name.c_str(), xmlfile.c_str()) < 0) {
+      int savedErrno = errno;
+      throw ChimeraTK::runtime_error(std::string{"Failed to replace cache file: "} + std::strerror(savedErrno));
+    }
   }
 
   /********************************************************************************************************************/
