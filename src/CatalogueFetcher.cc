@@ -36,11 +36,11 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
   }
 
   // iterate over list
+
   for(int i = 0; i < propList.array_length() && (isCancelled() == false); ++i) {
     // obtain the name of the element
-    char c[255];
-    propList.get_string_arg(i, c, 255);
-    std::string name = c;
+    auto u = propList.get_ustr(i);
+    std::string name(u->str_data.str_data_val);
     name = name.substr(0, name.find_first_of(" ")); // ignore comment which is following the space
 
     // if we are not yet at the property-level, recursivly call the function
