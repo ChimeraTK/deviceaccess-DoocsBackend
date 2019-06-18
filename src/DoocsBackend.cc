@@ -35,11 +35,11 @@ boost::shared_ptr<ChimeraTK::DeviceBackend> ChimeraTK_DeviceAccess_createBackend
   return ChimeraTK::DoocsBackend::createInstance(address, parameters);
 }
 
-std::vector<std::string> ChimeraTK_DeviceAccess_sdmParameterNames{"facility", "device", "location"};
+static std::vector<std::string> ChimeraTK_DeviceAccess_sdmParameterNames{"facility", "device", "location"};
 
-std::string ChimeraTK_DeviceAccess_version{CHIMERATK_DEVICEACCESS_VERSION};
+static std::string ChimeraTK_DeviceAccess_version{CHIMERATK_DEVICEACCESS_VERSION};
 
-std::string backend_name = "doocs";
+static std::string backend_name = "doocs";
 }
 
 static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::string cacheFile, std::future<void> cancelFlag);
