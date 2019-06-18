@@ -9,7 +9,7 @@
 
 #include <cstdlib>
 #include <cerrno>
-#include <exception>
+#include <cstring>
 
 /********************************************************************************************************************/
 
@@ -64,7 +64,9 @@ namespace Cache {
     doc.write_to_file_formatted(temporary_name);
     if(std::rename(temporary_name.c_str(), xmlfile.c_str()) < 0) {
       int savedErrno = errno;
-      throw ChimeraTK::runtime_error(std::string{"Failed to replace cache file: "} + std::strerror(savedErrno));
+      char reason[255] = {0};
+      strerror_r(savedErrno, reason, std::size(reason));
+      throw ChimeraTK::runtime_error(std::string{"Failed to replace cache file: "} + reason);
     }
   }
 
