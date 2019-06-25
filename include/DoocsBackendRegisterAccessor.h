@@ -101,7 +101,22 @@ namespace ChimeraTK {
       return false;
     }
 
-    void doPostRead() override { currentVersion = {}; }
+    void doPostRead() override {
+      // convert EqData time stamp into std::chrono::system_clock format
+      int seconds = 0;
+      int useconds = 0;
+      dst.time(&seconds, &useconds);
+      // use only if valid
+      if(seconds > 0) {
+        auto stamp = std::chrono::system_clock::from_time_t(seconds) + useconds * std::chrono::milliseconds();
+        // create new version number with time stamp from data
+        currentVersion = VersionNumber(stamp);
+      }
+      else {
+        // no valid time stamp has been set, generate our own
+        currentVersion = VersionNumber();
+      }
+    }
 
     AccessModeFlags getAccessModeFlags() const override {
       if(useZMQ) return {AccessMode::wait_for_new_data};
