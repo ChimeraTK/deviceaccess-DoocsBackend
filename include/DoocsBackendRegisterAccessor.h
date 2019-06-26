@@ -108,7 +108,7 @@ namespace ChimeraTK {
       dst.time(&seconds, &useconds);
       // use only if valid
       if(seconds > 0) {
-        auto stamp = std::chrono::system_clock::from_time_t(seconds) + useconds * std::chrono::milliseconds();
+        auto stamp = std::chrono::system_clock::from_time_t(seconds) + useconds * std::chrono::microseconds();
         // create new version number with time stamp from data
         currentVersion = VersionNumber(stamp);
       }
