@@ -54,9 +54,12 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
   /******************************************************************************************************************/
 
-  void ZMQSubscriptionManager::zmq_callback(void* self_, EqData* data, dmsg_info_t*) {
+  void ZMQSubscriptionManager::zmq_callback(void* self_, EqData* data, dmsg_info_t* info) {
     // obtain pointer to accessor object
     auto* subscription = static_cast<ZMQSubscriptionManager::Subscription*>(self_);
+
+    data->time(info->sec, info->usec);
+    data->mpnum(info->ident);
 
     // if there are more listeners, add a copy of the EqData to their queues as well
     std::unique_lock<std::mutex> lock(subscription->listeners_mutex);
