@@ -6,6 +6,10 @@ client protocol.
 
 Note: This doucmentation is still incomplete.
 
+\section Features
+- Read-write access to payload data of many DOOCS data types (see \ref supported_types)
+- Attached time stamp will be preserved and can be accessed through the VersionNumber
+
 \page supported_types Supported Data Types
 
 This page lists the supported data types. The list is still incomplete.
