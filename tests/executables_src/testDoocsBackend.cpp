@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <random>
 #include <thread>
+#include <iostream>
 
 #define BOOST_TEST_MODULE testDoocsBackend
 #include <boost/test/included/unit_test.hpp>
@@ -360,10 +361,10 @@ BOOST_AUTO_TEST_CASE(testString) {
   BOOST_CHECK(acc_someString[0][0] == "Something else.");
 
   acc_someString[0][0] = "Even different!";
-  BOOST_CHECK(DoocsServerTestHelper::doocsGet<string>("//MYDUMMY/SOME_STRING") == "Something else.");
+  BOOST_CHECK(DoocsServerTestHelper::doocsGet<std::string>("//MYDUMMY/SOME_STRING") == "Something else.");
   VersionNumber nextVersion;
   acc_someString.write(nextVersion);
-  BOOST_CHECK(DoocsServerTestHelper::doocsGet<string>("//MYDUMMY/SOME_STRING") == "Even different!");
+  BOOST_CHECK(DoocsServerTestHelper::doocsGet<std::string>("//MYDUMMY/SOME_STRING") == "Even different!");
   BOOST_CHECK(acc_someString.getVersionNumber() == nextVersion);
 
   device.close();
