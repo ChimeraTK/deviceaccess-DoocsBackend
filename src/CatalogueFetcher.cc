@@ -31,7 +31,9 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
   int rc = eq.names(&ea, &propList);
   if(rc) {
     // if the enumeration failes, maybe the server is not available (but
-    // exists in ENS) -> just ignore this address
+    // exists in ENS) -> just ignore this address but warn
+    std::cout << "DoocsBackend::CatalogueFetcher: Failed to query names for " + fixedComponents
+              << ": \"" + propList.get_string() + "\"" << std::endl;
     return;
   }
 
