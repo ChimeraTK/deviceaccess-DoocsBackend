@@ -9,6 +9,7 @@ Note: This doucmentation is still incomplete.
 \section Features
 - Read-write access to payload data of many DOOCS data types (see \ref supported_types)
 - Attached time stamp will be preserved and can be accessed through the VersionNumber
+- Applications are doocs property aware at startup (by using the optional \ref cacheFile "cache file mechanism").
 
 \page supported_types Supported Data Types
 
