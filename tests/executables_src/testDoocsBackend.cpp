@@ -13,6 +13,7 @@
 
 #define BOOST_TEST_MODULE testDoocsBackend
 #include <boost/test/included/unit_test.hpp>
+#include <boost/filesystem.hpp>
 
 #include <ChimeraTK/Device.h>
 #include <ChimeraTK/TransferGroup.h>
@@ -28,7 +29,7 @@ using namespace ChimeraTK;
 /**********************************************************************************************************************/
 
 static bool file_exists(const std::string& name);
-static void createCacheFile(const std::string& ccd);
+static void createCacheFileFromCdd(const std::string& cdd);
 static void deleteFile(const std::string& filename);
 
 class DoocsLauncher : public ThreadedDoocsServer {
@@ -70,7 +71,7 @@ std::string DoocsLauncher::DoocsServer2_cached;
 std::string DoocsLauncher::cacheFile1{"cache1.xml"};
 std::string DoocsLauncher::cacheFile2{"cache2.xml"};
 
-BOOST_GLOBAL_FIXTURE(DoocsLauncher);
+BOOST_GLOBAL_FIXTURE(DoocsLauncher)
 
 /**********************************************************************************************************************/
 
@@ -941,9 +942,9 @@ BOOST_AUTO_TEST_CASE(testExceptions) {
 
 /**********************************************************************************************************************/
 
-void createCacheFile(const std::string& ccd) {
+void createCacheFileFromCdd(const std::string& cdd) {
   namespace ctk = ChimeraTK;
-  auto d = ctk::Device(ccd);
+  auto d = ctk::Device(cdd);
   d.open();
   d.getRegisterCatalogue();
 }
@@ -956,8 +957,8 @@ void deleteFile(const std::string& filename) {
 
 BOOST_AUTO_TEST_CASE(testCatalogue) {
   {
-    createCacheFile(DoocsLauncher::DoocsServer1_cached);
-    createCacheFile(DoocsLauncher::DoocsServer2_cached);
+    createCacheFileFromCdd(DoocsLauncher::DoocsServer1_cached);
+    createCacheFileFromCdd(DoocsLauncher::DoocsServer2_cached);
 
     ChimeraTK::Device device;
     device.open(DoocsLauncher::DoocsServer2);
@@ -1162,7 +1163,7 @@ BOOST_AUTO_TEST_CASE(testDestruction) {
   auto server = find_device("MYDUMMY");
   server->lock();
   {
-    auto d = ChimeraTK::Device(DoocsLauncher::DoocsServer2);
+    auto d = ChimeraTK::Device(DoocsLauncher::DoocsServer2_cached);
     std::async(std::launch::async, [=]() { server->unlock(); });
   } // should not block here on instance destruction.
 }
@@ -1190,4 +1191,76 @@ BOOST_AUTO_TEST_CASE(testCacheFileCreation) {
   }
   deleteFile(DoocsLauncher::cacheFile1);
   deleteFile(DoocsLauncher::cacheFile2);
+}
+
+std::time_t createDummyXml(const std::string& filename){
+  std::string xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                    "<catalogue version=\"1.0\">"
+                    "  <register>\n"
+                    "    <name>/DUMMY</name>\n"
+                    "    <length>1</length>\n"
+                    "    <access_mode></access_mode>\n"
+                    "    <doocs_type_id>1</doocs_type_id>\n" // DATA_TEXT
+                    "    <!--doocs id: INT-->\n"
+                    "  </register>\n"
+                    "</catalogue>\n";
+  std::ofstream o(filename);
+  o << xml;
+  o.close();
+
+  auto creation_time = boost::filesystem::last_write_time(DoocsLauncher::cacheFile2);
+
+  // boost::filesystem::last_write_time timestamp resolution is not high
+  // enough to pick modifications without this wait.
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  return creation_time;
+}
+
+BOOST_AUTO_TEST_CASE(testCacheXmlReplacement) {
+  // test local copy is replaced when catalogue fetching is complete.
+  auto creation_time = createDummyXml(DoocsLauncher::cacheFile2);
+  {
+    auto d = ChimeraTK::Device(DoocsLauncher::DoocsServer2_cached);
+    std::atomic<bool> cancelTimeOutTask{false};
+
+    std::future<void> timeoutTask = std::async(std::launch::async, [&] () {
+          unsigned int count = 60;
+          while (count > 0 && not cancelTimeOutTask) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            count --;
+          }
+        }) ;
+
+    auto hasTimedOut = [&](){
+       return timeoutTask.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+    };
+
+    auto modification_time = creation_time;
+    while ((modification_time <= creation_time) && not hasTimedOut()) {
+      modification_time = boost::filesystem::last_write_time(DoocsLauncher::cacheFile2);
+      std::this_thread::sleep_for(std::chrono::seconds(2));
+    }
+    // cancel timeout task
+    cancelTimeOutTask = true;
+    BOOST_CHECK(modification_time > creation_time); // given the percondition,
+                                                    // this should fail if loop
+                                                    // times out.
+    deleteFile(DoocsLauncher::cacheFile2);
+  }
+
+}
+
+BOOST_AUTO_TEST_CASE(testCacheXmlReplacementBehaviorOnFailure) {
+  // local copy unchanged if app exits before.
+  auto creation_time = createDummyXml(DoocsLauncher::cacheFile2);
+  auto server = find_device("MYDUMMY");
+  server->lock();
+  {
+    auto d = ChimeraTK::Device(DoocsLauncher::DoocsServer2_cached);
+  }
+  server->unlock();
+  auto modification_time = boost::filesystem::last_write_time(DoocsLauncher::cacheFile2);
+  BOOST_CHECK(creation_time == modification_time);
+  deleteFile(DoocsLauncher::cacheFile2);
+
 }

@@ -25,7 +25,7 @@ void generateCacheFile() {
                     "    <name>/DUMMY</name>\n"
                     "    <length>1</length>\n"
                     "    <access_mode></access_mode>\n"
-                    "    <doocs_type_id>7</doocs_type_id>\n" // DATA_TEXT
+                    "    <doocs_type_id>1</doocs_type_id>\n" // DATA_TEXT
                     "    <!--doocs id: INT-->\n"
                     "  </register>\n"
                     "</catalogue>\n";
