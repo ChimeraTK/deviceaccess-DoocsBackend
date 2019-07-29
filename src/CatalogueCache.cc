@@ -152,7 +152,7 @@ namespace Cache {
     try {
       return std::make_unique<xmlpp::DomParser>(xmlfile);
     }
-    catch(xmlpp::exception& e) {
+    catch(std::exception& e) {
       throw ChimeraTK::logic_error("Error opening " + xmlfile + ": " + e.what());
     }
   }
@@ -160,11 +160,16 @@ namespace Cache {
   /********************************************************************************************************************/
 
   xmlpp::Element* getRootNode(xmlpp::DomParser& parser) {
-    auto root = parser.get_document()->get_root_node();
-    if(root->get_name() != "catalogue") {
-      ChimeraTK::logic_error("Expected tag 'catalog' got: " + root->get_name());
+    try {
+      auto root = parser.get_document()->get_root_node();
+      if(root->get_name() != "catalogue") {
+        ChimeraTK::logic_error("Expected tag 'catalog' got: " + root->get_name());
+      }
+      return root;
     }
-    return root;
+    catch(std::exception& e){
+      throw ChimeraTK::logic_error(e.what());
+    }
   }
 
   /********************************************************************************************************************/

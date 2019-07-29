@@ -1282,4 +1282,17 @@ BOOST_AUTO_TEST_CASE(testAccessorForCachedMode){
   acc_someInt_as_int[0][0] = 50;
   acc_someInt_as_int.write();
   BOOST_CHECK(DoocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 50);
+  deleteFile(DoocsLauncher::cacheFile1);
+}
+
+BOOST_AUTO_TEST_CASE(testBlankXMLThrow){
+
+  std::string xml = "";
+  std::ofstream o(DoocsLauncher::cacheFile2);
+  o << xml;
+  o.close();
+
+  BOOST_CHECK_THROW(ChimeraTK::Device(DoocsLauncher::DoocsServer2_cached), ChimeraTK::logic_error);
+  deleteFile(DoocsLauncher::cacheFile2);
+
 }
