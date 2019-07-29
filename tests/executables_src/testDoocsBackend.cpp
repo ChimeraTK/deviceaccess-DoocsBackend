@@ -1264,3 +1264,22 @@ BOOST_AUTO_TEST_CASE(testCacheXmlReplacementBehaviorOnFailure) {
   deleteFile(DoocsLauncher::cacheFile2);
 
 }
+
+BOOST_AUTO_TEST_CASE(testAccessorForCachedMode){
+  createCacheFileFromCdd(DoocsLauncher::DoocsServer1_cached);
+  auto d = ChimeraTK::Device(DoocsLauncher::DoocsServer1_cached);
+  
+  DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT", 120);
+  TwoDRegisterAccessor<int32_t> acc_someInt_as_int(d.getTwoDRegisterAccessor<int32_t>("MYDUMMY/SOME_INT"));
+  BOOST_CHECK(acc_someInt_as_int.getNChannels() == 1);
+  BOOST_CHECK(acc_someInt_as_int.getNElementsPerChannel() == 1);
+
+  d.open();
+
+  acc_someInt_as_int.read();
+  BOOST_CHECK(acc_someInt_as_int[0][0] == 120);
+
+  acc_someInt_as_int[0][0] = 50;
+  acc_someInt_as_int.write();
+  BOOST_CHECK(DoocsServerTestHelper::doocsGet<int>("//MYDUMMY/SOME_INT") == 50);
+}
