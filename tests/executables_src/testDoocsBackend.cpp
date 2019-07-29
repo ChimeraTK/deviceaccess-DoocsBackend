@@ -71,7 +71,7 @@ std::string DoocsLauncher::DoocsServer2_cached;
 std::string DoocsLauncher::cacheFile1{"cache1.xml"};
 std::string DoocsLauncher::cacheFile2{"cache2.xml"};
 
-BOOST_GLOBAL_FIXTURE(DoocsLauncher)
+BOOST_GLOBAL_FIXTURE(DoocsLauncher);
 
 /**********************************************************************************************************************/
 
