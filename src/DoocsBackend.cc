@@ -48,10 +48,12 @@ static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string server
 /********************************************************************************************************************/
 
 static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::string cacheFile, std::future<void> cancelFlag) {
-  auto catalogue = CatalogueFetcher(serverAddress, std::move(cancelFlag)).fetch();
+  auto result = CatalogueFetcher(serverAddress, std::move(cancelFlag)).fetch();
+  auto catalogue = std::move(result.first);
+  auto isCatalogueComplete = result.second;
+  bool isCacheFileNameSpecified = not cacheFile.empty();
 
-  // catalogue == nullptr when fetch is canceled.
-  if(catalogue != nullptr && catalogue->getNumberOfRegisters() > 0 && not cacheFile.empty()) {
+  if(isCatalogueComplete && isCacheFileNameSpecified){
     Cache::saveCatalogue(*catalogue, cacheFile);
   }
   return catalogue;

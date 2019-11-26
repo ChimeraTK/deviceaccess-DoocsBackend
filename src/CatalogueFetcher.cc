@@ -7,22 +7,25 @@
 const std::vector<std::string> IGNORE_PATTERNS = {".HIST", ".FILT", "._FILT", ".EGU", ".DESC", ".HSTAT", "._HSTAT", "._HIST",
     ".LIST", ".SAVE", ".COMMENT", ".XEGU", ".POLYPARA"};
 
-
 /********************************************************************************************************************/
 
-std::unique_ptr<ChimeraTK::RegisterCatalogue> CatalogueFetcher::fetch() {
+using Catalogue = std::unique_ptr<ChimeraTK::RegisterCatalogue>;
+std::pair<Catalogue, bool> CatalogueFetcher::fetch() {
   catalogue_ = std::make_unique<ChimeraTK::RegisterCatalogue>();
 
   auto nSlashes = detail::slashes(serverAddress_);
   fillCatalogue(serverAddress_, nSlashes);
 
-  return isCancelled() ? std::unique_ptr<ChimeraTK::RegisterCatalogue>{nullptr} : std::move(catalogue_);
-}
+  bool isCatalogueComplete = not(isCancelled() || locationLookupError_ ||
+                                 catalogue_->getNumberOfRegisters() == 0);
 
+  return std::pair<Catalogue, bool>{ std::move(catalogue_),
+                                     isCatalogueComplete };
+}
 
 /********************************************************************************************************************/
 
-void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) const {
+void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) {
   // obtain list of elements within the given partial address
   EqAdr ea;
   EqCall eq;
@@ -34,6 +37,8 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) co
     // exists in ENS) -> just ignore this address but warn
     std::cout << "DoocsBackend::CatalogueFetcher: Failed to query names for " + fixedComponents
               << ": \"" + propList.get_string() + "\"" << std::endl;
+
+    locationLookupError_ = true;
     return;
   }
 
