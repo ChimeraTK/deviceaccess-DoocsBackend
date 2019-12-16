@@ -126,6 +126,7 @@ namespace ChimeraTK {
     TransferFuture doReadTransferAsync() override;
 
     void interrupt() override {
+      if(!useZMQ) return; // nothing to interrupt here...
       try {
         throw boost::thread_interrupted();
       }

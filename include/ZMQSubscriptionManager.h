@@ -1,10 +1,14 @@
 #ifndef CHIMERATK_DOOCS_BACKEND_ZMQSUBSCRIPTIONMANAGER_H
 #define CHIMERATK_DOOCS_BACKEND_ZMQSUBSCRIPTIONMANAGER_H
 
+#include <pthread.h>
+
 #include <string>
 #include <mutex>
 #include <map>
 #include <vector>
+
+#include <boost/shared_ptr.hpp>
 
 #include <eq_fct.h>
 
@@ -27,14 +31,20 @@ namespace ChimeraTK {
       void unsubscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor);
 
      private:
+      ZMQSubscriptionManager();
+      ~ZMQSubscriptionManager();
+
       /** static flag if dmsg_start() has been called already, with mutex for thread safety */
       bool dmsgStartCalled;
       std::mutex dmsgStartCalled_mutex;
 
       /// Structure describing a single subscription
       struct Subscription {
+        Subscription() : zqmThreadId(ZMQSubscriptionManager::pthread_t_invalid) {}
+
         /// list of accessors listening to the ZMQ subscription.
         /// Accessing this vector requires holding zmq_callback_extra_listeners_mutex
+        /// It's ok to use plain pointers here, since accessors will unsubscribe themselves in their destructor
         std::vector<DoocsBackendRegisterAccessorBase*> listeners;
 
         /// Mutex for zmq_callback_extra_listeners
@@ -42,7 +52,17 @@ namespace ChimeraTK {
 
         /// cached dmsg tag needed for cleanup
         dmsg_t tag;
+
+        /// Thread ID of the ZeroMQ subscription thread which calls zmq_callback. This is a DOOCS thread and hence
+        /// outside our control. We store the ID inside zmq_callback so we can check whether the thread has been
+        /// properly terminated in the cleanup phase. listeners_mutex must be held while accessing this variable.
+        pthread_t zqmThreadId;
       };
+
+      /// A "random" value of pthread_t which we consider "invalid" in context of Subscription::zqmThreadId. Technically
+      /// we use a valid pthread_t of a thread which cannot be a ZeroMQ subscription thread. All values of
+      /// Subscription::zqmThreadId will be initialised with this value.
+      static pthread_t pthread_t_invalid;
 
       /// map of subscriptions
       std::map<std::string, Subscription> subscriptionMap;

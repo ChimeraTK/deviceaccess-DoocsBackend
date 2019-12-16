@@ -5,6 +5,27 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
   /******************************************************************************************************************/
 
+  pthread_t ZMQSubscriptionManager::pthread_t_invalid;
+
+  /******************************************************************************************************************/
+
+  ZMQSubscriptionManager::ZMQSubscriptionManager() { pthread_t_invalid = pthread_self(); }
+
+  /******************************************************************************************************************/
+
+  ZMQSubscriptionManager::~ZMQSubscriptionManager() {
+    for(auto subscription = subscriptionMap.begin(); subscription != subscriptionMap.end();) {
+      auto subscriptionToWork = subscription++;
+      for(auto accessor = subscriptionToWork->second.listeners.rbegin();
+          accessor != subscriptionToWork->second.listeners.rend();) {
+        auto accessorToWork = accessor++;
+        unsubscribe(subscriptionToWork->first, *accessorToWork);
+      }
+    }
+  }
+
+  /******************************************************************************************************************/
+
   void ZMQSubscriptionManager::subscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor) {
     std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
 
@@ -40,14 +61,26 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
     // ignore if no subscription exists
     if(subscriptionMap.find(path) == subscriptionMap.end()) return;
 
+    // gain lock for listener, to exclude concurrent access with the zmq_callback()
+    std::unique_lock<std::mutex> listeners_lock(subscriptionMap[path].listeners_mutex);
+
     // remove accessor from list of listeners
-    std::remove(subscriptionMap[path].listeners.begin(), subscriptionMap[path].listeners.end(), accessor);
+    subscriptionMap[path].listeners.erase(
+        std::remove(subscriptionMap[path].listeners.begin(), subscriptionMap[path].listeners.end(), accessor));
 
     // if no listener left, delete the subscription
     if(subscriptionMap[path].listeners.empty()) {
+      // remove ZMQ subscription
       EqAdr ea;
       ea.adr(path);
       dmsg_detach(&ea, subscriptionMap[path].tag);
+
+      // make sure ZMQ subscription thread is terminated
+      if(!pthread_equal(subscriptionMap[path].zqmThreadId, pthread_t_invalid)) {
+        pthread_join(subscriptionMap[path].zqmThreadId, nullptr);
+      }
+
+      // remove subscription from map
       subscriptionMap.erase(subscriptionMap.find(path));
     }
   }
@@ -63,6 +96,9 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
     // if there are more listeners, add a copy of the EqData to their queues as well
     std::unique_lock<std::mutex> lock(subscription->listeners_mutex);
+    if(pthread_equal(subscription->zqmThreadId, pthread_t_invalid)) {
+      subscription->zqmThreadId = pthread_self();
+    }
     for(auto& listener : subscription->listeners) {
       listener->notifications.push_overwrite(*data);
     }
