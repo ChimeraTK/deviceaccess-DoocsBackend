@@ -50,9 +50,6 @@ namespace ChimeraTK {
         /// Mutex for zmq_callback_extra_listeners
         std::mutex listeners_mutex;
 
-        /// cached dmsg tag needed for cleanup
-        dmsg_t tag;
-
         /// Thread ID of the ZeroMQ subscription thread which calls zmq_callback. This is a DOOCS thread and hence
         /// outside our control. We store the ID inside zmq_callback so we can check whether the thread has been
         /// properly terminated in the cleanup phase. listeners_mutex must be held while accessing this variable.

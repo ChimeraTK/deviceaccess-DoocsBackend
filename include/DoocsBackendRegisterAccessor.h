@@ -237,8 +237,7 @@ namespace ChimeraTK {
 
     // use ZeroMQ with AccessMode::wait_for_new_data
     if(useZMQ) {
-      // create notification queue and TransferFuture
-      notifications = cppext::future_queue<EqData>(3);
+      // create TransferFuture
       activeFuture = TransferFuture(notifications.then<void>([](EqData&) {}, std::launch::deferred), this);
       futureCreated = true;
 
@@ -272,6 +271,10 @@ namespace ChimeraTK {
       // use zero mq subscriptiopn?
       if(flags.has(AccessMode::wait_for_new_data)) {
         useZMQ = true;
+
+        // Create notification queue. It must be done already here (not only in initialise()), since interrupt() will
+        // expect its presence if useZMQ == true.
+        notifications = cppext::future_queue<EqData>(3);
       }
 
       // if the backend has not yet been openend, obtain size of the register from catalogue

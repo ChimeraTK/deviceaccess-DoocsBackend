@@ -35,7 +35,8 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       EqData dst;
       EqAdr ea;
       ea.adr(path);
-      int err = dmsg_attach(&ea, &dst, (void*)&(subscriptionMap[path]), &zmq_callback, &subscriptionMap[path].tag);
+      dmsg_t tag;
+      int err = dmsg_attach(&ea, &dst, (void*)&(subscriptionMap[path]), &zmq_callback, &tag);
       if(err) {
         throw ChimeraTK::runtime_error(
             std::string("Cannot subscribe to DOOCS property '" + path + "' via ZeroMQ: ") + dst.get_string());
@@ -70,15 +71,18 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
     // if no listener left, delete the subscription
     if(subscriptionMap[path].listeners.empty()) {
-      // remove ZMQ subscription
+      // temporarily unlock the locks which might block the ZQM subscription thread
+      listeners_lock.unlock();
+      lock.unlock();
+
+      // remove ZMQ subscription. This will also join the ZMQ subscription thread
       EqAdr ea;
       ea.adr(path);
-      dmsg_detach(&ea, subscriptionMap[path].tag);
+      dmsg_detach(&ea, nullptr); // nullptr = remove all subscriptions for that address
 
-      // make sure ZMQ subscription thread is terminated
-      if(!pthread_equal(subscriptionMap[path].zqmThreadId, pthread_t_invalid)) {
-        pthread_join(subscriptionMap[path].zqmThreadId, nullptr);
-      }
+      // obtain locks again
+      listeners_lock.lock();
+      lock.lock();
 
       // remove subscription from map
       subscriptionMap.erase(subscriptionMap.find(path));
