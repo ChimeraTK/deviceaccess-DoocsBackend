@@ -51,6 +51,8 @@ namespace ChimeraTK {
 
     void close() override;
 
+    bool isFunctional() const override;
+
     std::string readDeviceInfo() override { return std::string("DOOCS server address: ") + _serverAddress; }
 
    public:
@@ -68,7 +70,7 @@ namespace ChimeraTK {
 
     /** We need to make the catalogue mutable, since we fill it within
      * getRegisterCatalogue() */
-    mutable std::unique_ptr<RegisterCatalogue> _catalogue_mutable {};
+    mutable std::unique_ptr<RegisterCatalogue> _catalogue_mutable{};
 
     /** Class to register the backend type with the factory. */
     class BackendRegisterer {

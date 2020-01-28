@@ -42,18 +42,19 @@ static std::string ChimeraTK_DeviceAccess_version{CHIMERATK_DEVICEACCESS_VERSION
 static std::string backend_name = "doocs";
 }
 
-static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::string cacheFile, std::future<void> cancelFlag);
-
+static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(
+    std::string serverAddress, std::string cacheFile, std::future<void> cancelFlag);
 
 /********************************************************************************************************************/
 
-static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(std::string serverAddress, std::string cacheFile, std::future<void> cancelFlag) {
+static std::unique_ptr<ctk::RegisterCatalogue> fetchCatalogue(
+    std::string serverAddress, std::string cacheFile, std::future<void> cancelFlag) {
   auto result = CatalogueFetcher(serverAddress, std::move(cancelFlag)).fetch();
   auto catalogue = std::move(result.first);
   auto isCatalogueComplete = result.second;
   bool isCacheFileNameSpecified = not cacheFile.empty();
 
-  if(isCatalogueComplete && isCacheFileNameSpecified){
+  if(isCatalogueComplete && isCacheFileNameSpecified) {
     Cache::saveCatalogue(*catalogue, cacheFile);
   }
   return catalogue;
@@ -75,21 +76,23 @@ namespace ChimeraTK {
 
   DoocsBackend::DoocsBackend(const std::string& serverAddress, const std::string& cacheFile)
   : _serverAddress(serverAddress), _cacheFile(cacheFile) {
-    if (cacheFileExists() && isCachingEnabled()) {
+    if(cacheFileExists() && isCachingEnabled()) {
       _catalogue_mutable = Cache::readCatalogue(_cacheFile);
     }
-    _catalogueFuture = std::async(std::launch::async, fetchCatalogue, serverAddress, cacheFile, _cancelFlag.get_future());
+    _catalogueFuture =
+        std::async(std::launch::async, fetchCatalogue, serverAddress, cacheFile, _cancelFlag.get_future());
     FILL_VIRTUAL_FUNCTION_TEMPLATE_VTABLE(getRegisterAccessor_impl);
   }
 
   /********************************************************************************************************************/
 
   DoocsBackend::~DoocsBackend() {
-    if (_catalogueFuture.valid()) {
+    if(_catalogueFuture.valid()) {
       try {
-          _cancelFlag.set_value(); // cancel fill catalogue async task
-          _catalogueFuture.get();
-      } catch (...) {
+        _cancelFlag.set_value(); // cancel fill catalogue async task
+        _catalogueFuture.get();
+      }
+      catch(...) {
         // prevent throwing in destructor (ub if it does);
       }
     }
@@ -138,8 +141,8 @@ namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
-  const RegisterCatalogue &DoocsBackend::getRegisterCatalogue() const {
-    if (_catalogue_mutable == nullptr) {
+  const RegisterCatalogue& DoocsBackend::getRegisterCatalogue() const {
+    if(_catalogue_mutable == nullptr) {
       _catalogue_mutable = _catalogueFuture.get();
     }
     return *_catalogue_mutable;
@@ -148,6 +151,11 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   void DoocsBackend::close() { _opened = false; }
+
+  bool DoocsBackend::isFunctional() const {
+#warning This default implementation causes fluctuating error states in ApplicationCore. Write a proper implementsation (issue #22)
+    return _opened;
+  }
 
   /********************************************************************************************************************/
 
@@ -250,4 +258,3 @@ namespace ChimeraTK {
   }
 
 } /* namespace ChimeraTK */
-
