@@ -64,6 +64,9 @@ namespace ChimeraTK {
     bool shutdownCalled{false};
 
     ChimeraTK::VersionNumber currentVersion;
+
+    /// last time stamp for comparison so we can exclude backwardws-going time stamps
+    std::chrono::system_clock::time_point last_stamp;
   };
 
   /********************************************************************************************************************/
@@ -106,16 +109,17 @@ namespace ChimeraTK {
       int seconds = 0;
       int useconds = 0;
       dst.time(&seconds, &useconds);
-      // use only if valid
-      if(seconds > 0) {
+      // use only if valid: positive and monotonic
+      auto stamp = std::chrono::system_clock::from_time_t(seconds) + std::chrono::microseconds(useconds);
+      if(seconds > 0 && stamp > last_stamp) {
         // create new version number with time stamp from data
-        auto stamp = std::chrono::system_clock::from_time_t(seconds) + std::chrono::microseconds(useconds);
         currentVersion = VersionNumber(stamp);
       }
       else {
         // no valid time stamp has been set, generate our own
         currentVersion = VersionNumber();
       }
+      last_stamp = currentVersion.getTime();
     }
 
     AccessModeFlags getAccessModeFlags() const override {
