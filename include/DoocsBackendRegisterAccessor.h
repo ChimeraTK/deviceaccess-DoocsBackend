@@ -64,9 +64,6 @@ namespace ChimeraTK {
     bool shutdownCalled{false};
 
     ChimeraTK::VersionNumber currentVersion;
-
-    /// last time stamp for comparison so we can exclude backwardws-going time stamps
-    std::chrono::system_clock::time_point last_stamp;
   };
 
   /********************************************************************************************************************/
@@ -105,21 +102,12 @@ namespace ChimeraTK {
     }
 
     void doPostRead() override {
-      // convert EqData time stamp into std::chrono::system_clock format
-      int seconds = 0;
-      int useconds = 0;
-      dst.time(&seconds, &useconds);
-      // use only if valid: positive and monotonic
-      auto stamp = std::chrono::system_clock::from_time_t(seconds) + std::chrono::microseconds(useconds);
-      if(seconds > 0 && stamp > last_stamp) {
-        // create new version number with time stamp from data
-        currentVersion = VersionNumber(stamp);
-      }
-      else {
-        // no valid time stamp has been set, generate our own
-        currentVersion = VersionNumber();
-      }
-      last_stamp = currentVersion.getTime();
+      // Note: the original idea was to extract the time stamp from the received data. This idea has been dropped since
+      // the time stamp attached to the data seems to be unreliably, at least for the x2timer macro pulse number. If the
+      // unreliable time stamp is attached to the trigger, all data will get this time stamp. This leads to error
+      // messages of the DOOCS history archiver, which rejects data due to wrong time stamps. Hence we better generate
+      // our own time stamp here.
+      currentVersion = VersionNumber();
     }
 
     AccessModeFlags getAccessModeFlags() const override {
