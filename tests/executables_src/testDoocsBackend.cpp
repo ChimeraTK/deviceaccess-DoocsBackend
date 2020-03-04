@@ -1292,7 +1292,7 @@ BOOST_AUTO_TEST_CASE(testBlankXMLThrow){
   o << xml;
   o.close();
 
-  BOOST_CHECK_THROW(ChimeraTK::Device(DoocsLauncher::DoocsServer2_cached), ChimeraTK::logic_error);
+  BOOST_CHECK_THROW(ChimeraTK::Device x(DoocsLauncher::DoocsServer2_cached), ChimeraTK::logic_error);
   deleteFile(DoocsLauncher::cacheFile2);
 
 }
