@@ -26,9 +26,9 @@
 
     unsigned int getNumberOfDimensions() const override { return _length > 1 ? 1 : 0; }
 
-    bool isReadable() const override { return true; }
+    bool isReadable() const override { return _readable; }
 
-    bool isWriteable() const override { return true; } /// @todo fixme: return false for read-only properties
+    bool isWriteable() const override { return _writable; }
 
     ChimeraTK::AccessModeFlags getSupportedAccessModes() const override { return accessModeFlags; }
 
@@ -41,4 +41,6 @@
     ChimeraTK::RegisterInfo::DataDescriptor dataDescriptor;
     ChimeraTK::AccessModeFlags accessModeFlags{};
     int doocsTypeId;
+    bool _readable{true};
+    bool _writable{true};
   };
