@@ -19,7 +19,7 @@ namespace ChimeraTK {
   template<typename UserType>
   class DoocsBackendFloatRegisterAccessor : public DoocsBackendRegisterAccessor<UserType> {
    public:
-    virtual ~DoocsBackendFloatRegisterAccessor();
+    ~DoocsBackendFloatRegisterAccessor() override;
 
    protected:
     DoocsBackendFloatRegisterAccessor(boost::shared_ptr<DoocsBackend> backend, const std::string& path,

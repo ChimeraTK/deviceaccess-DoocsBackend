@@ -10,25 +10,40 @@ eq_dummy::eq_dummy()
   prop_someShortArray("SOME_SHORT_ARRAY", 5, this), prop_someLongArray("SOME_LONG_ARRAY", 5, this),
   prop_someFloatArray("SOME_FLOAT_ARRAY", 5, this), prop_someDoubleArray("SOME_DOUBLE_ARRAY", 5, this),
   prop_someSpectrum("SOME_SPECTRUM", 100, this), prop_someIIII("SOME_IIII", this), prop_someIFFF("SOME_IFFF", this),
-  prop_unsupportedDataType("UNSUPPORTED_DATA_TYPE", 640 * 460, this), prop_someZMQInt("SOME_ZMQINT", this), counter(0) {
-}
+  prop_unsupportedDataType("UNSUPPORTED_DATA_TYPE", 640 * 460, this), prop_someZMQInt("SOME_ZMQINT", this),
+  counter(512) {}
 
 eq_dummy::~eq_dummy() {}
 
 void eq_dummy::init() {
+  constexpr auto mpnum = 1234567890;
   prop_someInt.set_value(42);
-  prop_someFloat.set_value(3.1415);
+  prop_someInt.set_mpnum(mpnum);
+  prop_someFloat.set_value(3.1415f);
+  prop_someFloat.set_mpnum(mpnum);
   prop_someDouble.set_value(2.8);
+  prop_someDouble.set_mpnum(mpnum);
   prop_someString.set_value("The quick brown fox jumps over the lazy dog.");
+  prop_someString.set_mpnum(mpnum);
   prop_someStatus.set_value(3);
+  prop_someStatus.set_mpnum(mpnum);
+  prop_someBit.set_mpnum(mpnum);
   for(int i = 0; i < 42; i++) prop_someIntArray.set_value(3 * i + 120, i);
+  prop_someIntArray.set_mpnum(mpnum);
   for(int i = 0; i < 5; i++) prop_someShortArray.set_value(10 + i, i);
+  prop_someShortArray.set_mpnum(mpnum);
   for(int i = 0; i < 5; i++) prop_someLongArray.set_value(10 + i, i);
+  prop_someLongArray.set_mpnum(mpnum);
   for(int i = 0; i < 5; i++) prop_someFloatArray.set_value((float)i / 1000.F, i);
+  prop_someFloatArray.set_mpnum(mpnum);
   for(int i = 0; i < 5; i++) prop_someDoubleArray.set_value((double)i / 333., i);
+  prop_someDoubleArray.set_mpnum(mpnum);
   for(int i = 0; i < 100; i++) prop_someSpectrum.fill_spectrum(i, (float)i / 42.F);
+  prop_someSpectrum.macro_pulse(mpnum, 0);
   prop_someIIII.set_value(10, 11, 12, 13);
-  prop_someIFFF.set_value(10, 2.71828, 3.14159, 197.327);
+  prop_someIIII.set_mpnum(mpnum);
+  prop_someIFFF.set_value(10, 2.71828f, 3.14159f, 197.327f);
+  prop_someIFFF.set_mpnum(mpnum);
   prop_someZMQInt.set_value(0);
 }
 
@@ -44,6 +59,7 @@ void eq_dummy::post_init() {
 void eq_dummy::update() {
   // set new value of ZMQINT
   prop_someZMQInt.set_value(prop_someZMQInt.value() + 1);
+  prop_someZMQInt.set_mpnum(counter);
 
   // publish new value via ZeroMQ
   dmsg_info_t db;

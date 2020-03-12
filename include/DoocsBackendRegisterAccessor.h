@@ -1,6 +1,5 @@
 #ifndef CHIMERATK_DOOCS_BACKEND_REGISTER_ACCESSOR_H
 #define CHIMERATK_DOOCS_BACKEND_REGISTER_ACCESSOR_H
-#include <condition_variable>
 #include <mutex>
 #include <queue>
 #include <type_traits>

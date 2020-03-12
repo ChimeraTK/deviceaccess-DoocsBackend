@@ -21,6 +21,7 @@
 #include "DoocsBackendIntRegisterAccessor.h"
 #include "DoocsBackendLongRegisterAccessor.h"
 #include "DoocsBackendStringRegisterAccessor.h"
+#include "DoocsBackendEventIdAccessor.h"
 #include "RegisterInfo.h"
 #include "StringUtility.h"
 
@@ -216,8 +217,13 @@ namespace ChimeraTK {
     // check type and create matching accessor
     bool extraLevelUsed = false;
     auto sharedThis = boost::static_pointer_cast<DoocsBackend>(shared_from_this());
-    if(doocsTypeId == DATA_INT || doocsTypeId == DATA_A_INT || doocsTypeId == DATA_BOOL || doocsTypeId == DATA_A_BOOL ||
-        doocsTypeId == DATA_A_SHORT) {
+
+    if(field == "eventId") {
+      extraLevelUsed = true;
+      p.reset(new DoocsBackendEventIdRegisterAccessor<UserType>(sharedThis, path, registerPathName, flags));
+    }
+    else if(doocsTypeId == DATA_INT || doocsTypeId == DATA_A_INT || doocsTypeId == DATA_BOOL ||
+        doocsTypeId == DATA_A_BOOL || doocsTypeId == DATA_A_SHORT) {
       p.reset(new DoocsBackendIntRegisterAccessor<UserType>(
           sharedThis, path, registerPathName, numberOfWords, wordOffsetInRegister, flags));
     }
