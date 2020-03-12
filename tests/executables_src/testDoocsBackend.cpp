@@ -1312,6 +1312,19 @@ BOOST_AUTO_TEST_CASE(testEventId) {
           "SOME_LONG_ARRAY", "SOME_FLOAT_ARRAY", "SOME_DOUBLE_ARRAY", "SOME_SPECTRUM", "SOME_IIII", "SOME_IFFF"}) {
     auto path = RegisterPath("MYDUMMY/" + param + "/eventId");
     BOOST_CHECK(catalogue.hasRegister(path));
+
+    auto regInfo = catalogue.getRegister(path);
+    BOOST_CHECK(regInfo->isReadable());
+    BOOST_CHECK(!regInfo->isWriteable());
+    BOOST_CHECK_EQUAL(regInfo->getNumberOfElements(), 1);
+    BOOST_CHECK_EQUAL(regInfo->getNumberOfChannels(), 1);
+    BOOST_CHECK_EQUAL(regInfo->getNumberOfDimensions(), 0);
+    auto descriptor = regInfo->getDataDescriptor();
+    BOOST_CHECK(descriptor.fundamentalType() == ChimeraTK::RegisterInfo::FundamentalType::numeric);
+    BOOST_CHECK_EQUAL(descriptor.nDigits(), 20);
+    BOOST_CHECK(descriptor.isSigned());
+    BOOST_CHECK(descriptor.isIntegral());
+
     auto acc1 = device.getScalarRegisterAccessor<int64_t>(path);
     acc1.read();
     BOOST_CHECK_EQUAL(static_cast<int64_t>(acc1), expectedMPNumber);
@@ -1368,6 +1381,19 @@ BOOST_AUTO_TEST_CASE(testTimeStamp) {
           "SOME_LONG_ARRAY", "SOME_FLOAT_ARRAY", "SOME_DOUBLE_ARRAY", "SOME_SPECTRUM", "SOME_IIII", "SOME_IFFF"}) {
     auto path = RegisterPath("MYDUMMY/" + param + "/timeStamp");
     BOOST_CHECK(catalogue.hasRegister(path));
+
+    auto regInfo = catalogue.getRegister(path);
+    BOOST_CHECK(regInfo->isReadable());
+    BOOST_CHECK(!regInfo->isWriteable());
+    BOOST_CHECK_EQUAL(regInfo->getNumberOfElements(), 1);
+    BOOST_CHECK_EQUAL(regInfo->getNumberOfChannels(), 1);
+    BOOST_CHECK_EQUAL(regInfo->getNumberOfDimensions(), 0);
+    auto descriptor = regInfo->getDataDescriptor();
+    BOOST_CHECK(descriptor.fundamentalType() == ChimeraTK::RegisterInfo::FundamentalType::numeric);
+    BOOST_CHECK_EQUAL(descriptor.nDigits(), 20);
+    BOOST_CHECK(descriptor.isSigned());
+    BOOST_CHECK(descriptor.isIntegral());
+
     auto acc1 = device.getScalarRegisterAccessor<int64_t>(path);
     acc1.read();
     BOOST_CHECK_EQUAL(static_cast<int64_t>(acc1), expectedTimestamp);

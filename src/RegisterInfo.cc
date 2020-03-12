@@ -68,17 +68,19 @@ RegisterInfoList DoocsBackendRegisterInfo::create(const std::string &name, unsig
     list.push_back(info);
   }
 
-  boost::shared_ptr<DoocsBackendRegisterInfo> infoEventId(new DoocsBackendRegisterInfo(*info));
+  boost::shared_ptr<DoocsBackendRegisterInfo> infoEventId(new DoocsBackendRegisterInfo());
   infoEventId->_name = name + "/eventId";
   infoEventId->_writable = false;
   infoEventId->doocsTypeId = DATA_LONG;
+  infoEventId->_length = 1;
   infoEventId->dataDescriptor =
       ChimeraTK::RegisterInfo::DataDescriptor(ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, 20);
   list.push_back(infoEventId);
 
-  boost::shared_ptr<DoocsBackendRegisterInfo> infoTimeStamp(new DoocsBackendRegisterInfo(*info));
+  boost::shared_ptr<DoocsBackendRegisterInfo> infoTimeStamp(new DoocsBackendRegisterInfo());
   infoTimeStamp->_name = name + "/timeStamp";
   infoTimeStamp->doocsTypeId = DATA_LONG;
+  infoTimeStamp->_length = 1;
   infoTimeStamp->dataDescriptor =
       ChimeraTK::RegisterInfo::DataDescriptor(ChimeraTK::RegisterInfo::FundamentalType::numeric, true, true, 20);
   infoTimeStamp->_writable = false;
