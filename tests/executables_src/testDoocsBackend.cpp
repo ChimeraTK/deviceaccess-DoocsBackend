@@ -1311,7 +1311,6 @@ BOOST_AUTO_TEST_CASE(testEventId) {
   for(std::string param : {"SOME_INT", "SOME_FLOAT", "SOME_BIT", "SOME_INT_ARRAY", "SOME_SHORT_ARRAY",
           "SOME_LONG_ARRAY", "SOME_FLOAT_ARRAY", "SOME_DOUBLE_ARRAY", "SOME_SPECTRUM", "SOME_IIII", "SOME_IFFF"}) {
     auto path = RegisterPath("MYDUMMY/" + param + "/eventId");
-    std::cout << "Checking " << path << std::endl;
     BOOST_CHECK(catalogue.hasRegister(path));
     auto acc1 = device.getScalarRegisterAccessor<int64_t>(path);
     acc1.read();
@@ -1348,6 +1347,62 @@ BOOST_AUTO_TEST_CASE(testEventId) {
   auto acc2 = device.getScalarRegisterAccessor<int64_t>(path);
   acc2.read();
   BOOST_CHECK_EQUAL(static_cast<int64_t>(acc2), eqfct->counter - 1);
+  BOOST_CHECK_EQUAL(acc2.isReadOnly(), true);
+  BOOST_CHECK_EQUAL(acc2.isWriteable(), false);
+  BOOST_CHECK_EQUAL(acc2.isReadable(), true);
+  BOOST_CHECK_THROW(acc2.write(), ChimeraTK::logic_error);
+
+  device.close();
+}
+
+BOOST_AUTO_TEST_CASE(testTimeStamp) {
+  ChimeraTK::Device device;
+  device.open(DoocsLauncher::DoocsServer1);
+  auto catalogue = device.getRegisterCatalogue();
+  constexpr auto expectedTimestamp = 1584020594;
+
+  // device info string
+  BOOST_CHECK(device.readDeviceInfo() == "DOOCS server address: doocs://localhost:" + DoocsLauncher::rpc_no + "/F/D");
+
+  for(std::string param : {"SOME_INT", "SOME_FLOAT", "SOME_BIT", "SOME_INT_ARRAY", "SOME_SHORT_ARRAY",
+          "SOME_LONG_ARRAY", "SOME_FLOAT_ARRAY", "SOME_DOUBLE_ARRAY", "SOME_SPECTRUM", "SOME_IIII", "SOME_IFFF"}) {
+    auto path = RegisterPath("MYDUMMY/" + param + "/timeStamp");
+    BOOST_CHECK(catalogue.hasRegister(path));
+    auto acc1 = device.getScalarRegisterAccessor<int64_t>(path);
+    acc1.read();
+    BOOST_CHECK_EQUAL(static_cast<int64_t>(acc1), expectedTimestamp);
+    BOOST_CHECK_EQUAL(acc1.isReadOnly(), true);
+    BOOST_CHECK_EQUAL(acc1.isWriteable(), false);
+    BOOST_CHECK_EQUAL(acc1.isReadable(), true);
+    BOOST_CHECK_THROW(acc1.write(), ChimeraTK::logic_error);
+
+    auto acc2 = device.getScalarRegisterAccessor<std::string>(path);
+    acc2.read();
+    BOOST_CHECK_EQUAL(static_cast<std::string>(acc2), std::to_string(expectedTimestamp));
+    BOOST_CHECK_EQUAL(acc2.isReadOnly(), true);
+    BOOST_CHECK_EQUAL(acc2.isWriteable(), false);
+    BOOST_CHECK_EQUAL(acc2.isReadable(), true);
+    BOOST_CHECK_THROW(acc2.write(), ChimeraTK::logic_error);
+
+    auto acc3 = device.getScalarRegisterAccessor<uint8_t>(path);
+    BOOST_CHECK_THROW(acc3.read(), boost::numeric::positive_overflow);
+  }
+
+  // Check that we get the accessor for some unsupported type as well
+  // Whether or not eventId retuns something usefull here is completely undefined
+  auto acc1 = device.getScalarRegisterAccessor<int64_t>("MYDUMMY/UNSUPPORTED_DATA_TYPE/timeStamp");
+  BOOST_CHECK(acc1.isInitialised());
+
+  // Run update once to have the ZMQ variable's mp number updated
+  DoocsServerTestHelper::runUpdate();
+
+  // Get EqFct to access the mp counter for ZMQ
+  auto eqfct = reinterpret_cast<eq_dummy*>(find_device("MYDUMMY"));
+  auto path = RegisterPath("MYDUMMY/SOME_ZMQINT/timeStamp");
+  BOOST_CHECK(catalogue.hasRegister(path));
+  auto acc2 = device.getScalarRegisterAccessor<int64_t>(path);
+  acc2.read();
+  BOOST_CHECK_EQUAL(static_cast<int64_t>(acc2), eqfct->startTime - 1);
   BOOST_CHECK_EQUAL(acc2.isReadOnly(), true);
   BOOST_CHECK_EQUAL(acc2.isWriteable(), false);
   BOOST_CHECK_EQUAL(acc2.isReadable(), true);

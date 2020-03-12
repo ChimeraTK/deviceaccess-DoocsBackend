@@ -22,6 +22,7 @@
 #include "DoocsBackendLongRegisterAccessor.h"
 #include "DoocsBackendStringRegisterAccessor.h"
 #include "DoocsBackendEventIdAccessor.h"
+#include "DoocsBackendTimeStampAccessor.h"
 #include "RegisterInfo.h"
 #include "StringUtility.h"
 
@@ -221,6 +222,10 @@ namespace ChimeraTK {
     if(field == "eventId") {
       extraLevelUsed = true;
       p.reset(new DoocsBackendEventIdRegisterAccessor<UserType>(sharedThis, path, registerPathName, flags));
+    }
+    else if(field == "timeStamp") {
+      extraLevelUsed = true;
+      p.reset(new DoocsBackendTimeStampRegisterAccessor<UserType>(sharedThis, path, registerPathName, flags));
     }
     else if(doocsTypeId == DATA_INT || doocsTypeId == DATA_A_INT || doocsTypeId == DATA_BOOL ||
         doocsTypeId == DATA_A_BOOL || doocsTypeId == DATA_A_SHORT) {

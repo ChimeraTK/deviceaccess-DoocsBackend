@@ -30,6 +30,7 @@ class eq_dummy : public EqFct {
   D_int prop_someZMQInt;
 
   int64_t counter;
+  int64_t startTime;
 
   void init();
   void post_init();
