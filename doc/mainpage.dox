@@ -9,7 +9,18 @@ Note: This doucmentation is still incomplete.
 \section Features
 - Read-write access to payload data of many DOOCS data types (see \ref supported_types)
 - Attached time stamp will be preserved and can be accessed through the VersionNumber
-- Applications are doocs property aware at startup (by using the optional \ref cacheFile "cache file mechanism").
+- Applications are DOOCS property aware at startup (by using the optional \ref cacheFile "cache file mechanism").
+- Access to DOOCS property meta-information such as the attached event id (macropulse number) or data timestamps
+
+\subsection meta_information Data meta information
+Accces to meta meta can be done using "virtual" variables. To access the meta-data, the property name is extended
+with the requested meta infomation. Supported extensions are:
+
+- /eventId can be used to access the macropulse number
+- /timeStamp can be used to access the time stamp of the data (in seconds since 1970)
+
+For example to access the macropulse number of the RAW BAM arrival data, could be done with:
+`XFEL.SDIAG/BAM/47.I1/LOW_CHARGE_ARRIVAL_TIME/eventId`
 
 \page supported_types Supported Data Types
 
