@@ -1303,7 +1303,12 @@ BOOST_AUTO_TEST_CASE(testEventId) {
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
   auto catalogue = device.getRegisterCatalogue();
-  constexpr auto expectedMPNumber = 1234567890;
+
+  // Run update once to have the ZMQ variable's mp number updated
+  DoocsServerTestHelper::runUpdate();
+
+  // Get EqFct to access the mp counter for ZMQ
+  auto eqfct = reinterpret_cast<eq_dummy*>(find_device("MYDUMMY"));
 
   // device info string
   BOOST_CHECK(device.readDeviceInfo() == "DOOCS server address: doocs://localhost:" + DoocsLauncher::rpc_no + "/F/D");
@@ -1327,7 +1332,7 @@ BOOST_AUTO_TEST_CASE(testEventId) {
 
     auto acc1 = device.getScalarRegisterAccessor<int64_t>(path);
     acc1.read();
-    BOOST_CHECK_EQUAL(static_cast<int64_t>(acc1), expectedMPNumber);
+    BOOST_CHECK_EQUAL(static_cast<int64_t>(acc1), eqfct->counter - 1);
     BOOST_CHECK_EQUAL(acc1.isReadOnly(), true);
     BOOST_CHECK_EQUAL(acc1.isWriteable(), false);
     BOOST_CHECK_EQUAL(acc1.isReadable(), true);
@@ -1335,7 +1340,7 @@ BOOST_AUTO_TEST_CASE(testEventId) {
 
     auto acc2 = device.getScalarRegisterAccessor<std::string>(path);
     acc2.read();
-    BOOST_CHECK_EQUAL(static_cast<std::string>(acc2), std::to_string(expectedMPNumber));
+    BOOST_CHECK_EQUAL(static_cast<std::string>(acc2), std::to_string(eqfct->counter - 1));
     BOOST_CHECK_EQUAL(acc2.isReadOnly(), true);
     BOOST_CHECK_EQUAL(acc2.isWriteable(), false);
     BOOST_CHECK_EQUAL(acc2.isReadable(), true);
@@ -1353,8 +1358,6 @@ BOOST_AUTO_TEST_CASE(testEventId) {
   // Run update once to have the ZMQ variable's mp number updated
   DoocsServerTestHelper::runUpdate();
 
-  // Get EqFct to access the mp counter for ZMQ
-  auto eqfct = reinterpret_cast<eq_dummy*>(find_device("MYDUMMY"));
   auto path = RegisterPath("MYDUMMY/SOME_ZMQINT/eventId");
   BOOST_CHECK(catalogue.hasRegister(path));
   auto acc2 = device.getScalarRegisterAccessor<int64_t>(path);
@@ -1372,7 +1375,12 @@ BOOST_AUTO_TEST_CASE(testTimeStamp) {
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
   auto catalogue = device.getRegisterCatalogue();
-  constexpr auto expectedTimestamp = 1584020594;
+
+  // Run update once to have the ZMQ variable's mp number updated
+  DoocsServerTestHelper::runUpdate();
+
+  // Get EqFct to access the mp counter for ZMQ
+  auto eqfct = reinterpret_cast<eq_dummy*>(find_device("MYDUMMY"));
 
   // device info string
   BOOST_CHECK(device.readDeviceInfo() == "DOOCS server address: doocs://localhost:" + DoocsLauncher::rpc_no + "/F/D");
@@ -1396,7 +1404,7 @@ BOOST_AUTO_TEST_CASE(testTimeStamp) {
 
     auto acc1 = device.getScalarRegisterAccessor<int64_t>(path);
     acc1.read();
-    BOOST_CHECK_EQUAL(static_cast<int64_t>(acc1), expectedTimestamp);
+    BOOST_CHECK_EQUAL(static_cast<int64_t>(acc1), eqfct->startTime - 1);
     BOOST_CHECK_EQUAL(acc1.isReadOnly(), true);
     BOOST_CHECK_EQUAL(acc1.isWriteable(), false);
     BOOST_CHECK_EQUAL(acc1.isReadable(), true);
@@ -1404,7 +1412,7 @@ BOOST_AUTO_TEST_CASE(testTimeStamp) {
 
     auto acc2 = device.getScalarRegisterAccessor<std::string>(path);
     acc2.read();
-    BOOST_CHECK_EQUAL(static_cast<std::string>(acc2), std::to_string(expectedTimestamp));
+    BOOST_CHECK_EQUAL(static_cast<std::string>(acc2), std::to_string(eqfct->startTime - 1));
     BOOST_CHECK_EQUAL(acc2.isReadOnly(), true);
     BOOST_CHECK_EQUAL(acc2.isWriteable(), false);
     BOOST_CHECK_EQUAL(acc2.isReadable(), true);
@@ -1422,8 +1430,6 @@ BOOST_AUTO_TEST_CASE(testTimeStamp) {
   // Run update once to have the ZMQ variable's mp number updated
   DoocsServerTestHelper::runUpdate();
 
-  // Get EqFct to access the mp counter for ZMQ
-  auto eqfct = reinterpret_cast<eq_dummy*>(find_device("MYDUMMY"));
   auto path = RegisterPath("MYDUMMY/SOME_ZMQINT/timeStamp");
   BOOST_CHECK(catalogue.hasRegister(path));
   auto acc2 = device.getScalarRegisterAccessor<int64_t>(path);

@@ -11,65 +11,64 @@ eq_dummy::eq_dummy()
   prop_someFloatArray("SOME_FLOAT_ARRAY", 5, this), prop_someDoubleArray("SOME_DOUBLE_ARRAY", 5, this),
   prop_someSpectrum("SOME_SPECTRUM", 100, this), prop_someIIII("SOME_IIII", this), prop_someIFFF("SOME_IFFF", this),
   prop_unsupportedDataType("UNSUPPORTED_DATA_TYPE", 640 * 460, this), prop_someZMQInt("SOME_ZMQINT", this),
-  counter(512), startTime(1584020594) {}
+  counter(123456789), startTime(1584020594) {}
 
 eq_dummy::~eq_dummy() {}
 
 void eq_dummy::init() {
-  constexpr auto mpnum = 1234567890;
   prop_someInt.set_value(42);
-  prop_someInt.set_mpnum(mpnum);
+  prop_someInt.set_mpnum(counter);
   prop_someInt.set_tmstmp(startTime, 0);
 
   prop_someFloat.set_value(3.1415f);
-  prop_someFloat.set_mpnum(mpnum);
+  prop_someFloat.set_mpnum(counter);
   prop_someFloat.set_tmstmp(startTime, 0);
 
   prop_someDouble.set_value(2.8);
-  prop_someDouble.set_mpnum(mpnum);
+  prop_someDouble.set_mpnum(counter);
   prop_someDouble.set_tmstmp(startTime, 0);
 
   prop_someString.set_value("The quick brown fox jumps over the lazy dog.");
-  prop_someString.set_mpnum(mpnum);
+  prop_someString.set_mpnum(counter);
   prop_someString.set_tmstmp(startTime, 0);
 
   prop_someStatus.set_value(3);
-  prop_someStatus.set_mpnum(mpnum);
+  prop_someStatus.set_mpnum(counter);
   prop_someStatus.set_tmstmp(startTime, 0);
 
-  prop_someBit.set_mpnum(mpnum);
+  prop_someBit.set_mpnum(counter);
   prop_someBit.set_tmstmp(startTime, 0);
 
   for(int i = 0; i < 42; i++) prop_someIntArray.set_value(3 * i + 120, i);
-  prop_someIntArray.set_mpnum(mpnum);
+  prop_someIntArray.set_mpnum(counter);
   prop_someIntArray.set_tmstmp(startTime, 0);
 
   for(int i = 0; i < 5; i++) prop_someShortArray.set_value(10 + i, i);
-  prop_someShortArray.set_mpnum(mpnum);
+  prop_someShortArray.set_mpnum(counter);
   prop_someShortArray.set_tmstmp(startTime, 0);
 
   for(int i = 0; i < 5; i++) prop_someLongArray.set_value(10 + i, i);
-  prop_someLongArray.set_mpnum(mpnum);
+  prop_someLongArray.set_mpnum(counter);
   prop_someLongArray.set_tmstmp(startTime, 0);
 
   for(int i = 0; i < 5; i++) prop_someFloatArray.set_value((float)i / 1000.F, i);
-  prop_someFloatArray.set_mpnum(mpnum);
+  prop_someFloatArray.set_mpnum(counter);
   prop_someFloatArray.set_tmstmp(startTime, 0);
 
   for(int i = 0; i < 5; i++) prop_someDoubleArray.set_value((double)i / 333., i);
-  prop_someDoubleArray.set_mpnum(mpnum);
+  prop_someDoubleArray.set_mpnum(counter);
   prop_someDoubleArray.set_tmstmp(startTime, 0);
 
   for(int i = 0; i < 100; i++) prop_someSpectrum.fill_spectrum(i, (float)i / 42.F);
-  prop_someSpectrum.macro_pulse(mpnum, 0);
+  prop_someSpectrum.macro_pulse(counter, 0);
   prop_someSpectrum.set_tmstmp(startTime, 0, 0);
 
   prop_someIIII.set_value(10, 11, 12, 13);
-  prop_someIIII.set_mpnum(mpnum);
+  prop_someIIII.set_mpnum(counter);
   prop_someIIII.set_tmstmp(startTime, 0);
 
   prop_someIFFF.set_value(10, 2.71828f, 3.14159f, 197.327f);
-  prop_someIFFF.set_mpnum(mpnum);
+  prop_someIFFF.set_mpnum(counter);
   prop_someIFFF.set_tmstmp(startTime, 0);
 
   prop_someZMQInt.set_value(0);
@@ -89,6 +88,48 @@ void eq_dummy::update() {
   prop_someZMQInt.set_value(prop_someZMQInt.value() + 1);
   prop_someZMQInt.set_mpnum(counter);
   prop_someZMQInt.set_tmstmp(startTime, 0);
+
+  prop_someInt.set_mpnum(counter);
+  prop_someInt.set_tmstmp(startTime, 0);
+
+  prop_someFloat.set_mpnum(counter);
+  prop_someFloat.set_tmstmp(startTime, 0);
+
+  prop_someDouble.set_mpnum(counter);
+  prop_someDouble.set_tmstmp(startTime, 0);
+
+  prop_someString.set_mpnum(counter);
+  prop_someString.set_tmstmp(startTime, 0);
+
+  prop_someStatus.set_mpnum(counter);
+  prop_someStatus.set_tmstmp(startTime, 0);
+
+  prop_someBit.set_mpnum(counter);
+  prop_someBit.set_tmstmp(startTime, 0);
+
+  prop_someIntArray.set_mpnum(counter);
+  prop_someIntArray.set_tmstmp(startTime, 0);
+
+  prop_someShortArray.set_mpnum(counter);
+  prop_someShortArray.set_tmstmp(startTime, 0);
+
+  prop_someLongArray.set_mpnum(counter);
+  prop_someLongArray.set_tmstmp(startTime, 0);
+
+  prop_someFloatArray.set_mpnum(counter);
+  prop_someFloatArray.set_tmstmp(startTime, 0);
+
+  prop_someDoubleArray.set_mpnum(counter);
+  prop_someDoubleArray.set_tmstmp(startTime, 0);
+
+  prop_someSpectrum.macro_pulse(counter, 0);
+  prop_someSpectrum.set_tmstmp(startTime, 0, 0);
+
+  prop_someIIII.set_mpnum(counter);
+  prop_someIIII.set_tmstmp(startTime, 0);
+
+  prop_someIFFF.set_mpnum(counter);
+  prop_someIFFF.set_tmstmp(startTime, 0);
 
   // publish new value via ZeroMQ
   dmsg_info_t db;
