@@ -89,6 +89,7 @@ void eq_dummy::update() {
   prop_someZMQInt.set_mpnum(counter);
   prop_someZMQInt.set_tmstmp(startTime, 0);
 
+  // Attach new MP number and timestamp
   prop_someInt.set_mpnum(counter);
   prop_someInt.set_tmstmp(startTime, 0);
 
