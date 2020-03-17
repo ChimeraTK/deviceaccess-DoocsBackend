@@ -1442,3 +1442,37 @@ BOOST_AUTO_TEST_CASE(testTimeStamp) {
 
   device.close();
 }
+
+BOOST_AUTO_TEST_CASE(testEventIdMapping) {
+  ChimeraTK::Device device;
+  device.open(DoocsLauncher::DoocsServer1);
+  auto catalogue = device.getRegisterCatalogue();
+
+  // Run update once to have the ZMQ variable's mp number updated
+  DoocsServerTestHelper::runUpdate();
+
+  auto acc1 = device.getScalarRegisterAccessor<int>("MYDUMMY/SOME_INT");
+  auto acc2 = device.getScalarRegisterAccessor<float>("MYDUMMY/SOME_FLOAT");
+
+  acc1.read();
+  acc2.read();
+
+  BOOST_CHECK_MESSAGE(acc1.getVersionNumber() == acc2.getVersionNumber(),
+      static_cast<std::string>(acc1.getVersionNumber()) + " should be equal to " +
+          static_cast<std::string>(acc2.getVersionNumber()));
+
+  // update() will set a new eventId
+  DoocsServerTestHelper::runUpdate();
+
+  // After reading only one of the accessors, the version should now be different
+  acc2.read();
+  BOOST_CHECK_MESSAGE(acc1.getVersionNumber() != acc2.getVersionNumber(),
+      static_cast<std::string>(acc1.getVersionNumber()) + " should not be equal to " +
+          static_cast<std::string>(acc2.getVersionNumber()));
+
+  // After reading acc1 as well, they should match up now
+  acc1.read();
+  BOOST_CHECK_MESSAGE(acc1.getVersionNumber() == acc2.getVersionNumber(),
+      static_cast<std::string>(acc1.getVersionNumber()) + " should be equal to " +
+          static_cast<std::string>(acc2.getVersionNumber()));
+}
