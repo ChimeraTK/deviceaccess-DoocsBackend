@@ -14,6 +14,7 @@
 #include <eq_fct.h>
 
 #include "DoocsBackend.h"
+#include "EventIdMapper.h"
 #include "ZMQSubscriptionManager.h"
 
 namespace ChimeraTK {
@@ -106,7 +107,7 @@ namespace ChimeraTK {
       // unreliable time stamp is attached to the trigger, all data will get this time stamp. This leads to error
       // messages of the DOOCS history archiver, which rejects data due to wrong time stamps. Hence we better generate
       // our own time stamp here.
-      currentVersion = VersionNumber();
+      currentVersion = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
     }
 
     AccessModeFlags getAccessModeFlags() const override {
