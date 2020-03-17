@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <mutex>
 
 #include <eq_fct.h>
 
@@ -20,4 +21,7 @@ class EventIdMapper {
   ~EventIdMapper() = default;
   EventIdMapper(const EventIdMapper&) = delete;
   EventIdMapper& operator=(const EventIdMapper&) = delete;
+
+  std::mutex _mapMutex;
+  std::map<doocs::EventId, ChimeraTK::VersionNumber> _eventIdToVersionMap{};
 };
