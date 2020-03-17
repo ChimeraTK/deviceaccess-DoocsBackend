@@ -84,6 +84,8 @@ void eq_dummy::post_init() {
 }
 
 void eq_dummy::update() {
+  set_global_mpnum(counter);
+
   // set new value of ZMQINT
   prop_someZMQInt.set_value(prop_someZMQInt.value() + 1);
   prop_someZMQInt.set_mpnum(counter);
