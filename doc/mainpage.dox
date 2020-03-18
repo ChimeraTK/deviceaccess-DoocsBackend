@@ -9,8 +9,10 @@ Note: This doucmentation is still incomplete.
 \section Features
 - Read-write access to payload data of many DOOCS data types (see \ref supported_types)
 - Attached time stamp will be preserved and can be accessed through the VersionNumber
+- A 1-to-1 relationship between DOOCS's event ids and the version information used in ChimeraTK. If the event id matches, the VersionNumber will match as well.
 - Applications are DOOCS property aware at startup (by using the optional \ref cacheFile "cache file mechanism").
 - Access to DOOCS property meta-information such as the attached event id (macropulse number) or data timestamps
+
 
 \subsection meta_information Data meta information
 Accces to meta meta can be done using "virtual" variables. To access the meta-data, the property name is extended
