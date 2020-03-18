@@ -1475,4 +1475,22 @@ BOOST_AUTO_TEST_CASE(testEventIdMapping) {
   BOOST_CHECK_MESSAGE(acc1.getVersionNumber() == acc2.getVersionNumber(),
       static_cast<std::string>(acc1.getVersionNumber()) + " should be equal to " +
           static_cast<std::string>(acc2.getVersionNumber()));
+
+  // Check consistency accros two different DOOCS backend instances
+  ChimeraTK::Device device2;
+  device2.open(DoocsLauncher::DoocsServer2);
+  auto acc3 = device2.getScalarRegisterAccessor<int>("SOME_INT");
+  acc3.read();
+  BOOST_CHECK_MESSAGE(acc3.getVersionNumber() == acc2.getVersionNumber(),
+      static_cast<std::string>(acc3.getVersionNumber()) + " should be equal to " +
+          static_cast<std::string>(acc2.getVersionNumber()));
+
+  // update() will set a new eventId, hence a new version number
+  DoocsServerTestHelper::runUpdate();
+  acc2.read();
+  acc3.read();
+  BOOST_CHECK_MESSAGE(acc3.getVersionNumber() == acc2.getVersionNumber(),
+      static_cast<std::string>(acc3.getVersionNumber()) + " should be equal to " +
+          static_cast<std::string>(acc2.getVersionNumber()));
+
 }
