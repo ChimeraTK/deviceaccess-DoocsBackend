@@ -63,7 +63,7 @@ namespace ChimeraTK {
     /// Flag whether shutdown() has been called or not
     bool shutdownCalled{false};
 
-    ChimeraTK::VersionNumber currentVersion;
+    ChimeraTK::VersionNumber currentVersion{nullptr};
   };
 
   /********************************************************************************************************************/
@@ -101,7 +101,8 @@ namespace ChimeraTK {
       return false;
     }
 
-    void doPostRead() override {
+    void doPostRead(TransferType, bool hasNewData) override {
+      if(!hasNewData) return;
       // Note: the original idea was to extract the time stamp from the received data. This idea has been dropped since
       // the time stamp attached to the data seems to be unreliably, at least for the x2timer macro pulse number. If the
       // unreliable time stamp is attached to the trigger, all data will get this time stamp. This leads to error

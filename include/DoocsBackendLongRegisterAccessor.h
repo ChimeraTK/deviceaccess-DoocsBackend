@@ -27,9 +27,9 @@ namespace ChimeraTK {
     DoocsBackendLongRegisterAccessor(boost::shared_ptr<DoocsBackend> backend, const std::string& path,
         const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
 
-    void doPostRead() override;
+    void doPostRead(TransferType type, bool hasNewData) override;
 
-    void doPreWrite() override;
+    void doPreWrite(TransferType type) override;
 
     void initialiseImplementation() override;
 
@@ -78,20 +78,22 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendLongRegisterAccessor<UserType>::doPostRead() {
+  void DoocsBackendLongRegisterAccessor<UserType>::doPostRead(TransferType type, bool hasNewData) {
+    DoocsBackendRegisterAccessor<UserType>::doPostRead(type, hasNewData);
+    if(!hasNewData) return;
+
     // copy data into our buffer
     for(size_t i = 0; i < DoocsBackendRegisterAccessor<UserType>::nElements; i++) {
       int idx = i + DoocsBackendRegisterAccessor<UserType>::elementOffset;
       UserType val = numericToUserType<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_long(idx));
       NDRegisterAccessor<UserType>::buffer_2D[0][i] = val;
     }
-    DoocsBackendRegisterAccessor<UserType>::doPostRead();
   }
 
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendLongRegisterAccessor<UserType>::doPreWrite() {
+  void DoocsBackendLongRegisterAccessor<UserType>::doPreWrite(TransferType) {
     // copy data into our buffer
     if(DoocsBackendRegisterAccessor<UserType>::isPartial) { // implement
                                                             // read-modify-write

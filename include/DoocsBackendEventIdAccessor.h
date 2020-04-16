@@ -19,7 +19,7 @@ namespace ChimeraTK {
     DoocsBackendEventIdRegisterAccessor(boost::shared_ptr<DoocsBackend> backend, const std::string& path,
         const std::string& registerPathName, AccessModeFlags flags);
 
-    void doPostRead() override;
+    void doPostRead(TransferType type, bool hasNewData) override;
 
     bool isReadOnly() const override { return true; }
 
@@ -68,14 +68,15 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendEventIdRegisterAccessor<UserType>::doPostRead() {
+  void DoocsBackendEventIdRegisterAccessor<UserType>::doPostRead(TransferType type, bool hasNewData) {
+    DoocsBackendRegisterAccessor<UserType>::doPostRead(type, hasNewData);
+    if(!hasNewData) return;
+
     EqData d = DoocsBackendRegisterAccessor<UserType>::dst;
     auto id = d.get_event_id();
 
     UserType val = numericToUserType<UserType>(id.to_int());
     NDRegisterAccessor<UserType>::buffer_2D[0][0] = val;
-
-    DoocsBackendRegisterAccessor<UserType>::doPostRead();
   }
 
 } // namespace ChimeraTK
