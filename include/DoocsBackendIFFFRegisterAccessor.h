@@ -26,9 +26,9 @@ namespace ChimeraTK {
         const std::string& field, const std::string& registerPathName, size_t numberOfWords,
         size_t wordOffsetInRegister, AccessModeFlags flags);
 
-    void doPostRead() override;
+    void doPostRead(TransferType type, bool hasNewData) override;
 
-    void doPreWrite() override;
+    void doPreWrite(TransferType type) override;
 
     bool mayReplaceOther(const boost::shared_ptr<TransferElement const>& other) const override {
       auto rhsCasted = boost::dynamic_pointer_cast<const DoocsBackendIFFFRegisterAccessor<UserType>>(other);
@@ -113,7 +113,10 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendIFFFRegisterAccessor<UserType>::doPostRead() {
+  void DoocsBackendIFFFRegisterAccessor<UserType>::doPostRead(TransferType type, bool hasNewData) {
+    DoocsBackendRegisterAccessor<UserType>::doPostRead(type, hasNewData);
+    if(!hasNewData) return;
+
     // copy data into our buffer
     IFFF* data = dst.get_ifff();
     switch(field) {
@@ -137,13 +140,14 @@ namespace ChimeraTK {
         assert(false); // LCOV_EXCL_LINE (cannot happen, see constructor)
       }
     }
-    DoocsBackendRegisterAccessor<UserType>::doPostRead();
   }
 
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendIFFFRegisterAccessor<UserType>::doPreWrite() {
+  void DoocsBackendIFFFRegisterAccessor<UserType>::doPreWrite(TransferType type) {
+    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type);
+
     // read-modify-write: first read
     DoocsBackendRegisterAccessor<UserType>::doReadTransfer();
 

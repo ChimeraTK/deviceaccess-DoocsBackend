@@ -27,9 +27,9 @@ namespace ChimeraTK {
     DoocsBackendIntRegisterAccessor(boost::shared_ptr<DoocsBackend> backend, const std::string& path,
         const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
 
-    void doPostRead() override;
+    void doPostRead(TransferType type, bool hasNewData) override;
 
-    void doPreWrite() override;
+    void doPreWrite(TransferType type) override;
 
     void initialiseImplementation() override;
 
@@ -83,7 +83,10 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendIntRegisterAccessor<UserType>::doPostRead() {
+  void DoocsBackendIntRegisterAccessor<UserType>::doPostRead(TransferType type, bool hasNewData) {
+    DoocsBackendRegisterAccessor<UserType>::doPostRead(type, hasNewData);
+    if(!hasNewData) return;
+
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       UserType val = numericToUserType<UserType>(DoocsBackendRegisterAccessor<UserType>::dst.get_int());
@@ -96,13 +99,14 @@ namespace ChimeraTK {
         NDRegisterAccessor<UserType>::buffer_2D[0][i] = val;
       }
     }
-    DoocsBackendRegisterAccessor<UserType>::doPostRead();
   }
 
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendIntRegisterAccessor<UserType>::doPreWrite() {
+  void DoocsBackendIntRegisterAccessor<UserType>::doPreWrite(TransferType type) {
+    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type);
+
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       int32_t raw = userTypeToNumeric<int32_t>(NDRegisterAccessor<UserType>::buffer_2D[0][0]);

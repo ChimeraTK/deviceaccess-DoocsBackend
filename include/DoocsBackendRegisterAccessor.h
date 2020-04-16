@@ -63,7 +63,7 @@ namespace ChimeraTK {
     /// Flag whether shutdown() has been called or not
     bool shutdownCalled{false};
 
-    ChimeraTK::VersionNumber currentVersion;
+    ChimeraTK::VersionNumber currentVersion{nullptr};
   };
 
   /********************************************************************************************************************/
@@ -101,7 +101,16 @@ namespace ChimeraTK {
       return false;
     }
 
-    void doPostRead() override {
+    void doPreRead(TransferType) override {
+      if(!_backend->isOpen()) throw ChimeraTK::logic_error("Read operation not allowed while device is closed.");
+    }
+
+    void doPreWrite(TransferType) override {
+      if(!_backend->isOpen()) throw ChimeraTK::logic_error("Write operation not allowed while device is closed.");
+    }
+
+    void doPostRead(TransferType, bool hasNewData) override {
+      if(!hasNewData) return;
       // Note: the original idea was to extract the time stamp from the received data. This idea has been dropped since
       // the time stamp attached to the data seems to be unreliably, at least for the x2timer macro pulse number. If the
       // unreliable time stamp is attached to the trigger, all data will get this time stamp. This leads to error
@@ -404,17 +413,16 @@ namespace ChimeraTK {
   template<typename UserType>
   TransferFuture DoocsBackendRegisterAccessor<UserType>::doReadTransferAsync() {
     if(!_backend->isOpen()) throw ChimeraTK::logic_error("Attept to read from closed device.");
-    initialise();
-    // create future_queue if not already created and continue it to enusre
-    // postRead is called (in the user thread, so we use the deferred launch
-    // policy)
-    if(!futureCreated) {
-      notifications = cppext::future_queue<EqData>(2);
-      activeFuture = TransferFuture(notifications.then<void>([](EqData&) {}), this);
-      futureCreated = true;
-    }
 
     if(!useZMQ) {
+      // create future_queue if not already created and continue it to ensure postRead is called (in the user thread,
+      // so we use the deferred launch policy)
+      if(!futureCreated) {
+        notifications = cppext::future_queue<EqData>(2);
+        activeFuture = TransferFuture(notifications.then<void>([](EqData&) {}, std::launch::deferred), this);
+        futureCreated = true;
+      }
+
       // launch doReadTransfer in separate thread
       readAsyncThread = boost::thread([this] {
         try {
@@ -422,10 +430,20 @@ namespace ChimeraTK {
         }
         catch(...) {
           this->notifications.push_exception(std::current_exception());
-          throw;
+          return;
         }
         this->notifications.push({});
       });
+    }
+    else {
+      // initialise if not yet done
+      try {
+        initialise();
+      }
+      catch(...) {
+        // exceptions must not be thrown here directly
+        this->notifications.push_exception(std::current_exception());
+      }
     }
 
     // return the TransferFuture

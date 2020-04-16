@@ -17,6 +17,7 @@
 
 #include <ChimeraTK/Device.h>
 #include <ChimeraTK/TransferGroup.h>
+#include <ChimeraTK/UnifiedBackendTest.h>
 #include <doocs-server-test-helper/doocsServerTestHelper.h>
 #include <doocs-server-test-helper/ThreadedDoocsServer.h>
 #include <fstream>
@@ -957,6 +958,8 @@ void deleteFile(const std::string& filename) {
     throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)));
 }
 
+/**********************************************************************************************************************/
+
 BOOST_AUTO_TEST_CASE(testCatalogue) {
   {
     createCacheFileFromCdd(DoocsLauncher::DoocsServer1_cached);
@@ -1195,6 +1198,8 @@ BOOST_AUTO_TEST_CASE(testCacheFileCreation) {
   deleteFile(DoocsLauncher::cacheFile2);
 }
 
+/**********************************************************************************************************************/
+
 std::time_t createDummyXml(const std::string& filename){
   std::string xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                     "<catalogue version=\"1.0\">"
@@ -1217,6 +1222,8 @@ std::time_t createDummyXml(const std::string& filename){
   std::this_thread::sleep_for(std::chrono::seconds(1));
   return creation_time;
 }
+
+/**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testCacheXmlReplacement) {
   // test local copy is replaced when catalogue fetching is complete.
@@ -1252,6 +1259,8 @@ BOOST_AUTO_TEST_CASE(testCacheXmlReplacement) {
 
 }
 
+/**********************************************************************************************************************/
+
 BOOST_AUTO_TEST_CASE(testCacheXmlReplacementBehaviorOnFailure) {
   // local copy unchanged if app exits before.
   auto creation_time = createDummyXml(DoocsLauncher::cacheFile2);
@@ -1266,6 +1275,8 @@ BOOST_AUTO_TEST_CASE(testCacheXmlReplacementBehaviorOnFailure) {
   deleteFile(DoocsLauncher::cacheFile2);
 
 }
+
+/**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testAccessorForCachedMode){
   createCacheFileFromCdd(DoocsLauncher::DoocsServer1_cached);
@@ -1287,6 +1298,8 @@ BOOST_AUTO_TEST_CASE(testAccessorForCachedMode){
   deleteFile(DoocsLauncher::cacheFile1);
 }
 
+/**********************************************************************************************************************/
+
 BOOST_AUTO_TEST_CASE(testBlankXMLThrow){
 
   std::string xml = "";
@@ -1298,6 +1311,8 @@ BOOST_AUTO_TEST_CASE(testBlankXMLThrow){
   deleteFile(DoocsLauncher::cacheFile2);
 
 }
+
+/**********************************************************************************************************************/
 
 BOOST_AUTO_TEST_CASE(testEventId) {
   ChimeraTK::Device device;
@@ -1371,6 +1386,8 @@ BOOST_AUTO_TEST_CASE(testEventId) {
   device.close();
 }
 
+/**********************************************************************************************************************/
+
 BOOST_AUTO_TEST_CASE(testTimeStamp) {
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
@@ -1443,6 +1460,8 @@ BOOST_AUTO_TEST_CASE(testTimeStamp) {
   device.close();
 }
 
+/**********************************************************************************************************************/
+
 BOOST_AUTO_TEST_CASE(testEventIdMapping) {
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
@@ -1494,3 +1513,21 @@ BOOST_AUTO_TEST_CASE(testEventIdMapping) {
           static_cast<std::string>(acc2.getVersionNumber()));
 
 }
+
+/**********************************************************************************************************************/
+
+BOOST_AUTO_TEST_CASE(unifiedBackendTest) {
+  auto location = find_device("MYDUMMY");
+  assert(location != nullptr);
+
+  UnifiedBackendTest ubt;
+
+  ubt.integerRegister({"MYDUMMY/SOME_INT"});
+
+  ubt.forceRuntimeErrorOnRead({{[&] { location->lock(); }, [&] { location->unlock(); }}});
+  ubt.forceRuntimeErrorOnWrite({{[&] { location->lock(); }, [&] { location->unlock(); }}});
+
+  ubt.runTests(DoocsLauncher::DoocsServer1);
+}
+
+/**********************************************************************************************************************/

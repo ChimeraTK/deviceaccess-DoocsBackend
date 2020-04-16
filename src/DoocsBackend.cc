@@ -154,6 +154,8 @@ namespace ChimeraTK {
 
   void DoocsBackend::close() { _opened = false; }
 
+  /********************************************************************************************************************/
+
   bool DoocsBackend::isFunctional() const {
 #warning This default implementation causes fluctuating error states in ApplicationCore. Write a proper implementsation (issue #22)
     return _opened;

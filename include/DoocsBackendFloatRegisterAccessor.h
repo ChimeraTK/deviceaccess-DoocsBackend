@@ -25,9 +25,9 @@ namespace ChimeraTK {
     DoocsBackendFloatRegisterAccessor(boost::shared_ptr<DoocsBackend> backend, const std::string& path,
         const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
 
-    void doPostRead() override;
+    void doPostRead(TransferType type, bool hasNewData) override;
 
-    void doPreWrite() override;
+    void doPreWrite(TransferType type) override;
 
     void initialiseImplementation() override;
 
@@ -80,7 +80,10 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<float>::doPostRead() {
+  void DoocsBackendFloatRegisterAccessor<float>::doPostRead(TransferType type, bool hasNewData) {
+    DoocsBackendRegisterAccessor<float>::doPostRead(type, hasNewData);
+    if(!hasNewData) return;
+
     // copy data into our buffer
     if(!isArray) {
       NDRegisterAccessor<float>::buffer_2D[0][0] = dst.get_float();
@@ -91,13 +94,15 @@ namespace ChimeraTK {
         NDRegisterAccessor<float>::buffer_2D[0][i] = dst.get_float(idx);
       }
     }
-    DoocsBackendRegisterAccessor<float>::doPostRead();
   }
 
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<double>::doPostRead() {
+  void DoocsBackendFloatRegisterAccessor<double>::doPostRead(TransferType type, bool hasNewData) {
+    DoocsBackendRegisterAccessor<double>::doPostRead(type, hasNewData);
+    if(!hasNewData) return;
+
     // copy data into our buffer
     if(!isArray) {
       NDRegisterAccessor<double>::buffer_2D[0][0] = dst.get_double();
@@ -108,13 +113,15 @@ namespace ChimeraTK {
         NDRegisterAccessor<double>::buffer_2D[0][i] = dst.get_double(idx);
       }
     }
-    DoocsBackendRegisterAccessor<double>::doPostRead();
   }
 
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<std::string>::doPostRead() {
+  void DoocsBackendFloatRegisterAccessor<std::string>::doPostRead(TransferType type, bool hasNewData) {
+    DoocsBackendRegisterAccessor<std::string>::doPostRead(type, hasNewData);
+    if(!hasNewData) return;
+
     // copy data into our buffer
     if(!isArray) {
       NDRegisterAccessor<std::string>::buffer_2D[0][0] = dst.get_string();
@@ -126,15 +133,18 @@ namespace ChimeraTK {
             std::to_string(DoocsBackendRegisterAccessor<std::string>::dst.get_double(idx));
       }
     }
-    DoocsBackendRegisterAccessor<std::string>::doPostRead();
   }
 
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendFloatRegisterAccessor<UserType>::doPostRead() {
+  void DoocsBackendFloatRegisterAccessor<UserType>::doPostRead(TransferType type, bool hasNewData) {
     static_assert(std::numeric_limits<UserType>::is_integer,
         "Data type not implemented."); // only integral types left!
+
+    DoocsBackendRegisterAccessor<UserType>::doPostRead(type, hasNewData);
+    if(!hasNewData) return;
+
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       NDRegisterAccessor<UserType>::buffer_2D[0][0] =
@@ -147,13 +157,14 @@ namespace ChimeraTK {
             std::round(DoocsBackendRegisterAccessor<UserType>::dst.get_double(idx));
       }
     }
-    DoocsBackendRegisterAccessor<UserType>::doPostRead();
   }
 
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<std::string>::doPreWrite() {
+  void DoocsBackendFloatRegisterAccessor<std::string>::doPreWrite(TransferType type) {
+    DoocsBackendRegisterAccessor<std::string>::doPreWrite(type);
+
     // copy data into our buffer
     if(!isArray) {
       src.set(std::stod(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str()));
@@ -176,8 +187,10 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendFloatRegisterAccessor<UserType>::doPreWrite() {
+  void DoocsBackendFloatRegisterAccessor<UserType>::doPreWrite(TransferType type) {
+    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type);
     // copy data into our buffer
+
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       double val = NDRegisterAccessor<UserType>::buffer_2D[0][0];
       DoocsBackendRegisterAccessor<UserType>::src.set(val);
