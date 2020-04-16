@@ -101,6 +101,14 @@ namespace ChimeraTK {
       return false;
     }
 
+    void doPreRead(TransferType) override {
+      if(!_backend->isOpen()) throw ChimeraTK::logic_error("Read operation not allowed while device is closed.");
+    }
+
+    void doPreWrite(TransferType) override {
+      if(!_backend->isOpen()) throw ChimeraTK::logic_error("Write operation not allowed while device is closed.");
+    }
+
     void doPostRead(TransferType, bool hasNewData) override {
       if(!hasNewData) return;
       // Note: the original idea was to extract the time stamp from the received data. This idea has been dropped since

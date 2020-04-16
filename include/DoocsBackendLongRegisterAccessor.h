@@ -93,7 +93,9 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendLongRegisterAccessor<UserType>::doPreWrite(TransferType) {
+  void DoocsBackendLongRegisterAccessor<UserType>::doPreWrite(TransferType type) {
+    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type);
+
     // copy data into our buffer
     if(DoocsBackendRegisterAccessor<UserType>::isPartial) { // implement
                                                             // read-modify-write

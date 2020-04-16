@@ -162,7 +162,9 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<std::string>::doPreWrite(TransferType) {
+  void DoocsBackendFloatRegisterAccessor<std::string>::doPreWrite(TransferType type) {
+    DoocsBackendRegisterAccessor<std::string>::doPreWrite(type);
+
     // copy data into our buffer
     if(!isArray) {
       src.set(std::stod(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str()));
@@ -185,8 +187,10 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendFloatRegisterAccessor<UserType>::doPreWrite(TransferType) {
+  void DoocsBackendFloatRegisterAccessor<UserType>::doPreWrite(TransferType type) {
+    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type);
     // copy data into our buffer
+
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       double val = NDRegisterAccessor<UserType>::buffer_2D[0][0];
       DoocsBackendRegisterAccessor<UserType>::src.set(val);

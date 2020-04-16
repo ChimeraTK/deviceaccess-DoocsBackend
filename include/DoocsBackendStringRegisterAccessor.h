@@ -101,6 +101,8 @@ namespace ChimeraTK {
 
   template<>
   void DoocsBackendStringRegisterAccessor<std::string>::doPreWrite(TransferType type) {
+    DoocsBackendRegisterAccessor<std::string>::doPreWrite(type);
+
     // copy data into our buffer
     DoocsBackendRegisterAccessor<std::string>::src.set(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str());
   }

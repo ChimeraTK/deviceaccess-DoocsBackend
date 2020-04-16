@@ -145,7 +145,9 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendIFFFRegisterAccessor<UserType>::doPreWrite(TransferType) {
+  void DoocsBackendIFFFRegisterAccessor<UserType>::doPreWrite(TransferType type) {
+    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type);
+
     // read-modify-write: first read
     DoocsBackendRegisterAccessor<UserType>::doReadTransfer();
 

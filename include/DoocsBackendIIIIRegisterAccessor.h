@@ -22,7 +22,9 @@ namespace ChimeraTK {
   };
 
   template<typename UserType>
-  void DoocsBackendIIIIRegisterAccessor<UserType>::doPreWrite(TransferType) {
+  void DoocsBackendIIIIRegisterAccessor<UserType>::doPreWrite(TransferType type) {
+    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type);
+
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {
       int32_t raw = userTypeToNumeric<int32_t>(NDRegisterAccessor<UserType>::buffer_2D[0][0]);
