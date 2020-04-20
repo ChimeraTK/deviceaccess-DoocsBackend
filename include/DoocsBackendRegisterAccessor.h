@@ -12,6 +12,7 @@
 
 #include <eq_client.h>
 #include <eq_fct.h>
+#include <eq_errors.h>
 
 #include "DoocsBackend.h"
 #include "EventIdMapper.h"
@@ -103,10 +104,12 @@ namespace ChimeraTK {
 
     void doPreRead(TransferType) override {
       if(!_backend->isOpen()) throw ChimeraTK::logic_error("Read operation not allowed while device is closed.");
+      initialise();
     }
 
     void doPreWrite(TransferType) override {
       if(!_backend->isOpen()) throw ChimeraTK::logic_error("Write operation not allowed while device is closed.");
+      initialise();
     }
 
     void doPostRead(TransferType, bool hasNewData) override {
@@ -197,7 +200,12 @@ namespace ChimeraTK {
     EqData tmp;
     int rc = eq.get(&ea, &tmp, &dst);
     if(rc) {
-      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
+      if(rc == eq_errors::ill_property || rc == eq_errors::ill_location ||
+          rc == eq_errors::ill_address) { // no property by that name
+        throw ChimeraTK::logic_error("Property does not exist: " + _path);
+      }
+      // runtime error will later be thrown by the transfer...
+      return;
     }
 
     // obtain number of elements
@@ -214,8 +222,7 @@ namespace ChimeraTK {
       nElements = actualLength;
     }
     if(nElements + elementOffset > actualLength) {
-      throw ChimeraTK::logic_error("Requested number of words exceeds the "
-                                   "length of the DOOCS property!");
+      throw ChimeraTK::logic_error("Requested number of words exceeds the length of the DOOCS property!");
     }
     if(nElements == actualLength && elementOffset == 0) {
       isPartial = false;
@@ -303,8 +310,11 @@ namespace ChimeraTK {
 
   template<typename UserType>
   bool DoocsBackendRegisterAccessor<UserType>::doReadTransferNonBlocking() {
-    if(!_backend->isOpen()) throw ChimeraTK::logic_error("Attept to read from closed device.");
-    initialise();
+    if(!isInitialised) {
+      // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
+      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
+    }
+
     if(!useZMQ) {
       this->doReadTransfer();
       return true;
@@ -337,8 +347,11 @@ namespace ChimeraTK {
 
   template<typename UserType>
   bool DoocsBackendRegisterAccessor<UserType>::doReadTransferLatest() {
-    if(!_backend->isOpen()) throw ChimeraTK::logic_error("Attept to read from closed device.");
-    initialise();
+    if(!isInitialised) {
+      // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
+      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
+    }
+
     if(!useZMQ) {
       this->doReadTransfer();
       return true;
@@ -355,8 +368,11 @@ namespace ChimeraTK {
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::doReadTransfer() {
-    if(!_backend->isOpen()) throw ChimeraTK::logic_error("Attept to read from closed device.");
-    initialise();
+    if(!isInitialised) {
+      // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
+      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
+    }
+
     boost::this_thread::interruption_point();
     if(!useZMQ) {
       // read data
@@ -398,8 +414,11 @@ namespace ChimeraTK {
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::write_internal() {
-    if(!_backend->isOpen()) throw ChimeraTK::logic_error("Attept to write to closed device.");
-    initialise();
+    if(!isInitialised) {
+      // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
+      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
+    }
+
     // write data
     int rc = eq.set(&ea, &src, &dst);
     // check error
@@ -412,7 +431,10 @@ namespace ChimeraTK {
 
   template<typename UserType>
   TransferFuture DoocsBackendRegisterAccessor<UserType>::doReadTransferAsync() {
-    if(!_backend->isOpen()) throw ChimeraTK::logic_error("Attept to read from closed device.");
+    if(!isInitialised) {
+      // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
+      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
+    }
 
     if(!useZMQ) {
       // create future_queue if not already created and continue it to ensure postRead is called (in the user thread,
