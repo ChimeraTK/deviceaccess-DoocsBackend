@@ -30,9 +30,7 @@ namespace ChimeraTK {
     void initialiseImplementation() override {}
 
     bool doWriteTransfer(VersionNumber /*versionNumber = {}*/) override {
-      throw ChimeraTK::logic_error(
-          "Trying to write to read-only register \"" + DoocsBackendRegisterAccessor<UserType>::_path + "\"");
-
+      // do not throw again, already done in doPreWrite...
       return false;
     }
 

@@ -105,11 +105,13 @@ namespace ChimeraTK {
     void doPreRead(TransferType) override {
       if(!_backend->isOpen()) throw ChimeraTK::logic_error("Read operation not allowed while device is closed.");
       initialise();
+      if(!isReadable()) throw ChimeraTK::logic_error("Try to write read-only register \"" + _path + "\".");
     }
 
     void doPreWrite(TransferType) override {
       if(!_backend->isOpen()) throw ChimeraTK::logic_error("Write operation not allowed while device is closed.");
       initialise();
+      if(!isWriteable()) throw ChimeraTK::logic_error("Try to write read-only register \"" + _path + "\".");
     }
 
     void doPostRead(TransferType, bool hasNewData) override {
