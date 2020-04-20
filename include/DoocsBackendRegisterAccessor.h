@@ -179,8 +179,20 @@ namespace ChimeraTK {
     /** Flag whether the initialisation has been performed already */
     bool isInitialised{false};
 
-    /** Perform initialisation (i.e. connect to server etc.) */
+    /**
+     *  Perform initialisation (i.e. connect to server etc.). 
+     * 
+     *  Note: must *only* throw ChimeraTK::logic_error. Just do not proceed with the initialisation if a runtime_error
+     *  is to be thrown - this will then be done in the transfer.
+     */
     void initialise();
+
+    /**
+     *  Perform accessor-type specific part of the initialisation. Called at the end of initialise().
+     * 
+     *  Note: must *only* throw ChimeraTK::logic_error. Just do not proceed with the initialisation if a runtime_error
+     *  is to be thrown - this will then be done in the transfer.
+     */
     virtual void initialiseImplementation() = 0;
 
     bool _allocateBuffers;
