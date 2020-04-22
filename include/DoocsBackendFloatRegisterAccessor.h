@@ -27,7 +27,7 @@ namespace ChimeraTK {
 
     void doPostRead(TransferType type, bool hasNewData) override;
 
-    void doPreWrite(TransferType type) override;
+    void doPreWrite(TransferType type, VersionNumber) override;
 
     void initialiseImplementation() override;
 
@@ -162,8 +162,8 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendFloatRegisterAccessor<std::string>::doPreWrite(TransferType type) {
-    DoocsBackendRegisterAccessor<std::string>::doPreWrite(type);
+  void DoocsBackendFloatRegisterAccessor<std::string>::doPreWrite(TransferType type, VersionNumber version) {
+    DoocsBackendRegisterAccessor<std::string>::doPreWrite(type, version);
 
     // copy data into our buffer
     if(!isArray) {
@@ -187,8 +187,8 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendFloatRegisterAccessor<UserType>::doPreWrite(TransferType type) {
-    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type);
+  void DoocsBackendFloatRegisterAccessor<UserType>::doPreWrite(TransferType type, VersionNumber version) {
+    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type, version);
     // copy data into our buffer
 
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {

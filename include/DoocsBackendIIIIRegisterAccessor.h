@@ -16,14 +16,14 @@ namespace ChimeraTK {
    protected:
     using DoocsBackendIntRegisterAccessor<UserType>::DoocsBackendIntRegisterAccessor;
 
-    void doPreWrite(TransferType type) override;
+    void doPreWrite(TransferType type, VersionNumber version) override;
 
     friend class DoocsBackend;
   };
 
   template<typename UserType>
-  void DoocsBackendIIIIRegisterAccessor<UserType>::doPreWrite(TransferType type) {
-    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type);
+  void DoocsBackendIIIIRegisterAccessor<UserType>::doPreWrite(TransferType type, VersionNumber version) {
+    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type, version);
 
     // copy data into our buffer
     if(!DoocsBackendRegisterAccessor<UserType>::isArray) {

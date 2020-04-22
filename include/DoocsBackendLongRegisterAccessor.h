@@ -29,7 +29,7 @@ namespace ChimeraTK {
 
     void doPostRead(TransferType type, bool hasNewData) override;
 
-    void doPreWrite(TransferType type) override;
+    void doPreWrite(TransferType type, VersionNumber version) override;
 
     void initialiseImplementation() override;
 
@@ -93,8 +93,8 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendLongRegisterAccessor<UserType>::doPreWrite(TransferType type) {
-    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type);
+  void DoocsBackendLongRegisterAccessor<UserType>::doPreWrite(TransferType type, VersionNumber version) {
+    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type, version);
 
     // copy data into our buffer
     if(DoocsBackendRegisterAccessor<UserType>::isPartial) { // implement

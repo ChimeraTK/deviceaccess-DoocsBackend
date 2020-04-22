@@ -27,7 +27,7 @@ namespace ChimeraTK {
 
     void doPostRead(TransferType type, bool hasNewData) override;
 
-    void doPreWrite(TransferType type) override;
+    void doPreWrite(TransferType type, VersionNumber version) override;
 
     void initialiseImplementation() override;
 
@@ -100,8 +100,8 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<>
-  void DoocsBackendStringRegisterAccessor<std::string>::doPreWrite(TransferType type) {
-    DoocsBackendRegisterAccessor<std::string>::doPreWrite(type);
+  void DoocsBackendStringRegisterAccessor<std::string>::doPreWrite(TransferType type, VersionNumber version) {
+    DoocsBackendRegisterAccessor<std::string>::doPreWrite(type, version);
 
     // copy data into our buffer
     DoocsBackendRegisterAccessor<std::string>::src.set(NDRegisterAccessor<std::string>::buffer_2D[0][0].c_str());
@@ -120,7 +120,7 @@ namespace ChimeraTK {
 
   template<typename UserType>
   void DoocsBackendStringRegisterAccessor<UserType>::doPreWrite(
-      TransferType) { // LCOV_EXCL_LINE (already prevented in constructor)
+      TransferType, VersionNumber) { // LCOV_EXCL_LINE (already prevented in constructor)
     throw ChimeraTK::logic_error("Trying to access a string DOOCS property with a non-string user data "
                                  "type."); // LCOV_EXCL_LINE
   }                                        // LCOV_EXCL_LINE

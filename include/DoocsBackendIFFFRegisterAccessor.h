@@ -28,7 +28,7 @@ namespace ChimeraTK {
 
     void doPostRead(TransferType type, bool hasNewData) override;
 
-    void doPreWrite(TransferType type) override;
+    void doPreWrite(TransferType type, VersionNumber version) override;
 
     bool mayReplaceOther(const boost::shared_ptr<TransferElement const>& other) const override {
       auto rhsCasted = boost::dynamic_pointer_cast<const DoocsBackendIFFFRegisterAccessor<UserType>>(other);
@@ -145,8 +145,8 @@ namespace ChimeraTK {
   /**********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendIFFFRegisterAccessor<UserType>::doPreWrite(TransferType type) {
-    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type);
+  void DoocsBackendIFFFRegisterAccessor<UserType>::doPreWrite(TransferType type, VersionNumber version) {
+    DoocsBackendRegisterAccessor<UserType>::doPreWrite(type, version);
 
     // read-modify-write: first read
     DoocsBackendRegisterAccessor<UserType>::doReadTransfer();
