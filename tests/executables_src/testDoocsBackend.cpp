@@ -86,6 +86,8 @@ BOOST_AUTO_TEST_CASE(testScalarInt) {
   BOOST_CHECK(device.isOpened() == true);
 
   TwoDRegisterAccessor<int32_t> acc_someInt_as_int(device.getTwoDRegisterAccessor<int32_t>("MYDUMMY/SOME_INT"));
+  BOOST_CHECK(acc_someInt_as_int.getVersionNumber() == VersionNumber{nullptr});
+
   BOOST_CHECK(acc_someInt_as_int.getNChannels() == 1);
   BOOST_CHECK(acc_someInt_as_int.getNElementsPerChannel() == 1);
   acc_someInt_as_int.read();
