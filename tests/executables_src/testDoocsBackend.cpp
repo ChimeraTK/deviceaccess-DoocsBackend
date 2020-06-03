@@ -17,7 +17,6 @@
 
 #include <ChimeraTK/Device.h>
 #include <ChimeraTK/TransferGroup.h>
-#include <ChimeraTK/UnifiedBackendTest.h>
 #include <doocs-server-test-helper/doocsServerTestHelper.h>
 #include <doocs-server-test-helper/ThreadedDoocsServer.h>
 #include <fstream>
@@ -1514,22 +1513,6 @@ BOOST_AUTO_TEST_CASE(testEventIdMapping) {
       static_cast<std::string>(acc3.getVersionNumber()) + " should be equal to " +
           static_cast<std::string>(acc2.getVersionNumber()));
 
-}
-
-/**********************************************************************************************************************/
-
-BOOST_AUTO_TEST_CASE(unifiedBackendTest) {
-  auto location = find_device("MYDUMMY");
-  assert(location != nullptr);
-
-  UnifiedBackendTest ubt;
-
-  ubt.integerRegister({"MYDUMMY/SOME_INT"});
-
-  ubt.forceRuntimeErrorOnRead({{[&] { location->lock(); }, [&] { location->unlock(); }}});
-  ubt.forceRuntimeErrorOnWrite({{[&] { location->lock(); }, [&] { location->unlock(); }}});
-
-  ubt.runTests(DoocsLauncher::DoocsServer1);
 }
 
 /**********************************************************************************************************************/
