@@ -18,6 +18,7 @@
 #include <ChimeraTK/Device.h>
 #include <ChimeraTK/TransferGroup.h>
 #include <doocs-server-test-helper/doocsServerTestHelper.h>
+extern const char* object_name;
 #include <doocs-server-test-helper/ThreadedDoocsServer.h>
 #include <fstream>
 
@@ -36,10 +37,9 @@ static void deleteFile(const std::string& filename);
 
 class DoocsLauncher : public ThreadedDoocsServer {
  public:
-  DoocsLauncher() :
-    ThreadedDoocsServer("testDoocsBackend.conf", boost::unit_test::framework::master_test_suite().argc,
-        boost::unit_test::framework::master_test_suite().argv) {
-
+  DoocsLauncher()
+  : ThreadedDoocsServer("testDoocsBackend", "testDoocsBackend.conf",
+        boost::unit_test::framework::master_test_suite().argc, boost::unit_test::framework::master_test_suite().argv) {
     // set CDDs for the two doocs addresses used in the test
     rpc_no = rpcNo();
     DoocsServer1 = "(doocs:doocs://localhost:" + rpcNo() + "/F/D)";
