@@ -50,6 +50,9 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       }
     }
 
+    // gain lock for listener, to exclude concurrent access with the zmq_callback()
+    std::unique_lock<std::mutex> listeners_lock(subscriptionMap[path].listeners_mutex);
+
     // add accessor to list of listeners
     subscriptionMap[path].listeners.push_back(accessor);
   }
