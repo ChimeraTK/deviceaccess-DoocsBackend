@@ -19,6 +19,7 @@
 #include <ChimeraTK/TransferGroup.h>
 #include <ChimeraTK/UnifiedBackendTest.h>
 #include <doocs-server-test-helper/doocsServerTestHelper.h>
+extern const char* object_name;
 #include <doocs-server-test-helper/ThreadedDoocsServer.h>
 #include <fstream>
 
@@ -34,8 +35,8 @@ using namespace ChimeraTK;
 class DoocsLauncher : public ThreadedDoocsServer {
  public:
   DoocsLauncher()
-  : ThreadedDoocsServer("testUnifiedBackendTest.conf", boost::unit_test::framework::master_test_suite().argc,
-        boost::unit_test::framework::master_test_suite().argv) {
+  : ThreadedDoocsServer("testUnifiedBackendTest", "testUnifiedBackendTest.conf",
+        boost::unit_test::framework::master_test_suite().argc, boost::unit_test::framework::master_test_suite().argv) {
     // set CDDs for the two doocs addresses used in the test
     rpc_no = rpcNo();
     DoocsServer1 = "(doocs:doocs://localhost:" + rpcNo() + "/F/D)";
