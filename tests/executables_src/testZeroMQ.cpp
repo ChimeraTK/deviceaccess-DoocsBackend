@@ -14,8 +14,6 @@
 #include <ChimeraTK/Device.h>
 #include <ChimeraTK/TransferGroup.h>
 #include <doocs-server-test-helper/doocsServerTestHelper.h>
-
-extern const char* object_name;
 #include <doocs-server-test-helper/ThreadedDoocsServer.h>
 
 #include <eq_client.h>
@@ -27,8 +25,8 @@ using namespace ChimeraTK;
 
 class DoocsLauncher : public ThreadedDoocsServer {
  public:
-  DoocsLauncher()
-  : ThreadedDoocsServer("testZeroMQ", "testZeroMQ.conf", boost::unit_test::framework::master_test_suite().argc,
+  DoocsLauncher() :
+    ThreadedDoocsServer("testZeroMQ.conf", boost::unit_test::framework::master_test_suite().argc,
         boost::unit_test::framework::master_test_suite().argv) {
     // set CDDs for the two doocs addresses used in the test
     DoocsServer1 = "(doocs:doocs://localhost:" + rpcNo() + "/F/D)";

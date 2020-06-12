@@ -84,7 +84,6 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       dmsg_detach(&ea, nullptr); // nullptr = remove all subscriptions for that address
 
       // obtain locks again
-      listeners_lock.lock();
       lock.lock();
 
       // remove subscription from map
