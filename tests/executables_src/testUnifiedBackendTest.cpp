@@ -77,11 +77,17 @@ BOOST_AUTO_TEST_CASE(unifiedBackendTest) {
   auto location = find_device("MYDUMMY");
   assert(location != nullptr);
 
+  doocs::zmq_set_subscription_timeout(10); // reduce timout to make test faster
+
   UnifiedBackendTest ubt;
 
   ubt.setSyncReadTestRegisters<int32_t>({"MYDUMMY/SOME_INT"});
   ubt.setWriteTestRegisters<int32_t>({"MYDUMMY/SOME_INT"});
   ubt.setAsyncReadTestRegisters<int32_t>({"MYDUMMY/SOME_ZMQINT"});
+
+  ubt.setRemoteValue([&](const std::string& /*name*/, size_t /*index*/) {
+    DoocsServerTestHelper::runUpdate();
+  });
 
   ubt.forceRuntimeErrorOnRead({{[&] { location->lock(); }, [&] { location->unlock(); }}});
   ubt.forceRuntimeErrorOnWrite({{[&] { location->lock(); }, [&] { location->unlock(); }}});
