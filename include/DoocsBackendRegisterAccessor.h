@@ -326,6 +326,7 @@ namespace ChimeraTK {
   bool DoocsBackendRegisterAccessor<UserType>::doReadTransferNonBlocking() {
     if(!isInitialised) {
       // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
+      _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
     }
 
@@ -346,6 +347,7 @@ namespace ChimeraTK {
           int rc = eq.get(&ea, &tmp, &dst);
           // if again error received, throw exception
           if(rc) {
+            _backend->informRuntimeError(_path);
             throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
           }
           // otherwise try again
@@ -363,6 +365,7 @@ namespace ChimeraTK {
   bool DoocsBackendRegisterAccessor<UserType>::doReadTransferLatest() {
     if(!isInitialised) {
       // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
+      _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
     }
 
@@ -384,6 +387,7 @@ namespace ChimeraTK {
   void DoocsBackendRegisterAccessor<UserType>::doReadTransfer() {
     if(!isInitialised) {
       // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
+      _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
     }
 
@@ -394,6 +398,7 @@ namespace ChimeraTK {
       int rc = eq.get(&ea, &tmp, &dst);
       // check error
       if(rc) {
+        _backend->informRuntimeError(_path);
         throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
       }
     }
@@ -409,6 +414,7 @@ namespace ChimeraTK {
           int rc = eq.get(&ea, &tmp, &dst);
           // if again error received, throw exception
           if(rc) {
+            _backend->informRuntimeError(_path);
             throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
           }
           // otherwise try again
@@ -420,6 +426,7 @@ namespace ChimeraTK {
     }
     // check for error code in dst
     if(dst.error() != 0) {
+      _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
     }
   }
@@ -430,6 +437,7 @@ namespace ChimeraTK {
   void DoocsBackendRegisterAccessor<UserType>::write_internal() {
     if(!isInitialised) {
       // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
+      _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
     }
 
@@ -437,6 +445,7 @@ namespace ChimeraTK {
     int rc = eq.set(&ea, &src, &dst);
     // check error
     if(rc || dst.error() != 0) {
+      _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot write to DOOCS property: ") + dst.get_string());
     }
   }
@@ -447,6 +456,7 @@ namespace ChimeraTK {
   TransferFuture DoocsBackendRegisterAccessor<UserType>::doReadTransferAsync() {
     if(!isInitialised) {
       // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
+      _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
     }
 

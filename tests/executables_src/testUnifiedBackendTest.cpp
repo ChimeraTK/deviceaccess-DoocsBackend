@@ -85,9 +85,7 @@ BOOST_AUTO_TEST_CASE(unifiedBackendTest) {
   ubt.setWriteTestRegisters<int32_t>({"MYDUMMY/SOME_INT"});
   ubt.setAsyncReadTestRegisters<int32_t>({"MYDUMMY/SOME_ZMQINT"});
 
-  ubt.setRemoteValue([&](const std::string& /*name*/, size_t /*index*/) {
-    DoocsServerTestHelper::runUpdate();
-  });
+  ubt.setRemoteValue([&](const std::string& /*name*/, size_t /*index*/) { DoocsServerTestHelper::runUpdate(); });
 
   ubt.forceRuntimeErrorOnRead({{[&] { location->lock(); }, [&] { location->unlock(); }}});
   ubt.forceRuntimeErrorOnWrite({{[&] { location->lock(); }, [&] { location->unlock(); }}});

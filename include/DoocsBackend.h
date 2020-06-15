@@ -85,6 +85,9 @@ namespace ChimeraTK {
     template<typename UserType>
     friend class DoocsBackendRegisterAccessor;
 
+    /** Called by accessors to inform about runtime_error */
+    void informRuntimeError(const std::string& address);
+
    private:
     std::string _cacheFile;
     mutable std::future<std::unique_ptr<RegisterCatalogue>> _catalogueFuture;
@@ -92,6 +95,11 @@ namespace ChimeraTK {
 
     bool cacheFileExists();
     bool isCachingEnabled() const;
+
+    bool _isFunctional{false};
+
+    /// contains DOOCS address which triggered runtime_error, when _isFunctional == false and _opend == true
+    std::string lastFailedAddress;
   };
 
 } // namespace ChimeraTK

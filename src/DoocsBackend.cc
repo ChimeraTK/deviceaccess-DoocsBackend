@@ -136,10 +136,33 @@ namespace ChimeraTK {
     // create and return the backend
     return boost::shared_ptr<DeviceBackend>(new DoocsBackend(address, cacheFile));
   }
+  /********************************************************************************************************************/
+
+  void DoocsBackend::informRuntimeError(const std::string& address) {
+    _isFunctional = false;
+    lastFailedAddress = address;
+  }
 
   /********************************************************************************************************************/
 
-  void DoocsBackend::open() { _opened = true; }
+  void DoocsBackend::open() {
+    if(lastFailedAddress != "") {
+      // open() is called after a runtime_error: check if device is recovered.
+      EqAdr ea;
+      ea.adr(lastFailedAddress);
+      EqCall eq;
+      EqData src, dst;
+      int rc = eq.get(&ea, &src, &dst);
+      // if again error received, throw exception
+      if(rc) {
+        throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
+      }
+      lastFailedAddress = "";
+    }
+
+    _opened = true;
+    _isFunctional = true;
+  }
 
   /********************************************************************************************************************/
 
@@ -152,14 +175,15 @@ namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
-  void DoocsBackend::close() { _opened = false; }
+  void DoocsBackend::close() {
+    lastFailedAddress = "";
+    _opened = false;
+    _isFunctional = false;
+  }
 
   /********************************************************************************************************************/
 
-  bool DoocsBackend::isFunctional() const {
-#warning This default implementation causes fluctuating error states in ApplicationCore. Write a proper implementsation (issue #22)
-    return _opened;
-  }
+  bool DoocsBackend::isFunctional() const { return _isFunctional; }
 
   /********************************************************************************************************************/
 
