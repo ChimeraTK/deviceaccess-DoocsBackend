@@ -171,7 +171,7 @@ namespace ChimeraTK {
     }
     else {
       if(DoocsBackendRegisterAccessor<std::string>::isPartial) { // implement read-modify-write
-        DoocsBackendRegisterAccessor<std::string>::doReadTransfer();
+        DoocsBackendRegisterAccessor<std::string>::doReadTransferSynchronously();
         for(int i = 0; i < DoocsBackendRegisterAccessor<std::string>::src.array_length(); i++) {
           DoocsBackendRegisterAccessor<std::string>::src.set(
               DoocsBackendRegisterAccessor<std::string>::dst.get_double(i), i);
@@ -197,7 +197,7 @@ namespace ChimeraTK {
     }
     else {
       if(DoocsBackendRegisterAccessor<UserType>::isPartial) { // implement read-modify-write
-        DoocsBackendRegisterAccessor<UserType>::doReadTransfer();
+        DoocsBackendRegisterAccessor<UserType>::doReadTransferSynchronously();
         for(int i = 0; i < DoocsBackendRegisterAccessor<UserType>::src.array_length(); i++) {
           DoocsBackendRegisterAccessor<UserType>::src.set(DoocsBackendRegisterAccessor<UserType>::dst.get_double(i), i);
         }

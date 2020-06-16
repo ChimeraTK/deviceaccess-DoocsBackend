@@ -149,7 +149,7 @@ namespace ChimeraTK {
     DoocsBackendRegisterAccessor<UserType>::doPreWrite(type, version);
 
     // read-modify-write: first read
-    DoocsBackendRegisterAccessor<UserType>::doReadTransfer();
+    DoocsBackendRegisterAccessor<UserType>::doReadTransferSynchronously();
 
     // now modify
     IFFF* data = dst.get_ifff();

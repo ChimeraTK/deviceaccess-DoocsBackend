@@ -32,7 +32,7 @@ namespace ChimeraTK {
     }
     else {
       if(DoocsBackendRegisterAccessor<UserType>::isPartial) { // implement read-modify-write
-        DoocsBackendRegisterAccessor<UserType>::doReadTransfer();
+        DoocsBackendRegisterAccessor<UserType>::doReadTransferSynchronously();
         DoocsBackendRegisterAccessor<UserType>::src.set(DoocsBackendRegisterAccessor<UserType>::dst.get_int(0),
             DoocsBackendRegisterAccessor<UserType>::dst.get_int(1),
             DoocsBackendRegisterAccessor<UserType>::dst.get_int(2),

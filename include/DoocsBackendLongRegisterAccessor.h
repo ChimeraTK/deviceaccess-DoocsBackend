@@ -99,7 +99,7 @@ namespace ChimeraTK {
     // copy data into our buffer
     if(DoocsBackendRegisterAccessor<UserType>::isPartial) { // implement
                                                             // read-modify-write
-      DoocsBackendRegisterAccessor<UserType>::doReadTransfer();
+      DoocsBackendRegisterAccessor<UserType>::doReadTransferSynchronously();
       for(int i = 0; i < DoocsBackendRegisterAccessor<UserType>::src.array_length(); i++) {
         DoocsBackendRegisterAccessor<UserType>::src.set(DoocsBackendRegisterAccessor<UserType>::dst.get_long(i), i);
       }

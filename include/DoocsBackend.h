@@ -55,6 +55,11 @@ namespace ChimeraTK {
 
     std::string readDeviceInfo() override { return std::string("DOOCS server address: ") + _serverAddress; }
 
+    void setException() override {
+      std::lock_guard<std::mutex> lk(_mxRecovery);
+      _isFunctional = false;
+    };
+
    public:
     static boost::shared_ptr<DeviceBackend> createInstance(
         std::string address, std::map<std::string, std::string> parameters);
@@ -95,6 +100,9 @@ namespace ChimeraTK {
 
     bool cacheFileExists();
     bool isCachingEnabled() const;
+
+    /// Mutex for accessing _isFunctional and lastFailedAddress;
+    mutable std::mutex _mxRecovery;
 
     bool _isFunctional{false};
 

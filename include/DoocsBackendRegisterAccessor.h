@@ -63,8 +63,6 @@ namespace ChimeraTK {
 
     /// Flag whether shutdown() has been called or not
     bool shutdownCalled{false};
-
-    ChimeraTK::VersionNumber currentVersion{nullptr};
   };
 
   /********************************************************************************************************************/
@@ -90,15 +88,10 @@ namespace ChimeraTK {
       shutdownCalled = true;
     }
 
-    void doReadTransfer() override;
+    void doReadTransferSynchronously() override;
 
-    bool doReadTransferNonBlocking() override;
-
-    bool doReadTransferLatest() override;
-
-    bool doWriteTransfer(ChimeraTK::VersionNumber versionNumber = {}) override {
+    bool doWriteTransfer(VersionNumber) override {
       write_internal();
-      currentVersion = versionNumber;
       return false;
     }
 
@@ -121,15 +114,8 @@ namespace ChimeraTK {
       // unreliable time stamp is attached to the trigger, all data will get this time stamp. This leads to error
       // messages of the DOOCS history archiver, which rejects data due to wrong time stamps. Hence we better generate
       // our own time stamp here.
-      currentVersion = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
+      TransferElement::_versionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
     }
-
-    AccessModeFlags getAccessModeFlags() const override {
-      if(useZMQ) return {AccessMode::wait_for_new_data};
-      return {};
-    }
-
-    TransferFuture doReadTransferAsync() override;
 
     void interrupt() override {
       if(!useZMQ) return; // nothing to interrupt here...
@@ -141,15 +127,13 @@ namespace ChimeraTK {
       }
     }
 
-    ChimeraTK::VersionNumber getVersionNumber() const override { return currentVersion; }
-
     bool isReadOnly() const override { return false; }
 
     bool isReadable() const override { return true; }
 
     bool isWriteable() const override { return true; }
 
-    using TransferElement::activeFuture;
+    using TransferElement::_readQueue;
 
     bool mayReplaceOther(const boost::shared_ptr<TransferElement const>& other) const override {
       auto rhsCasted = boost::dynamic_pointer_cast<const DoocsBackendRegisterAccessor<UserType>>(other);
@@ -259,10 +243,6 @@ namespace ChimeraTK {
 
     // use ZeroMQ with AccessMode::wait_for_new_data
     if(useZMQ) {
-      // create TransferFuture
-      activeFuture = TransferFuture(notifications.then<void>([](EqData&) {}, std::launch::deferred), this);
-      futureCreated = true;
-
       // subscribe via subscription manager
       DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().subscribe(_path, this);
     }
@@ -277,7 +257,7 @@ namespace ChimeraTK {
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(boost::shared_ptr<DoocsBackend> backend,
       const std::string& path, const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister,
       AccessModeFlags flags, bool allocateBuffers)
-  : NDRegisterAccessor<UserType>(path), _allocateBuffers(allocateBuffers), _backend(backend) {
+  : NDRegisterAccessor<UserType>(path, flags), _allocateBuffers(allocateBuffers), _backend(backend) {
     try {
       _path = path;
       elementOffset = wordOffsetInRegister;
@@ -294,9 +274,17 @@ namespace ChimeraTK {
       if(flags.has(AccessMode::wait_for_new_data)) {
         useZMQ = true;
 
-        // Create notification queue. It must be done already here (not only in initialise()), since interrupt() will
-        // expect its presence if useZMQ == true.
+        // Create notification queue.
         notifications = cppext::future_queue<EqData>(3);
+        _readQueue = notifications.then<void>(
+            [this](EqData& data) {
+              this->dst = data;
+              if(data.error() == no_connection) {
+                _backend->informRuntimeError(_path);
+                throw ChimeraTK::runtime_error("ZeroMQ connection interrupted: " + data.get_string());
+              }
+            },
+            std::launch::deferred);
       }
 
       // if the backend has not yet been openend, obtain size of the register from catalogue
@@ -323,109 +311,23 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   template<typename UserType>
-  bool DoocsBackendRegisterAccessor<UserType>::doReadTransferNonBlocking() {
+  void DoocsBackendRegisterAccessor<UserType>::doReadTransferSynchronously() {
     if(!isInitialised) {
       // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
       _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
     }
 
-    if(!useZMQ) {
-      this->doReadTransfer();
-      return true;
-    }
-    else {
-      // loop to allow retries in case of timeout errors
-      while(true) {
-        // wait until new data has been received
-        bool gotData = notifications.pop(dst);
-        if(!gotData) return false;
-        // check for an error
-        if(dst.error() != 0) {
-          // try obtaining data through RPC call instead to verify error
-          EqData tmp;
-          int rc = eq.get(&ea, &tmp, &dst);
-          // if again error received, throw exception
-          if(rc) {
-            _backend->informRuntimeError(_path);
-            throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
-          }
-          // otherwise try again
-          continue;
-        }
-        // we have received data, so return
-        return true;
-      }
-    }
-  }
-
-  /********************************************************************************************************************/
-
-  template<typename UserType>
-  bool DoocsBackendRegisterAccessor<UserType>::doReadTransferLatest() {
-    if(!isInitialised) {
-      // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
-      _backend->informRuntimeError(_path);
-      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
-    }
-
-    if(!useZMQ) {
-      this->doReadTransfer();
-      return true;
-    }
-    else {
-      if(notifications.empty()) return false;
-      while(notifications.pop(dst))
-        ; // remove all elements
-      return true;
-    }
-  }
-
-  /********************************************************************************************************************/
-
-  template<typename UserType>
-  void DoocsBackendRegisterAccessor<UserType>::doReadTransfer() {
-    if(!isInitialised) {
-      // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
-      _backend->informRuntimeError(_path);
-      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
-    }
+    assert(!useZMQ);
 
     boost::this_thread::interruption_point();
-    if(!useZMQ) {
-      // read data
-      EqData tmp;
-      int rc = eq.get(&ea, &tmp, &dst);
-      // check error
-      if(rc) {
-        _backend->informRuntimeError(_path);
-        throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
-      }
-    }
-    else {
-      // loop to allow retries in case of timeout errors
-      while(true) {
-        // wait until new data has been received
-        notifications.pop_wait(dst);
-        // check for an error
-        if(dst.error() != 0) {
-          // try obtaining data through RPC call instead to verify error
-          EqData tmp;
-          int rc = eq.get(&ea, &tmp, &dst);
-          // if again error received, throw exception
-          if(rc) {
-            _backend->informRuntimeError(_path);
-            throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
-          }
-          // otherwise try again
-          continue;
-        }
-        // terminate loop, since no retry needed
-        break;
-      }
-    }
-    // check for error code in dst
-    if(dst.error() != 0) {
+
+    // read data
+    EqData tmp;
+    int rc = eq.get(&ea, &tmp, &dst);
+
+    // check error
+    if(rc) {
       _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
     }
@@ -448,52 +350,6 @@ namespace ChimeraTK {
       _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot write to DOOCS property: ") + dst.get_string());
     }
-  }
-
-  /********************************************************************************************************************/
-
-  template<typename UserType>
-  TransferFuture DoocsBackendRegisterAccessor<UserType>::doReadTransferAsync() {
-    if(!isInitialised) {
-      // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
-      _backend->informRuntimeError(_path);
-      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
-    }
-
-    if(!useZMQ) {
-      // create future_queue if not already created and continue it to ensure postRead is called (in the user thread,
-      // so we use the deferred launch policy)
-      if(!futureCreated) {
-        notifications = cppext::future_queue<EqData>(2);
-        activeFuture = TransferFuture(notifications.then<void>([](EqData&) {}, std::launch::deferred), this);
-        futureCreated = true;
-      }
-
-      // launch doReadTransfer in separate thread
-      readAsyncThread = boost::thread([this] {
-        try {
-          this->doReadTransfer();
-        }
-        catch(...) {
-          this->notifications.push_exception(std::current_exception());
-          return;
-        }
-        this->notifications.push({});
-      });
-    }
-    else {
-      // initialise if not yet done
-      try {
-        initialise();
-      }
-      catch(...) {
-        // exceptions must not be thrown here directly
-        this->notifications.push_exception(std::current_exception());
-      }
-    }
-
-    // return the TransferFuture
-    return activeFuture;
   }
 
   /********************************************************************************************************************/

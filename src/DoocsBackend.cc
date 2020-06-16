@@ -139,6 +139,7 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   void DoocsBackend::informRuntimeError(const std::string& address) {
+    std::lock_guard<std::mutex> lk(_mxRecovery);
     _isFunctional = false;
     lastFailedAddress = address;
   }
@@ -146,6 +147,7 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   void DoocsBackend::open() {
+    std::lock_guard<std::mutex> lk(_mxRecovery);
     if(lastFailedAddress != "") {
       // open() is called after a runtime_error: check if device is recovered.
       EqAdr ea;
@@ -183,7 +185,10 @@ namespace ChimeraTK {
 
   /********************************************************************************************************************/
 
-  bool DoocsBackend::isFunctional() const { return _isFunctional; }
+  bool DoocsBackend::isFunctional() const {
+    std::lock_guard<std::mutex> lk(_mxRecovery);
+    return _isFunctional;
+  }
 
   /********************************************************************************************************************/
 
