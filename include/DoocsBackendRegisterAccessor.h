@@ -117,16 +117,6 @@ namespace ChimeraTK {
       TransferElement::_versionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
     }
 
-    void interrupt() override {
-      if(!useZMQ) return; // nothing to interrupt here...
-      try {
-        throw boost::thread_interrupted();
-      }
-      catch(boost::thread_interrupted&) {
-        notifications.push_exception(std::current_exception());
-      }
-    }
-
     bool isReadOnly() const override { return false; }
 
     bool isReadable() const override { return true; }
