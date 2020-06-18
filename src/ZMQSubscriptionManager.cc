@@ -31,22 +31,9 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
     // create subscription if not yet existing
     if(subscriptionMap.find(path) == subscriptionMap.end()) {
-      // subscribe to property
-      EqData dst;
-      EqAdr ea;
-      ea.adr(path);
-      dmsg_t tag;
-      int err = dmsg_attach(&ea, &dst, (void*)&(subscriptionMap[path]), &zmq_callback, &tag);
-      if(err) {
-        throw ChimeraTK::runtime_error(
-            std::string("Cannot subscribe to DOOCS property '" + path + "' via ZeroMQ: ") + dst.get_string());
-      }
-
-      // run dmsg_start() once
-      std::unique_lock<std::mutex> lck(dmsgStartCalled_mutex);
-      if(!dmsgStartCalled) {
-        dmsg_start();
-        dmsgStartCalled = true;
+      std::unique_lock<std::mutex> lk_subact(subscriptionsActive_mutex);
+      if(subscriptionsActive) {
+        activate(path);
       }
     }
 
@@ -79,15 +66,88 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       lock.unlock();
 
       // remove ZMQ subscription. This will also join the ZMQ subscription thread
-      EqAdr ea;
-      ea.adr(path);
-      dmsg_detach(&ea, nullptr); // nullptr = remove all subscriptions for that address
+      deactivate(path);
 
       // obtain locks again
       lock.lock();
 
       // remove subscription from map
       subscriptionMap.erase(subscriptionMap.find(path));
+    }
+  }
+
+  /******************************************************************************************************************/
+
+  void ZMQSubscriptionManager::activate(const std::string& path) {
+    // do nothing if already active
+    if(subscriptionMap[path].active) return;
+
+    // subscribe to property
+    EqData dst;
+    EqAdr ea;
+    ea.adr(path);
+    dmsg_t tag;
+    int err = dmsg_attach(&ea, &dst, (void*)&(subscriptionMap[path]), &zmq_callback, &tag);
+    if(err) {
+      /// FIXME put error into queue of all accessors!
+      throw ChimeraTK::runtime_error(
+          std::string("Cannot subscribe to DOOCS property '" + path + "' via ZeroMQ: ") + dst.get_string());
+    }
+
+    // run dmsg_start() once
+    std::unique_lock<std::mutex> lck(dmsgStartCalled_mutex);
+    if(!dmsgStartCalled) {
+      dmsg_start();
+      dmsgStartCalled = true;
+    }
+
+    // set active flag
+    subscriptionMap[path].active = true;
+  }
+
+  /******************************************************************************************************************/
+
+  void ZMQSubscriptionManager::deactivate(const std::string& path) {
+    // do nothing if already inactive
+    {
+      std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
+      std::unique_lock<std::mutex> listeners_lock(subscriptionMap[path].listeners_mutex);
+      if(!subscriptionMap[path].active) return;
+
+      // clear active flag
+      subscriptionMap[path].active = false;
+    }
+
+    // remove ZMQ subscription. This will also join the ZMQ subscription thread
+    EqAdr ea;
+    ea.adr(path);
+    dmsg_detach(&ea, nullptr); // nullptr = remove all subscriptions for that address
+  }
+
+  /******************************************************************************************************************/
+
+  void ZMQSubscriptionManager::activateAll() {
+    std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
+    std::unique_lock<std::mutex> lk_subact(subscriptionsActive_mutex);
+    subscriptionsActive = true;
+
+    for(auto& subscription : subscriptionMap) {
+      std::unique_lock<std::mutex> listeners_lock(subscription.second.listeners_mutex);
+      activate(subscription.first);
+    }
+  }
+
+  /******************************************************************************************************************/
+
+  void ZMQSubscriptionManager::deactivateAll() {
+    std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
+    std::unique_lock<std::mutex> lk_subact(subscriptionsActive_mutex);
+    subscriptionsActive = false;
+
+    for(auto& subscription : subscriptionMap) {
+      lock.unlock();
+      deactivate(subscription.first);
+      lock.lock();
     }
   }
 

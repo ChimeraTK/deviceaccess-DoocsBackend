@@ -30,13 +30,30 @@ namespace ChimeraTK {
       void subscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor);
       void unsubscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor);
 
+      /// Activate all subscriptions. Should be called from DoocsBackend::activateAsyncRead().
+      void activateAll();
+
+      /// Deactivate all subscriptions. Should be called from DoocsBackend::informRuntimeError().
+      void deactivateAll();
+
      private:
       ZMQSubscriptionManager();
       ~ZMQSubscriptionManager();
 
+      // Activate ZeroMQ subscription.
+      // Caller need to own subscriptionMap_mutex and corresponding listeners_mutex already.
+      void activate(const std::string& path);
+
+      // Deactivate ZeroMQ subscription. Caller must not own subscriptionMap_mutex or the listeners_mutex.
+      void deactivate(const std::string& path);
+
       /** static flag if dmsg_start() has been called already, with mutex for thread safety */
       bool dmsgStartCalled;
       std::mutex dmsgStartCalled_mutex;
+
+      /// Flag whether new subscriptions should be active or not, with mutex for thread safety.
+      bool subscriptionsActive{false};
+      std::mutex subscriptionsActive_mutex;
 
       /// Structure describing a single subscription
       struct Subscription {
@@ -54,6 +71,11 @@ namespace ChimeraTK {
         /// outside our control. We store the ID inside zmq_callback so we can check whether the thread has been
         /// properly terminated in the cleanup phase. listeners_mutex must be held while accessing this variable.
         pthread_t zqmThreadId;
+
+        /// Flag whether the subscription is currently active, i.e. whether the actual DOOCS subscription has been made.
+        /// This is used to implement activateAsyncRead() properly. listeners_mutex must be held while accessing this
+        /// variable.
+        bool active{false};
       };
 
       /// A "random" value of pthread_t which we consider "invalid" in context of Subscription::zqmThreadId. Technically

@@ -25,6 +25,7 @@
 #include "DoocsBackendTimeStampAccessor.h"
 #include "RegisterInfo.h"
 #include "StringUtility.h"
+#include "ZMQSubscriptionManager.h"
 
 // this is required since we link against the DOOCS libEqServer.so
 const char* object_name = "DoocsBackend";
@@ -142,6 +143,7 @@ namespace ChimeraTK {
     std::lock_guard<std::mutex> lk(_mxRecovery);
     _isFunctional = false;
     lastFailedAddress = address;
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAll();
   }
 
   /********************************************************************************************************************/
@@ -157,6 +159,8 @@ namespace ChimeraTK {
       int rc = eq.get(&ea, &src, &dst);
       // if again error received, throw exception
       if(rc) {
+        DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAll();
+        _isFunctional = false;
         throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
       }
       lastFailedAddress = "";
@@ -164,6 +168,8 @@ namespace ChimeraTK {
 
     _opened = true;
     _isFunctional = true;
+
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().activateAll();
   }
 
   /********************************************************************************************************************/
@@ -189,6 +195,10 @@ namespace ChimeraTK {
     std::lock_guard<std::mutex> lk(_mxRecovery);
     return _isFunctional;
   }
+
+  /********************************************************************************************************************/
+
+  void DoocsBackend::activateAsyncRead() noexcept {}
 
   /********************************************************************************************************************/
 

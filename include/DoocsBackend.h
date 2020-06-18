@@ -93,6 +93,8 @@ namespace ChimeraTK {
     /** Called by accessors to inform about runtime_error */
     void informRuntimeError(const std::string& address);
 
+    void activateAsyncRead() noexcept override;
+
    private:
     std::string _cacheFile;
     mutable std::future<std::unique_ptr<RegisterCatalogue>> _catalogueFuture;
