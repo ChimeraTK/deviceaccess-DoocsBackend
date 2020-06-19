@@ -69,23 +69,48 @@ std::string DoocsLauncher::DoocsServer2_cached;
 std::string DoocsLauncher::cacheFile1{"cache1.xml"};
 std::string DoocsLauncher::cacheFile2{"cache2.xml"};
 
+eq_dummy* location{nullptr};
+
 BOOST_GLOBAL_FIXTURE(DoocsLauncher);
 
 /**********************************************************************************************************************/
 
+template<typename UserType>
+std::vector<std::vector<UserType>> setRemoteValue(std::string registerName) {
+  std::vector<UserType> ret; // always scalar or 1D
+
+  location->lock();
+  if(registerName == "MYDUMMY/SOME_INT") {
+    auto newval = location->prop_someInt.value() + 2;
+    location->prop_someInt.set_value(newval);
+    ret.push_back(ctk::numericToUserType<UserType>(newval));
+  }
+  else if(registerName == "MYDUMMY/SOME_ZMQINT") {
+    auto newval = location->prop_someZMQInt.value() + 3;
+    location->prop_someZMQInt.set_value(newval);
+    ret.push_back(ctk::numericToUserType<UserType>(newval));
+  }
+  location->unlock();
+
+  return {ret};
+}
+
+/**********************************************************************************************************************/
+
 BOOST_AUTO_TEST_CASE(unifiedBackendTest) {
-  auto location = find_device("MYDUMMY");
+  location = dynamic_cast<eq_dummy*>(find_device("MYDUMMY"));
   assert(location != nullptr);
 
   doocs::zmq_set_subscription_timeout(10); // reduce timout to make test faster
 
-  UnifiedBackendTest ubt;
+  auto ubt =
+      makeUnifiedBackendTest([](std::string registerName, auto dummy) -> std::vector<std::vector<decltype(dummy)>> {
+        return setRemoteValue<decltype(dummy)>(registerName);
+      });
 
   ubt.setSyncReadTestRegisters<int32_t>({"MYDUMMY/SOME_INT"});
   ubt.setWriteTestRegisters<int32_t>({"MYDUMMY/SOME_INT"});
   ubt.setAsyncReadTestRegisters<int32_t>({"MYDUMMY/SOME_ZMQINT"});
-
-  ubt.setRemoteValue([&](const std::string& /*name*/, size_t /*index*/) { DoocsServerTestHelper::runUpdate(); });
 
   ubt.forceRuntimeErrorOnRead({{[&] { location->lock(); }, [&] { location->unlock(); }}});
   ubt.forceRuntimeErrorOnWrite({{[&] { location->lock(); }, [&] { location->unlock(); }}});
