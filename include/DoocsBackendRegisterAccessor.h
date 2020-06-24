@@ -63,6 +63,9 @@ namespace ChimeraTK {
 
     /// Flag whether shutdown() has been called or not
     bool shutdownCalled{false};
+
+    /// Pointer to the backend
+    boost::shared_ptr<DoocsBackend> _backend;
   };
 
   /********************************************************************************************************************/
@@ -170,8 +173,6 @@ namespace ChimeraTK {
     virtual void initialiseImplementation() = 0;
 
     bool _allocateBuffers;
-
-    boost::shared_ptr<DoocsBackend> _backend;
   };
 
   /********************************************************************************************************************/
@@ -247,8 +248,9 @@ namespace ChimeraTK {
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(boost::shared_ptr<DoocsBackend> backend,
       const std::string& path, const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister,
       AccessModeFlags flags, bool allocateBuffers)
-  : NDRegisterAccessor<UserType>(path, flags), _allocateBuffers(allocateBuffers), _backend(backend) {
+  : NDRegisterAccessor<UserType>(path, flags), _allocateBuffers(allocateBuffers) {
     try {
+      _backend = backend;
       _path = path;
       elementOffset = wordOffsetInRegister;
       nElements = numberOfWords;
@@ -266,15 +268,7 @@ namespace ChimeraTK {
 
         // Create notification queue.
         notifications = cppext::future_queue<EqData>(3);
-        _readQueue = notifications.then<void>(
-            [this](EqData& data) {
-              this->dst = data;
-              if(data.error() == no_connection) {
-                _backend->informRuntimeError(_path);
-                throw ChimeraTK::runtime_error("ZeroMQ connection interrupted: " + data.get_string());
-              }
-            },
-            std::launch::deferred);
+        _readQueue = notifications.then<void>([this](EqData& data) { this->dst = data; }, std::launch::deferred);
       }
 
       // if the backend has not yet been openend, obtain size of the register from catalogue
@@ -307,6 +301,9 @@ namespace ChimeraTK {
       _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
     }
+    if(!_backend->isFunctional()) {
+      throw ChimeraTK::runtime_error(std::string("Exception reported by another accessor."));
+    }
 
     assert(!useZMQ);
 
@@ -331,6 +328,9 @@ namespace ChimeraTK {
       // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
       _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
+    }
+    if(!_backend->isFunctional()) {
+      throw ChimeraTK::runtime_error(std::string("Exception reported by another accessor."));
     }
 
     // write data

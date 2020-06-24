@@ -137,19 +137,11 @@ namespace ChimeraTK {
     // create and return the backend
     return boost::shared_ptr<DeviceBackend>(new DoocsBackend(address, cacheFile));
   }
-  /********************************************************************************************************************/
-
-  void DoocsBackend::informRuntimeError(const std::string& address) {
-    std::lock_guard<std::mutex> lk(_mxRecovery);
-    _isFunctional = false;
-    lastFailedAddress = address;
-    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAll();
-  }
 
   /********************************************************************************************************************/
 
   void DoocsBackend::open() {
-    std::lock_guard<std::mutex> lk(_mxRecovery);
+    std::unique_lock<std::mutex> lk(_mxRecovery);
     if(lastFailedAddress != "") {
       // open() is called after a runtime_error: check if device is recovered.
       EqAdr ea;
@@ -159,8 +151,8 @@ namespace ChimeraTK {
       int rc = eq.get(&ea, &src, &dst);
       // if again error received, throw exception
       if(rc) {
-        DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAll();
-        _isFunctional = false;
+        lk.unlock();
+        setException();
         throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
       }
       lastFailedAddress = "";
@@ -193,6 +185,21 @@ namespace ChimeraTK {
     std::lock_guard<std::mutex> lk(_mxRecovery);
     return _isFunctional;
   }
+
+  /********************************************************************************************************************/
+
+  void DoocsBackend::informRuntimeError(const std::string& address) {
+    std::lock_guard<std::mutex> lk(_mxRecovery);
+    lastFailedAddress = address;
+  }
+
+  /********************************************************************************************************************/
+
+  void DoocsBackend::setException() {
+    std::lock_guard<std::mutex> lk(_mxRecovery);
+    _isFunctional = false;
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAllAndPushException();
+  };
 
   /********************************************************************************************************************/
 

@@ -42,7 +42,6 @@ namespace ChimeraTK {
    public:
     ~DoocsBackend() override;
 
-   protected:
     DoocsBackend(const std::string& serverAddress, const std::string& cacheFile = {});
 
     const RegisterCatalogue& getRegisterCatalogue() const override;
@@ -55,16 +54,11 @@ namespace ChimeraTK {
 
     std::string readDeviceInfo() override { return std::string("DOOCS server address: ") + _serverAddress; }
 
-    void setException() override {
-      std::lock_guard<std::mutex> lk(_mxRecovery);
-      _isFunctional = false;
-    };
+    void setException() override;
 
-   public:
     static boost::shared_ptr<DeviceBackend> createInstance(
         std::string address, std::map<std::string, std::string> parameters);
 
-   protected:
     template<typename UserType>
     boost::shared_ptr<NDRegisterAccessor<UserType>> getRegisterAccessor_impl(
         const RegisterPath& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
@@ -90,7 +84,8 @@ namespace ChimeraTK {
     template<typename UserType>
     friend class DoocsBackendRegisterAccessor;
 
-    /** Called by accessors to inform about runtime_error */
+    /** Called by accessors to inform about addess causing a runtime_error. Does not switch backend into exception
+     *  state, this is done separately by calling setException(). */
     void informRuntimeError(const std::string& address);
 
     void activateAsyncRead() noexcept override;

@@ -55,6 +55,11 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
     // gain lock for listener, to exclude concurrent access with the zmq_callback()
     std::unique_lock<std::mutex> listeners_lock(subscriptionMap[path].listeners_mutex);
 
+    // ignore if subscription exists but not for this accessor
+    if(std::find(subscriptionMap[path].listeners.begin(), subscriptionMap[path].listeners.end(), accessor) ==
+        subscriptionMap[path].listeners.end())
+      return;
+
     // remove accessor from list of listeners
     subscriptionMap[path].listeners.erase(
         std::remove(subscriptionMap[path].listeners.begin(), subscriptionMap[path].listeners.end(), accessor));
@@ -101,8 +106,9 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       dmsgStartCalled = true;
     }
 
-    // set active flag
+    // set active flag, reset hasException flag
     subscriptionMap[path].active = true;
+    subscriptionMap[path].hasException = false;
   }
 
   /******************************************************************************************************************/
@@ -139,34 +145,71 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
   /******************************************************************************************************************/
 
-  void ZMQSubscriptionManager::deactivateAll() {
+  void ZMQSubscriptionManager::deactivateAllAndPushException() {
     std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
     std::unique_lock<std::mutex> lk_subact(subscriptionsActive_mutex);
     subscriptionsActive = false;
 
     for(auto& subscription : subscriptionMap) {
+      // decativate subscription
       lock.unlock();
       deactivate(subscription.first);
       lock.lock();
+
+      // put exception to queue
+      {
+        std::unique_lock<std::mutex> listeners_lock(subscription.second.listeners_mutex);
+        if(subscription.second.hasException) continue;
+        subscription.second.hasException = true;
+        for(auto& listener : subscription.second.listeners) {
+          try {
+            throw ChimeraTK::runtime_error("Exception reported by another accessor.");
+          }
+          catch(...) {
+            listener->notifications.push_overwrite_exception(std::current_exception());
+          }
+        }
+      }
     }
   }
 
   /******************************************************************************************************************/
 
   void ZMQSubscriptionManager::zmq_callback(void* self_, EqData* data, dmsg_info_t* info) {
-    // obtain pointer to accessor object
+    // obtain pointer to subscription object
     auto* subscription = static_cast<ZMQSubscriptionManager::Subscription*>(self_);
 
+    // Make sure the stamp is used from the ZeroMQ header. TODO: Is this really wanted?
     data->time(info->sec, info->usec);
     data->mpnum(info->ident);
 
-    // if there are more listeners, add a copy of the EqData to their queues as well
+    // store thread id of the thread calling this function, if not yet done
     std::unique_lock<std::mutex> lock(subscription->listeners_mutex);
     if(pthread_equal(subscription->zqmThreadId, pthread_t_invalid)) {
       subscription->zqmThreadId = pthread_self();
     }
-    for(auto& listener : subscription->listeners) {
-      listener->notifications.push_overwrite(*data);
+
+    // check for error
+    if(data->error() != no_connection) {
+      // no error: push the data
+      for(auto& listener : subscription->listeners) {
+        listener->notifications.push_overwrite(*data);
+      }
+    }
+    else {
+      // no error: push the data
+      try {
+        throw ChimeraTK::runtime_error("ZeroMQ connection interrupted: " + data->get_string());
+      }
+      catch(...) {
+        subscription->hasException = true;
+        for(auto& listener : subscription->listeners) {
+          listener->notifications.push_overwrite_exception(std::current_exception());
+          lock.unlock();
+          listener->_backend->informRuntimeError(listener->_path);
+          lock.lock();
+        }
+      }
     }
   }
 

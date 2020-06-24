@@ -33,8 +33,9 @@ namespace ChimeraTK {
       /// Activate all subscriptions. Should be called from DoocsBackend::activateAsyncRead().
       void activateAll();
 
-      /// Deactivate all subscriptions. Should be called from DoocsBackend::informRuntimeError().
-      void deactivateAll();
+      /// Deactivate all subscriptions and push exceptions into the queues. Should be called from
+      /// DoocsBackend::setException().
+      void deactivateAllAndPushException();
 
      private:
       ZMQSubscriptionManager();
@@ -76,6 +77,10 @@ namespace ChimeraTK {
         /// This is used to implement activateAsyncRead() properly. listeners_mutex must be held while accessing this
         /// variable.
         bool active{false};
+
+        /// Flag whether an exception has been reported to the listeners since the last activation. Used to prevent
+        /// duplicate exceptions in setException(). Will be cleared during activation. Access requires listeners_mutex.
+        bool hasException{false};
       };
 
       /// A "random" value of pthread_t which we consider "invalid" in context of Subscription::zqmThreadId. Technically
