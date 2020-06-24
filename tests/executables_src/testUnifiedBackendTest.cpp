@@ -69,26 +69,62 @@ std::string DoocsLauncher::DoocsServer2_cached;
 std::string DoocsLauncher::cacheFile1{"cache1.xml"};
 std::string DoocsLauncher::cacheFile2{"cache2.xml"};
 
-eq_dummy* location{nullptr};
+static eq_dummy* location{nullptr};
+
+static size_t mpn = 10000;
+static size_t seconds = 0;
+static size_t microseconds = 0;
 
 BOOST_GLOBAL_FIXTURE(DoocsLauncher);
 
 /**********************************************************************************************************************/
 
-template<typename UserType>
-std::vector<std::vector<UserType>> setRemoteValue(std::string registerName) {
-  std::vector<UserType> ret; // always scalar or 1D
+void setRemoteValue(std::string registerName, bool disableZeroMQ = false) {
+  ++mpn;
+  microseconds += 12345;
+  if(microseconds > 999999) {
+    microseconds -= 1000000;
+    ++seconds;
+  }
 
   location->lock();
   if(registerName == "MYDUMMY/SOME_INT") {
     auto newval = location->prop_someInt.value() + 2;
     location->prop_someInt.set_value(newval);
-    ret.push_back(ctk::numericToUserType<UserType>(newval));
+    location->prop_someInt.set_tmstmp(seconds, microseconds);
+    location->prop_someInt.set_mpnum(mpn);
   }
   else if(registerName == "MYDUMMY/SOME_ZMQINT") {
     auto newval = location->prop_someZMQInt.value() + 3;
     location->prop_someZMQInt.set_value(newval);
-    ret.push_back(ctk::numericToUserType<UserType>(newval));
+    location->prop_someZMQInt.set_tmstmp(seconds, microseconds);
+    location->prop_someZMQInt.set_mpnum(mpn);
+
+    if(!disableZeroMQ) {
+      dmsg_info_t info;
+      memset(&info, 0, sizeof(info));
+      info.sec = seconds;
+      info.usec = microseconds;
+      info.ident = mpn;
+      location->prop_someZMQInt.send(&info);
+      usleep(10000); // FIXME: DOOCS-ZeroMQ seems to lose data when sending too fast...
+    }
+  }
+  location->unlock();
+}
+
+/**********************************************************************************************************************/
+
+template<typename UserType>
+std::vector<std::vector<UserType>> getRemoteValue(std::string registerName) {
+  std::vector<UserType> ret; // always scalar or 1D
+
+  location->lock();
+  if(registerName == "MYDUMMY/SOME_INT") {
+    ret.push_back(ctk::numericToUserType<UserType>(location->prop_someInt.value()));
+  }
+  else if(registerName == "MYDUMMY/SOME_ZMQINT") {
+    ret.push_back(ctk::numericToUserType<UserType>(location->prop_someZMQInt.value()));
   }
   location->unlock();
 
@@ -101,12 +137,17 @@ BOOST_AUTO_TEST_CASE(unifiedBackendTest) {
   location = dynamic_cast<eq_dummy*>(find_device("MYDUMMY"));
   assert(location != nullptr);
 
+  doocs::Timestamp timestamp = get_global_timestamp();
+  auto sinceEpoch = timestamp.get_seconds_and_microseconds_since_epoch();
+  seconds = sinceEpoch.seconds + 1;
+
   doocs::zmq_set_subscription_timeout(10); // reduce timout to make test faster
 
-  auto ubt =
-      makeUnifiedBackendTest([](std::string registerName, auto dummy) -> std::vector<std::vector<decltype(dummy)>> {
-        return setRemoteValue<decltype(dummy)>(registerName);
-      });
+  auto ubt = makeUnifiedBackendTest(
+      [](std::string registerName, auto dummy) -> std::vector<std::vector<decltype(dummy)>> {
+        return getRemoteValue<decltype(dummy)>(registerName);
+      },
+      [](std::string registerName) { setRemoteValue(registerName); });
 
   ubt.setSyncReadTestRegisters<int32_t>({"MYDUMMY/SOME_INT"});
   ubt.setWriteTestRegisters<int32_t>({"MYDUMMY/SOME_INT"});
@@ -114,6 +155,7 @@ BOOST_AUTO_TEST_CASE(unifiedBackendTest) {
 
   ubt.forceRuntimeErrorOnRead({{[&] { location->lock(); }, [&] { location->unlock(); }}});
   ubt.forceRuntimeErrorOnWrite({{[&] { location->lock(); }, [&] { location->unlock(); }}});
+  ubt.forceAsyncReadInconsistency([&](std::string registerName) { setRemoteValue(registerName, true); });
 
   ubt.runTests(DoocsLauncher::DoocsServer1);
 }
