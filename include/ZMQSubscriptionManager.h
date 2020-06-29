@@ -27,11 +27,23 @@ namespace ChimeraTK {
         return manager;
       }
 
+      /// Register accessor subscription
       void subscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor);
+
+      /// Unregister accessor subscription
       void unsubscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor);
 
       /// Activate all subscriptions. Should be called from DoocsBackend::activateAsyncRead().
       void activateAll();
+
+      /// Set flag so future subscriptions will be activated
+      void activateNew() {
+        std::unique_lock<std::mutex> lk_subact(subscriptionsActive_mutex);
+        subscriptionsActive = true;
+      };
+
+      /// Deactivate all subscriptions. Should be called from DoocsBackend::close().
+      void deactivateAll();
 
       /// Deactivate all subscriptions and push exceptions into the queues. Should be called from
       /// DoocsBackend::setException().

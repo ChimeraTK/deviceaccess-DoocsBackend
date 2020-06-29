@@ -160,6 +160,7 @@ namespace ChimeraTK {
 
     _opened = true;
     _isFunctional = true;
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().activateNew();
   }
 
   /********************************************************************************************************************/
@@ -174,6 +175,7 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   void DoocsBackend::close() {
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAll();
     lastFailedAddress = "";
     _opened = false;
     _isFunctional = false;

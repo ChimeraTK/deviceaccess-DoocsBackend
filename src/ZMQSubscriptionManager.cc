@@ -27,21 +27,47 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
   /******************************************************************************************************************/
 
   void ZMQSubscriptionManager::subscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor) {
-    std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
+    bool initialValueReadRequired = false;
 
-    // create subscription if not yet existing
-    if(subscriptionMap.find(path) == subscriptionMap.end()) {
-      std::unique_lock<std::mutex> lk_subact(subscriptionsActive_mutex);
-      if(subscriptionsActive) {
-        activate(path);
+    {
+      std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
+
+      // create subscription if not yet existing
+      if(subscriptionMap.find(path) == subscriptionMap.end()) {
+        std::unique_lock<std::mutex> lk_subact(subscriptionsActive_mutex);
+        if(subscriptionsActive) {
+          activate(path);
+        }
       }
+      else {
+        // No new DOOCS subscription is made => we need to poll the initial value on our own
+        initialValueReadRequired = true;
+      }
+
+      // gain lock for listener, to exclude concurrent access with the zmq_callback()
+      std::unique_lock<std::mutex> listeners_lock(subscriptionMap[path].listeners_mutex);
+
+      // add accessor to list of listeners
+      subscriptionMap[path].listeners.push_back(accessor);
     }
 
-    // gain lock for listener, to exclude concurrent access with the zmq_callback()
-    std::unique_lock<std::mutex> listeners_lock(subscriptionMap[path].listeners_mutex);
-
-    // add accessor to list of listeners
-    subscriptionMap[path].listeners.push_back(accessor);
+    // If required, poll the initial value and push it into the queue. This must be done after the subcription has been
+    // made.
+    if(initialValueReadRequired) {
+      EqData src, dst;
+      EqAdr adr;
+      EqCall eq;
+      adr.adr(path);
+      auto rc = eq.get(&adr, &src, &dst);
+      if(rc) {
+        // This will push exceptions to all receivers, incuding the accessor. It will have the wrong message, though.
+        // This should be corrected, but we need a hasException per accessor then...
+        accessor->_backend->informRuntimeError(path);
+      }
+      else {
+        accessor->notifications.push_overwrite(dst);
+      }
+    }
   }
 
   /******************************************************************************************************************/
@@ -145,7 +171,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
   /******************************************************************************************************************/
 
-  void ZMQSubscriptionManager::deactivateAllAndPushException() {
+  void ZMQSubscriptionManager::deactivateAll() {
     std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
     std::unique_lock<std::mutex> lk_subact(subscriptionsActive_mutex);
     subscriptionsActive = false;
@@ -155,7 +181,18 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       lock.unlock();
       deactivate(subscription.first);
       lock.lock();
+    }
+  }
 
+  /******************************************************************************************************************/
+
+  void ZMQSubscriptionManager::deactivateAllAndPushException() {
+    deactivateAll();
+
+    std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
+    std::unique_lock<std::mutex> lk_subact(subscriptionsActive_mutex);
+
+    for(auto& subscription : subscriptionMap) {
       // put exception to queue
       {
         std::unique_lock<std::mutex> listeners_lock(subscription.second.listeners_mutex);
