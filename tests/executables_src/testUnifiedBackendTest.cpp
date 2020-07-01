@@ -94,6 +94,12 @@ void setRemoteValue(std::string registerName, bool disableZeroMQ = false) {
     location->prop_someInt.set_tmstmp(seconds, microseconds);
     location->prop_someInt.set_mpnum(mpn);
   }
+  else if(registerName == "MYDUMMY/SOME_RO_INT") {
+    auto newval = location->prop_someInt.value() + 1;
+    location->prop_someReadonlyInt.set_value(newval);
+    location->prop_someReadonlyInt.set_tmstmp(seconds, microseconds);
+    location->prop_someReadonlyInt.set_mpnum(mpn);
+  }
   else if(registerName == "MYDUMMY/SOME_ZMQINT") {
     auto newval = location->prop_someZMQInt.value() + 3;
     location->prop_someZMQInt.set_value(newval);
@@ -110,6 +116,10 @@ void setRemoteValue(std::string registerName, bool disableZeroMQ = false) {
       usleep(10000); // FIXME: DOOCS-ZeroMQ seems to lose data when sending too fast...
     }
   }
+  else {
+    std::cout << "setRemoteValue: Don't know what to do for register: " << registerName << std::endl;
+    assert(false);
+  }
   location->unlock();
 }
 
@@ -123,8 +133,15 @@ std::vector<std::vector<UserType>> getRemoteValue(std::string registerName) {
   if(registerName == "MYDUMMY/SOME_INT") {
     ret.push_back(ctk::numericToUserType<UserType>(location->prop_someInt.value()));
   }
+  else if(registerName == "MYDUMMY/SOME_RO_INT") {
+    ret.push_back(ctk::numericToUserType<UserType>(location->prop_someReadonlyInt.value()));
+  }
   else if(registerName == "MYDUMMY/SOME_ZMQINT") {
     ret.push_back(ctk::numericToUserType<UserType>(location->prop_someZMQInt.value()));
+  }
+  else {
+    std::cout << "getRemoteValue: Don't know what to do for register: " << registerName << std::endl;
+    assert(false);
   }
   location->unlock();
 
@@ -150,6 +167,7 @@ BOOST_AUTO_TEST_CASE(unifiedBackendTest) {
       [](std::string registerName) { setRemoteValue(registerName); });
 
   ubt.addSyncReadTestRegister<int32_t>("MYDUMMY/SOME_INT", false, false);
+  ubt.addSyncReadTestRegister<int32_t>("MYDUMMY/SOME_RO_INT", true, false);
   ubt.addWriteTestRegister<int32_t>("MYDUMMY/SOME_INT", false, false);
   ubt.addAsyncReadTestRegister<int32_t>("MYDUMMY/SOME_ZMQINT", false, false);
 

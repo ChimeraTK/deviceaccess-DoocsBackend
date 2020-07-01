@@ -4,14 +4,17 @@
 #include "eq_dummy.h"
 
 eq_dummy::eq_dummy()
-: EqFct("NAME = location"), prop_someInt("SOME_INT Some integer property", this), prop_someFloat("SOME_FLOAT", this),
+: EqFct("NAME = location"), prop_someInt("SOME_INT Some integer property", this),
+  prop_someReadonlyInt("SOME_RO_INT Some read-only integer property", this), prop_someFloat("SOME_FLOAT", this),
   prop_someDouble("SOME_DOUBLE", this), prop_someString("SOME_STRING", this), prop_someStatus("SOME_STATUS", this),
   prop_someBit("SOME_BIT", 0, &prop_someStatus.stat_, this), prop_someIntArray("SOME_INT_ARRAY", 42, this),
   prop_someShortArray("SOME_SHORT_ARRAY", 5, this), prop_someLongArray("SOME_LONG_ARRAY", 5, this),
   prop_someFloatArray("SOME_FLOAT_ARRAY", 5, this), prop_someDoubleArray("SOME_DOUBLE_ARRAY", 5, this),
   prop_someSpectrum("SOME_SPECTRUM", 100, this), prop_someIIII("SOME_IIII", this), prop_someIFFF("SOME_IFFF", this),
   prop_unsupportedDataType("UNSUPPORTED_DATA_TYPE", 640 * 460, this), prop_someZMQInt("SOME_ZMQINT", this),
-  counter(123456789), startTime(1584020594) {}
+  counter(123456789), startTime(1584020594) {
+  prop_someReadonlyInt.set_ro_access();
+}
 
 eq_dummy::~eq_dummy() {}
 

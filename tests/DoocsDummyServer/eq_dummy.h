@@ -10,6 +10,7 @@ class eq_dummy : public EqFct {
   virtual ~eq_dummy();
 
   D_int prop_someInt;
+  D_int prop_someReadonlyInt;
   D_float prop_someFloat;
   D_double prop_someDouble;
   D_string prop_someString;
