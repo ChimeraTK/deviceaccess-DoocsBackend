@@ -8,7 +8,7 @@
 #include <ChimeraTK/Exception.h>
 #include <ChimeraTK/FixedPointConverter.h>
 #include <ChimeraTK/RegisterPath.h>
-#include <ChimeraTK/SyncNDRegisterAccessor.h>
+#include <ChimeraTK/NDRegisterAccessor.h>
 
 #include <eq_client.h>
 #include <eq_fct.h>
@@ -44,22 +44,14 @@ namespace ChimeraTK {
     /// element offset specified by the user
     size_t elementOffset;
 
-    /// flag if the accessor should affect only a part of the property (in case of
-    /// an array)
+    /// flag if the accessor should affect only a part of the property (in case of an array)
     bool isPartial;
 
-    /// flag if a ZeroMQ subscribtion is used for reading data (c.f.
-    /// AccessMode::wait_for_new_data)
+    /// flag if a ZeroMQ subscribtion is used for reading data (c.f. AccessMode::wait_for_new_data)
     bool useZMQ;
-
-    /// Thread which might be launched in readAsync() if ZQM is *not* used
-    boost::thread readAsyncThread;
 
     /// future_queue used to notify the TransferFuture about completed transfers
     cppext::future_queue<EqData> notifications;
-
-    /// Flag whether TransferFuture has been created
-    bool futureCreated{false};
 
     /// Flag whether shutdown() has been called or not
     bool shutdownCalled{false};
@@ -83,10 +75,6 @@ namespace ChimeraTK {
     void shutdown() {
       if(useZMQ) {
         DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().unsubscribe(_path, this);
-      }
-      if(readAsyncThread.joinable()) {
-        readAsyncThread.interrupt();
-        readAsyncThread.join();
       }
       shutdownCalled = true;
     }
