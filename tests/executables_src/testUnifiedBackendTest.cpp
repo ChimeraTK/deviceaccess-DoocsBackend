@@ -149,9 +149,9 @@ BOOST_AUTO_TEST_CASE(unifiedBackendTest) {
       },
       [](std::string registerName) { setRemoteValue(registerName); });
 
-  ubt.setSyncReadTestRegisters<int32_t>({"MYDUMMY/SOME_INT"});
-  ubt.setWriteTestRegisters<int32_t>({"MYDUMMY/SOME_INT"});
-  ubt.setAsyncReadTestRegisters<int32_t>({"MYDUMMY/SOME_ZMQINT"});
+  ubt.addSyncReadTestRegister<int32_t>("MYDUMMY/SOME_INT", false, false);
+  ubt.addWriteTestRegister<int32_t>("MYDUMMY/SOME_INT", false, false);
+  ubt.addAsyncReadTestRegister<int32_t>("MYDUMMY/SOME_ZMQINT", false, false);
 
   ubt.forceRuntimeErrorOnRead({{[&] { location->lock(); }, [&] { location->unlock(); }}});
   ubt.forceRuntimeErrorOnWrite({{[&] { location->lock(); }, [&] { location->unlock(); }}});
