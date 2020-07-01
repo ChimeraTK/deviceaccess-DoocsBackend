@@ -246,7 +246,7 @@ namespace ChimeraTK {
       path = path.substr(0, path.find_last_of('/'));
     }
 
-    // if backend is open, read property once to obtain type. otherwise use the (potentially cached) catalogue
+    // if backend is open, read property once to obtain type
     int doocsTypeId = DATA_NULL;
     if(isOpen()) {
       EqAdr ea;
@@ -255,11 +255,19 @@ namespace ChimeraTK {
       ea.adr(path);
       int rc = eq.get(&ea, &src, &dst);
       if(rc) {
-        throw ChimeraTK::runtime_error("Cannot open DOOCS property '" + path + "': " + dst.get_string());
+        if(rc == eq_errors::ill_property || rc == eq_errors::ill_location ||
+            rc == eq_errors::ill_address) { // no property by that name
+          throw ChimeraTK::logic_error("Property does not exist: " + path + "': " + dst.get_string());
+        }
+        // runtime errors are thrown later
       }
-      doocsTypeId = dst.type();
+      else {
+        doocsTypeId = dst.type();
+      }
     }
-    else {
+
+    // if backend is closed, or if property could not be read, use the (potentially cached) catalogue
+    if(doocsTypeId == DATA_NULL) {
       auto reg =
           boost::dynamic_pointer_cast<DoocsBackendRegisterInfo>(getRegisterCatalogue().getRegister(registerPathName));
       doocsTypeId = reg->doocsTypeId;
