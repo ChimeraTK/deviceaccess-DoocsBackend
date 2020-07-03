@@ -31,6 +31,8 @@ using namespace ChimeraTK;
 
 /**********************************************************************************************************************/
 
+static std::atomic<bool> zmqStartup_gotData{false};
+
 class DoocsLauncher : public ThreadedDoocsServer {
  public:
   DoocsLauncher()
@@ -38,10 +40,7 @@ class DoocsLauncher : public ThreadedDoocsServer {
         boost::unit_test::framework::master_test_suite().argv) {
     // set CDDs for the two doocs addresses used in the test
     rpc_no = rpcNo();
-    DoocsServer1 = "(doocs:doocs://localhost:" + rpcNo() + "/F/D)";
-    DoocsServer1_cached = "(doocs:doocs://localhost:" + rpcNo() + "/F/D?cacheFile=" + cacheFile1 + ")";
-    DoocsServer2 = "(doocs:doocs://localhost:" + rpcNo() + "/F/D/MYDUMMY)";
-    DoocsServer2_cached = "(doocs:doocs://localhost:" + rpcNo() + "/F/D/MYDUMMY?cacheFile=" + cacheFile2 + ")";
+    DoocsServer = "(doocs:doocs://localhost:" + rpcNo() + "/F/D)";
 
     // wait until server has started (both the update thread and the rpc thread)
     EqCall eq;
@@ -49,25 +48,35 @@ class DoocsLauncher : public ThreadedDoocsServer {
     EqData src, dst;
     ea.adr("doocs://localhost:" + rpcNo() + "/F/D/MYDUMMY/SOME_ZMQINT");
     while(eq.get(&ea, &src, &dst)) usleep(100000);
+
+    // wait until ZeroMQ is working
+    dmsg_start();
+    dmsg_t tag;
+    std::cout << "ZeroMQ Subscribe" << std::endl;
+    int err = dmsg_attach(
+        &ea, &dst, nullptr,
+        [](void*, EqData* data, dmsg_info_t*) {
+          if(!data->error()) zmqStartup_gotData = true;
+        },
+        &tag);
+    assert(!err);
+    std::cout << "ZeroMQ wait" << std::endl;
+    auto location = dynamic_cast<eq_dummy*>(find_device("MYDUMMY"));
+    assert(location != nullptr);
+    while(!zmqStartup_gotData) {
+      usleep(100000);
+      DoocsServerTestHelper::runUpdate();
+    }
+    std::cout << "OK!" << std::endl;
+    dmsg_detach(&ea, nullptr);
   }
 
   static std::string rpc_no;
-  static std::string DoocsServer1;
-  static std::string DoocsServer1_cached;
-  static std::string cacheFile1;
-
-  static std::string DoocsServer2;
-  static std::string DoocsServer2_cached;
-  static std::string cacheFile2;
+  static std::string DoocsServer;
 };
 
 std::string DoocsLauncher::rpc_no;
-std::string DoocsLauncher::DoocsServer1;
-std::string DoocsLauncher::DoocsServer1_cached;
-std::string DoocsLauncher::DoocsServer2;
-std::string DoocsLauncher::DoocsServer2_cached;
-std::string DoocsLauncher::cacheFile1{"cache1.xml"};
-std::string DoocsLauncher::cacheFile2{"cache2.xml"};
+std::string DoocsLauncher::DoocsServer;
 
 static eq_dummy* location{nullptr};
 
@@ -79,74 +88,437 @@ BOOST_GLOBAL_FIXTURE(DoocsLauncher);
 
 /**********************************************************************************************************************/
 
-void setRemoteValue(std::string registerName, bool disableZeroMQ = false) {
-  ++mpn;
-  microseconds += 12345;
-  if(microseconds > 999999) {
-    microseconds -= 1000000;
-    ++seconds;
-  }
+template<typename DERIVED>
+struct AllRegisterDefaults {
+  AllRegisterDefaults() = default;
+  AllRegisterDefaults(bool _isWriteable) : isWriteable(_isWriteable) {}
+  AllRegisterDefaults(AccessModeFlags _flags) : supportedFlags(_flags), testAsyncReadInconsistency(true) {}
 
-  location->lock();
-  if(registerName == "MYDUMMY/SOME_INT") {
-    auto newval = location->prop_someInt.value() + 2;
-    location->prop_someInt.set_value(newval);
-    location->prop_someInt.set_tmstmp(seconds, microseconds);
-    location->prop_someInt.set_mpnum(mpn);
-  }
-  else if(registerName == "MYDUMMY/SOME_RO_INT") {
-    auto newval = location->prop_someInt.value() + 1;
-    location->prop_someReadonlyInt.set_value(newval);
-    location->prop_someReadonlyInt.set_tmstmp(seconds, microseconds);
-    location->prop_someReadonlyInt.set_mpnum(mpn);
-  }
-  else if(registerName == "MYDUMMY/SOME_ZMQINT") {
-    auto newval = location->prop_someZMQInt.value() + 3;
-    location->prop_someZMQInt.set_value(newval);
-    location->prop_someZMQInt.set_tmstmp(seconds, microseconds);
-    location->prop_someZMQInt.set_mpnum(mpn);
+  DERIVED* derived{static_cast<DERIVED*>(this)};
 
-    if(!disableZeroMQ) {
-      dmsg_info_t info;
-      memset(&info, 0, sizeof(info));
-      info.sec = seconds;
-      info.usec = microseconds;
-      info.ident = mpn;
-      location->prop_someZMQInt.send(&info);
-      usleep(10000); // FIXME: DOOCS-ZeroMQ seems to lose data when sending too fast...
+  const bool isWriteable{true};
+  const bool isReadable{true};
+  const ChimeraTK::AccessModeFlags supportedFlags{};
+  const size_t nChannels{1};
+  const size_t writeQueueLength{std::numeric_limits<size_t>::max()};
+  const bool testAsyncReadInconsistency{false};
+  typedef std::nullptr_t rawUserType;
+
+  void setForceRuntimeError(bool enable) {
+    if(enable) {
+      location->lock();
+    }
+    else {
+      location->unlock();
     }
   }
-  else {
-    std::cout << "setRemoteValue: Don't know what to do for register: " << registerName << std::endl;
-    assert(false);
+
+  [[noreturn]] void setForceDataLossWrite(bool) { assert(false); }
+
+  [[noreturn]] void forceAsyncReadInconsistency() { assert(false); }
+
+  void updateStamp() {
+    ++mpn;
+    microseconds += 100000;
+    if(microseconds > 1000000) {
+      microseconds -= 100000;
+      ++seconds;
+    }
+    derived->prop.set_tmstmp(seconds, microseconds);
+    derived->prop.set_mpnum(mpn);
   }
-  location->unlock();
+};
+
+/**********************************************************************************************************************/
+
+template<typename DERIVED>
+struct ScalarDefaults : AllRegisterDefaults<DERIVED> {
+  using AllRegisterDefaults<DERIVED>::AllRegisterDefaults;
+  using AllRegisterDefaults<DERIVED>::derived;
+  const size_t nElementsPerChannel{1};
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> generateValue() {
+    return {{ChimeraTK::numericToUserType<UserType>(static_cast<typename DERIVED::minimumUserType>(
+        derived->template getRemoteValue<typename DERIVED::minimumUserType>()[0][0] + derived->increment))}};
+  }
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> getRemoteValue() {
+    std::lock_guard<EqFct> lk(*location);
+    auto v = ChimeraTK::numericToUserType<UserType>(derived->prop.value());
+    return {{v}};
+  }
+
+  void setRemoteValue() {
+    auto v = derived->template generateValue<typename DERIVED::minimumUserType>()[0][0];
+    std::lock_guard<EqFct> lk(*location);
+    derived->prop.set_value(v);
+    this->updateStamp();
+  }
+};
+
+/**********************************************************************************************************************/
+
+template<typename DERIVED>
+struct ArrayDefaults : AllRegisterDefaults<DERIVED> {
+  using AllRegisterDefaults<DERIVED>::AllRegisterDefaults;
+  using AllRegisterDefaults<DERIVED>::derived;
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> generateValue() {
+    auto curval = derived->template getRemoteValue<typename DERIVED::minimumUserType>()[0];
+    std::vector<UserType> val;
+    for(size_t i = 0; i < derived->nElementsPerChannel; ++i) {
+      val.push_back(ChimeraTK::numericToUserType<UserType>(curval[i] + (i + 1) * derived->increment));
+    }
+    return {val};
+  }
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> getRemoteValue() {
+    std::vector<UserType> val;
+    std::lock_guard<EqFct> lk(*location);
+    for(size_t i = 0; i < derived->nElementsPerChannel; ++i) {
+      val.push_back(ChimeraTK::numericToUserType<UserType>(derived->prop.value(i)));
+    }
+    return {val};
+  }
+
+  void setRemoteValue() {
+    auto val = derived->template generateValue<typename DERIVED::minimumUserType>()[0];
+    std::lock_guard<EqFct> lk(*location);
+    for(size_t i = 0; i < derived->nElementsPerChannel; ++i) {
+      derived->prop.set_value(val[i], i);
+    }
+    this->updateStamp();
+  }
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeInt : ScalarDefaults<RegSomeInt> {
+  const std::string path{"MYDUMMY/SOME_INT"};
+  D_int& prop{location->prop_someInt};
+  typedef int32_t minimumUserType;
+  int32_t increment{3};
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeRoInt : ScalarDefaults<RegSomeInt> {
+  RegSomeRoInt() : ScalarDefaults<RegSomeInt>(false) {} // isWriteable = false
+  const std::string path{"MYDUMMY/SOME_RO_INT"};
+  D_int& prop{location->prop_someReadonlyInt};
+  typedef int32_t minimumUserType;
+  int32_t increment{7};
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeZmqInt : ScalarDefaults<RegSomeZmqInt> {
+  RegSomeZmqInt() : ScalarDefaults<RegSomeZmqInt>({AccessMode::wait_for_new_data}) {}
+  const std::string path{"MYDUMMY/SOME_ZMQINT"};
+  D_int& prop{location->prop_someZMQInt};
+  typedef int32_t minimumUserType;
+  int32_t increment{51};
+
+  void setRemoteValue() {
+    ScalarDefaults<RegSomeZmqInt>::setRemoteValue();
+
+    std::lock_guard<EqFct> lk(*location);
+    dmsg_info_t info;
+    memset(&info, 0, sizeof(info));
+    info.sec = seconds;
+    info.usec = microseconds;
+    info.ident = mpn;
+    prop.send(&info);
+    usleep(10000); // FIXME: DOOCS-ZeroMQ seems to lose data when sending too fast...
+  }
+
+  void forceAsyncReadInconsistency() {
+    // Change value without sending it via ZeroMQ
+    ScalarDefaults<RegSomeZmqInt>::setRemoteValue();
+  }
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeFloat : ScalarDefaults<RegSomeFloat> {
+  const std::string path{"MYDUMMY/SOME_FLOAT"};
+  D_float& prop{location->prop_someFloat};
+  typedef float minimumUserType;
+  float increment{std::exp(1.F)};
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeDouble : ScalarDefaults<RegSomeDouble> {
+  const std::string path{"MYDUMMY/SOME_DOUBLE"};
+  D_double& prop{location->prop_someDouble};
+  typedef double minimumUserType;
+  double increment{std::exp(1.5)};
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeString : ScalarDefaults<RegSomeString> {
+  const std::string path{"MYDUMMY/SOME_STRING"};
+  D_string& prop{location->prop_someString};
+  typedef std::string minimumUserType;
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> generateValue() {
+    assert(false); // See specialisation below
+  }
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> getRemoteValue() {
+    std::vector<UserType> val;
+    std::lock_guard<EqFct> lk(*location);
+    val.push_back(prop.value());
+    return {val};
+  }
+
+  size_t someValue{42};
+};
+
+template<>
+std::vector<std::vector<std::string>> RegSomeString::generateValue<std::string>() {
+  ++someValue;
+  return {{"This is a string: " + std::to_string(someValue)}};
 }
 
 /**********************************************************************************************************************/
 
-template<typename UserType>
-std::vector<std::vector<UserType>> getRemoteValue(std::string registerName) {
-  std::vector<UserType> ret; // always scalar or 1D
+struct RegSomeStatus : ScalarDefaults<RegSomeStatus> {
+  const std::string path{"MYDUMMY/SOME_STATUS"};
+  D_status& prop{location->prop_someStatus};
+  typedef uint16_t minimumUserType;
+  uint16_t increment{32000};
+};
 
-  location->lock();
-  if(registerName == "MYDUMMY/SOME_INT") {
-    ret.push_back(ctk::numericToUserType<UserType>(location->prop_someInt.value()));
-  }
-  else if(registerName == "MYDUMMY/SOME_RO_INT") {
-    ret.push_back(ctk::numericToUserType<UserType>(location->prop_someReadonlyInt.value()));
-  }
-  else if(registerName == "MYDUMMY/SOME_ZMQINT") {
-    ret.push_back(ctk::numericToUserType<UserType>(location->prop_someZMQInt.value()));
-  }
-  else {
-    std::cout << "getRemoteValue: Don't know what to do for register: " << registerName << std::endl;
-    assert(false);
-  }
-  location->unlock();
+/**********************************************************************************************************************/
 
-  return {ret};
-}
+struct RegSomeBit : ScalarDefaults<RegSomeBit> {
+  const std::string path{"MYDUMMY/SOME_BIT"};
+  D_bit& prop{location->prop_someBit};
+  typedef uint8_t minimumUserType;
+  uint8_t increment{0}; // unused
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> generateValue() {
+    return {{!this->getRemoteValue<minimumUserType>()[0][0]}};
+  }
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeIntArray : ArrayDefaults<RegSomeIntArray> {
+  const std::string path{"MYDUMMY/SOME_INT_ARRAY"};
+  size_t nElementsPerChannel{42};
+  D_intarray& prop{location->prop_someIntArray};
+  typedef int32_t minimumUserType;
+  int32_t increment{11};
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeShortArray : ArrayDefaults<RegSomeShortArray> {
+  const std::string path{"MYDUMMY/SOME_SHORT_ARRAY"};
+  size_t nElementsPerChannel{5};
+  D_shortarray& prop{location->prop_someShortArray};
+  typedef int16_t minimumUserType;
+  int16_t increment{17};
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeLongArray : ArrayDefaults<RegSomeLongArray> {
+  const std::string path{"MYDUMMY/SOME_LONG_ARRAY"};
+  size_t nElementsPerChannel{5};
+  D_longarray& prop{location->prop_someLongArray};
+  typedef int64_t minimumUserType;
+  int64_t increment{23};
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeFloatArray : ArrayDefaults<RegSomeFloatArray> {
+  const std::string path{"MYDUMMY/SOME_FLOAT_ARRAY"};
+  size_t nElementsPerChannel{5};
+  D_floatarray& prop{location->prop_someFloatArray};
+  typedef float minimumUserType;
+  float increment{std::exp(5.F)};
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeDoubleArray : ArrayDefaults<RegSomeDoubleArray> {
+  const std::string path{"MYDUMMY/SOME_DOUBLE_ARRAY"};
+  size_t nElementsPerChannel{5};
+  D_doublearray& prop{location->prop_someDoubleArray};
+  typedef double minimumUserType;
+  double increment{std::exp(7.)};
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeSpectrum : ArrayDefaults<RegSomeSpectrum> {
+  const std::string path{"MYDUMMY/SOME_SPECTRUM"};
+  size_t nElementsPerChannel{100};
+  D_spectrum& prop{location->prop_someSpectrum};
+  typedef float minimumUserType;
+  float increment{std::exp(11.F)};
+
+  void setRemoteValue() {
+    auto val = generateValue<minimumUserType>()[0];
+    std::lock_guard<EqFct> lk(*location);
+    prop.current_buffer(0);
+    for(size_t i = 0; i < nElementsPerChannel; ++i) {
+      prop.fill_spectrum(i, val[i]);
+    }
+    this->updateStamp();
+  }
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> getRemoteValue() {
+    std::vector<UserType> val;
+    std::lock_guard<EqFct> lk(*location);
+    for(size_t i = 0; i < nElementsPerChannel; ++i) {
+      val.push_back(prop.read_spectrum(i));
+    }
+    return {val};
+  }
+
+  void updateStamp() {
+    ++mpn;
+    microseconds += 100000;
+    if(microseconds > 1000000) {
+      microseconds -= 100000;
+      ++seconds;
+    }
+    derived->prop.set_tmstmp(seconds, microseconds, 0);
+    derived->prop.set_mpnum(mpn);
+  }
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeIiii : ArrayDefaults<RegSomeIiii> {
+  const std::string path{"MYDUMMY/SOME_IIII"};
+  size_t nElementsPerChannel{4};
+  D_iiii& prop{location->prop_someIIII};
+  typedef int32_t minimumUserType;
+  int32_t increment{13};
+
+  void setRemoteValue() {
+    auto val = generateValue<minimumUserType>()[0];
+    std::lock_guard<EqFct> lk(*location);
+    prop.set_value(val[0], val[1], val[2], val[3]);
+    this->updateStamp();
+  }
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> getRemoteValue() {
+    std::lock_guard<EqFct> lk(*location);
+    auto val = prop.value();
+    return {{ChimeraTK::numericToUserType<UserType>(val->i1_data), ChimeraTK::numericToUserType<UserType>(val->i2_data),
+        ChimeraTK::numericToUserType<UserType>(val->i3_data), ChimeraTK::numericToUserType<UserType>(val->i4_data)}};
+  }
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeIfff_I : ScalarDefaults<RegSomeIfff_I> {
+  const std::string path{"MYDUMMY/SOME_IFFF/I"};
+  D_ifff& prop{location->prop_someIFFF};
+  typedef int32_t minimumUserType;
+  int32_t increment{23};
+
+  void setRemoteValue() {
+    auto v = generateValue<minimumUserType>()[0][0];
+    std::lock_guard<EqFct> lk(*location);
+    auto curval = prop.value();
+    prop.set_value(v, curval->f1_data, curval->f2_data, curval->f3_data);
+    this->updateStamp();
+  }
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> getRemoteValue() {
+    std::lock_guard<EqFct> lk(*location);
+    return {{ChimeraTK::numericToUserType<UserType>(prop.value()->i1_data)}};
+  }
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeIfff_F1 : ScalarDefaults<RegSomeIfff_F1> {
+  const std::string path{"MYDUMMY/SOME_IFFF/F1"};
+  D_ifff& prop{location->prop_someIFFF};
+  typedef float minimumUserType;
+  float increment{std::exp(3.14F)};
+
+  void setRemoteValue() {
+    auto v = generateValue<minimumUserType>()[0][0];
+    std::lock_guard<EqFct> lk(*location);
+    auto curval = prop.value();
+    prop.set_value(curval->i1_data, v, curval->f2_data, curval->f3_data);
+    this->updateStamp();
+  }
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> getRemoteValue() {
+    std::lock_guard<EqFct> lk(*location);
+    return {{ChimeraTK::numericToUserType<UserType>(prop.value()->f1_data)}};
+  }
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeIfff_F2 : ScalarDefaults<RegSomeIfff_F2> {
+  const std::string path{"MYDUMMY/SOME_IFFF/F2"};
+  D_ifff& prop{location->prop_someIFFF};
+  typedef float minimumUserType;
+  float increment{std::exp(1.23F)};
+
+  void setRemoteValue() {
+    auto v = generateValue<minimumUserType>()[0][0];
+    std::lock_guard<EqFct> lk(*location);
+    auto curval = prop.value();
+    prop.set_value(curval->i1_data, curval->f1_data, v, curval->f3_data);
+    this->updateStamp();
+  }
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> getRemoteValue() {
+    std::lock_guard<EqFct> lk(*location);
+    return {{ChimeraTK::numericToUserType<UserType>(prop.value()->f2_data)}};
+  }
+};
+
+/**********************************************************************************************************************/
+
+struct RegSomeIfff_F3 : ScalarDefaults<RegSomeIfff_F3> {
+  const std::string path{"MYDUMMY/SOME_IFFF/F3"};
+  D_ifff& prop{location->prop_someIFFF};
+  typedef float minimumUserType;
+  float increment{std::exp(2.34F)};
+
+  void setRemoteValue() {
+    auto v = generateValue<minimumUserType>()[0][0];
+    std::lock_guard<EqFct> lk(*location);
+    auto curval = prop.value();
+    prop.set_value(curval->i1_data, curval->f1_data, curval->f2_data, v);
+    this->updateStamp();
+  }
+
+  template<typename UserType>
+  std::vector<std::vector<UserType>> getRemoteValue() {
+    std::lock_guard<EqFct> lk(*location);
+    return {{ChimeraTK::numericToUserType<UserType>(prop.value()->f3_data)}};
+  }
+};
 
 /**********************************************************************************************************************/
 
@@ -160,22 +532,28 @@ BOOST_AUTO_TEST_CASE(unifiedBackendTest) {
 
   doocs::zmq_set_subscription_timeout(10); // reduce timout to make test faster
 
-  auto ubt = makeUnifiedBackendTest(
-      [](std::string registerName, auto dummy) -> std::vector<std::vector<decltype(dummy)>> {
-        return getRemoteValue<decltype(dummy)>(registerName);
-      },
-      [](std::string registerName) { setRemoteValue(registerName); });
+  auto ubt = ChimeraTK::UnifiedBackendTest<>()
+                 .addRegister<RegSomeInt>()
+                 .addRegister<RegSomeRoInt>()
+                 .addRegister<RegSomeZmqInt>()
+                 .addRegister<RegSomeFloat>()
+                 .addRegister<RegSomeDouble>()
+                 .addRegister<RegSomeString>()
+                 .addRegister<RegSomeStatus>()
+                 .addRegister<RegSomeBit>()
+                 .addRegister<RegSomeIntArray>()
+                 .addRegister<RegSomeShortArray>()
+                 .addRegister<RegSomeLongArray>()
+                 .addRegister<RegSomeFloatArray>()
+                 .addRegister<RegSomeDoubleArray>()
+                 .addRegister<RegSomeSpectrum>()
+                 .addRegister<RegSomeIiii>()
+                 .addRegister<RegSomeIfff_I>()
+                 .addRegister<RegSomeIfff_F1>()
+                 .addRegister<RegSomeIfff_F2>()
+                 .addRegister<RegSomeIfff_F3>();
 
-  ubt.addSyncReadTestRegister<int32_t>("MYDUMMY/SOME_INT", false, false);
-  ubt.addSyncReadTestRegister<int32_t>("MYDUMMY/SOME_RO_INT", true, false);
-  ubt.addWriteTestRegister<int32_t>("MYDUMMY/SOME_INT", false, false);
-  ubt.addAsyncReadTestRegister<int32_t>("MYDUMMY/SOME_ZMQINT", false, false);
-
-  ubt.forceRuntimeErrorOnRead({{[&] { location->lock(); }, [&] { location->unlock(); }}});
-  ubt.forceRuntimeErrorOnWrite({{[&] { location->lock(); }, [&] { location->unlock(); }}});
-  ubt.forceAsyncReadInconsistency([&](std::string registerName) { setRemoteValue(registerName, true); });
-
-  ubt.runTests(DoocsLauncher::DoocsServer1);
+  ubt.runTests(DoocsLauncher::DoocsServer);
 }
 
 /**********************************************************************************************************************/
