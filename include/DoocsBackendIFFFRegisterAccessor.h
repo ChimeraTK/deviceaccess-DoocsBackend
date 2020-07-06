@@ -69,6 +69,8 @@ namespace ChimeraTK {
       if(numberOfWords > 1 || wordOffsetInRegister != 0) {
         throw ChimeraTK::logic_error("Register '" + this->getName() + "' is scalar.");
       }
+      this->nElements = 1; // needed since DOOCS reports a length of 4
+
       // determine field
       if(fieldName == "I") {
         field = Field::I;
