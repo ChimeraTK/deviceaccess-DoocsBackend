@@ -90,21 +90,18 @@ BOOST_GLOBAL_FIXTURE(DoocsLauncher);
 
 template<typename DERIVED>
 struct AllRegisterDefaults {
-  AllRegisterDefaults() = default;
-  AllRegisterDefaults(bool _isWriteable) : isWriteable(_isWriteable) {}
-  AllRegisterDefaults(AccessModeFlags _flags) : supportedFlags(_flags), testAsyncReadInconsistency(true) {}
-
   DERIVED* derived{static_cast<DERIVED*>(this)};
 
-  const bool isWriteable{true};
-  const bool isReadable{true};
-  const ChimeraTK::AccessModeFlags supportedFlags{};
-  const size_t nChannels{1};
-  const size_t writeQueueLength{std::numeric_limits<size_t>::max()};
-  const bool testAsyncReadInconsistency{false};
+  bool isWriteable() { return true; }
+  bool isReadable() { return true; }
+  ChimeraTK::AccessModeFlags supportedFlags() { return {}; }
+  size_t nChannels() { return 1; }
+  size_t writeQueueLength() { return std::numeric_limits<size_t>::max(); }
+  size_t nRuntimeErrorCases() { return 1; }
+  bool testAsyncReadInconsistency() { return false; }
   typedef std::nullptr_t rawUserType;
 
-  void setForceRuntimeError(bool enable) {
+  void setForceRuntimeError(bool enable, size_t) {
     if(enable) {
       location->lock();
     }
@@ -135,7 +132,7 @@ template<typename DERIVED>
 struct ScalarDefaults : AllRegisterDefaults<DERIVED> {
   using AllRegisterDefaults<DERIVED>::AllRegisterDefaults;
   using AllRegisterDefaults<DERIVED>::derived;
-  const size_t nElementsPerChannel{1};
+  size_t nElementsPerChannel() { return 1; }
 
   template<typename UserType>
   std::vector<std::vector<UserType>> generateValue() {
@@ -169,7 +166,7 @@ struct ArrayDefaults : AllRegisterDefaults<DERIVED> {
   std::vector<std::vector<UserType>> generateValue() {
     auto curval = derived->template getRemoteValue<typename DERIVED::minimumUserType>()[0];
     std::vector<UserType> val;
-    for(size_t i = 0; i < derived->nElementsPerChannel; ++i) {
+    for(size_t i = 0; i < derived->nElementsPerChannel(); ++i) {
       val.push_back(ChimeraTK::numericToUserType<UserType>(curval[i] + (i + 1) * derived->increment));
     }
     return {val};
@@ -179,7 +176,7 @@ struct ArrayDefaults : AllRegisterDefaults<DERIVED> {
   std::vector<std::vector<UserType>> getRemoteValue() {
     std::vector<UserType> val;
     std::lock_guard<EqFct> lk(*location);
-    for(size_t i = 0; i < derived->nElementsPerChannel; ++i) {
+    for(size_t i = 0; i < derived->nElementsPerChannel(); ++i) {
       val.push_back(ChimeraTK::numericToUserType<UserType>(derived->prop.value(i)));
     }
     return {val};
@@ -188,7 +185,7 @@ struct ArrayDefaults : AllRegisterDefaults<DERIVED> {
   void setRemoteValue() {
     auto val = derived->template generateValue<typename DERIVED::minimumUserType>()[0];
     std::lock_guard<EqFct> lk(*location);
-    for(size_t i = 0; i < derived->nElementsPerChannel; ++i) {
+    for(size_t i = 0; i < derived->nElementsPerChannel(); ++i) {
       derived->prop.set_value(val[i], i);
     }
     this->updateStamp();
@@ -198,7 +195,7 @@ struct ArrayDefaults : AllRegisterDefaults<DERIVED> {
 /**********************************************************************************************************************/
 
 struct RegSomeInt : ScalarDefaults<RegSomeInt> {
-  const std::string path{"MYDUMMY/SOME_INT"};
+  std::string path() { return "MYDUMMY/SOME_INT"; }
   D_int& prop{location->prop_someInt};
   typedef int32_t minimumUserType;
   int32_t increment{3};
@@ -207,8 +204,8 @@ struct RegSomeInt : ScalarDefaults<RegSomeInt> {
 /**********************************************************************************************************************/
 
 struct RegSomeRoInt : ScalarDefaults<RegSomeInt> {
-  RegSomeRoInt() : ScalarDefaults<RegSomeInt>(false) {} // isWriteable = false
-  const std::string path{"MYDUMMY/SOME_RO_INT"};
+  bool isWriteable() { return false; }
+  std::string path() { return "MYDUMMY/SOME_RO_INT"; }
   D_int& prop{location->prop_someReadonlyInt};
   typedef int32_t minimumUserType;
   int32_t increment{7};
@@ -217,8 +214,8 @@ struct RegSomeRoInt : ScalarDefaults<RegSomeInt> {
 /**********************************************************************************************************************/
 
 struct RegSomeZmqInt : ScalarDefaults<RegSomeZmqInt> {
-  RegSomeZmqInt() : ScalarDefaults<RegSomeZmqInt>({AccessMode::wait_for_new_data}) {}
-  const std::string path{"MYDUMMY/SOME_ZMQINT"};
+  AccessModeFlags supportedFlags() { return {AccessMode::wait_for_new_data}; }
+  std::string path() { return "MYDUMMY/SOME_ZMQINT"; }
   D_int& prop{location->prop_someZMQInt};
   typedef int32_t minimumUserType;
   int32_t increment{51};
@@ -245,7 +242,7 @@ struct RegSomeZmqInt : ScalarDefaults<RegSomeZmqInt> {
 /**********************************************************************************************************************/
 
 struct RegSomeFloat : ScalarDefaults<RegSomeFloat> {
-  const std::string path{"MYDUMMY/SOME_FLOAT"};
+  std::string path() { return "MYDUMMY/SOME_FLOAT"; }
   D_float& prop{location->prop_someFloat};
   typedef float minimumUserType;
   float increment{std::exp(1.F)};
@@ -254,7 +251,7 @@ struct RegSomeFloat : ScalarDefaults<RegSomeFloat> {
 /**********************************************************************************************************************/
 
 struct RegSomeDouble : ScalarDefaults<RegSomeDouble> {
-  const std::string path{"MYDUMMY/SOME_DOUBLE"};
+  std::string path() { return "MYDUMMY/SOME_DOUBLE"; }
   D_double& prop{location->prop_someDouble};
   typedef double minimumUserType;
   double increment{std::exp(1.5)};
@@ -263,7 +260,7 @@ struct RegSomeDouble : ScalarDefaults<RegSomeDouble> {
 /**********************************************************************************************************************/
 
 struct RegSomeString : ScalarDefaults<RegSomeString> {
-  const std::string path{"MYDUMMY/SOME_STRING"};
+  std::string path() { return "MYDUMMY/SOME_STRING"; }
   D_string& prop{location->prop_someString};
   typedef std::string minimumUserType;
 
@@ -292,7 +289,7 @@ std::vector<std::vector<std::string>> RegSomeString::generateValue<std::string>(
 /**********************************************************************************************************************/
 
 struct RegSomeStatus : ScalarDefaults<RegSomeStatus> {
-  const std::string path{"MYDUMMY/SOME_STATUS"};
+  std::string path() { return "MYDUMMY/SOME_STATUS"; }
   D_status& prop{location->prop_someStatus};
   typedef uint16_t minimumUserType;
   uint16_t increment{32000};
@@ -301,7 +298,7 @@ struct RegSomeStatus : ScalarDefaults<RegSomeStatus> {
 /**********************************************************************************************************************/
 
 struct RegSomeBit : ScalarDefaults<RegSomeBit> {
-  const std::string path{"MYDUMMY/SOME_BIT"};
+  std::string path() { return "MYDUMMY/SOME_BIT"; }
   D_bit& prop{location->prop_someBit};
   typedef uint8_t minimumUserType;
   uint8_t increment{0}; // unused
@@ -315,8 +312,8 @@ struct RegSomeBit : ScalarDefaults<RegSomeBit> {
 /**********************************************************************************************************************/
 
 struct RegSomeIntArray : ArrayDefaults<RegSomeIntArray> {
-  const std::string path{"MYDUMMY/SOME_INT_ARRAY"};
-  size_t nElementsPerChannel{42};
+  std::string path() { return "MYDUMMY/SOME_INT_ARRAY"; }
+  size_t nElementsPerChannel() { return 42; }
   D_intarray& prop{location->prop_someIntArray};
   typedef int32_t minimumUserType;
   int32_t increment{11};
@@ -325,8 +322,8 @@ struct RegSomeIntArray : ArrayDefaults<RegSomeIntArray> {
 /**********************************************************************************************************************/
 
 struct RegSomeShortArray : ArrayDefaults<RegSomeShortArray> {
-  const std::string path{"MYDUMMY/SOME_SHORT_ARRAY"};
-  size_t nElementsPerChannel{5};
+  std::string path() { return "MYDUMMY/SOME_SHORT_ARRAY"; }
+  size_t nElementsPerChannel() { return 5; }
   D_shortarray& prop{location->prop_someShortArray};
   typedef int16_t minimumUserType;
   int16_t increment{17};
@@ -335,8 +332,8 @@ struct RegSomeShortArray : ArrayDefaults<RegSomeShortArray> {
 /**********************************************************************************************************************/
 
 struct RegSomeLongArray : ArrayDefaults<RegSomeLongArray> {
-  const std::string path{"MYDUMMY/SOME_LONG_ARRAY"};
-  size_t nElementsPerChannel{5};
+  std::string path() { return "MYDUMMY/SOME_LONG_ARRAY"; }
+  size_t nElementsPerChannel() { return 5; }
   D_longarray& prop{location->prop_someLongArray};
   typedef int64_t minimumUserType;
   int64_t increment{23};
@@ -345,8 +342,8 @@ struct RegSomeLongArray : ArrayDefaults<RegSomeLongArray> {
 /**********************************************************************************************************************/
 
 struct RegSomeFloatArray : ArrayDefaults<RegSomeFloatArray> {
-  const std::string path{"MYDUMMY/SOME_FLOAT_ARRAY"};
-  size_t nElementsPerChannel{5};
+  std::string path() { return "MYDUMMY/SOME_FLOAT_ARRAY"; }
+  size_t nElementsPerChannel() { return 5; }
   D_floatarray& prop{location->prop_someFloatArray};
   typedef float minimumUserType;
   float increment{std::exp(5.F)};
@@ -355,8 +352,8 @@ struct RegSomeFloatArray : ArrayDefaults<RegSomeFloatArray> {
 /**********************************************************************************************************************/
 
 struct RegSomeDoubleArray : ArrayDefaults<RegSomeDoubleArray> {
-  const std::string path{"MYDUMMY/SOME_DOUBLE_ARRAY"};
-  size_t nElementsPerChannel{5};
+  std::string path() { return "MYDUMMY/SOME_DOUBLE_ARRAY"; }
+  size_t nElementsPerChannel() { return 5; }
   D_doublearray& prop{location->prop_someDoubleArray};
   typedef double minimumUserType;
   double increment{std::exp(7.)};
@@ -365,8 +362,8 @@ struct RegSomeDoubleArray : ArrayDefaults<RegSomeDoubleArray> {
 /**********************************************************************************************************************/
 
 struct RegSomeSpectrum : ArrayDefaults<RegSomeSpectrum> {
-  const std::string path{"MYDUMMY/SOME_SPECTRUM"};
-  size_t nElementsPerChannel{100};
+  std::string path() { return "MYDUMMY/SOME_SPECTRUM"; }
+  size_t nElementsPerChannel() { return 100; }
   D_spectrum& prop{location->prop_someSpectrum};
   typedef float minimumUserType;
   float increment{std::exp(11.F)};
@@ -375,7 +372,7 @@ struct RegSomeSpectrum : ArrayDefaults<RegSomeSpectrum> {
     auto val = generateValue<minimumUserType>()[0];
     std::lock_guard<EqFct> lk(*location);
     prop.current_buffer(0);
-    for(size_t i = 0; i < nElementsPerChannel; ++i) {
+    for(size_t i = 0; i < nElementsPerChannel(); ++i) {
       prop.fill_spectrum(i, val[i]);
     }
     this->updateStamp();
@@ -385,7 +382,7 @@ struct RegSomeSpectrum : ArrayDefaults<RegSomeSpectrum> {
   std::vector<std::vector<UserType>> getRemoteValue() {
     std::vector<UserType> val;
     std::lock_guard<EqFct> lk(*location);
-    for(size_t i = 0; i < nElementsPerChannel; ++i) {
+    for(size_t i = 0; i < nElementsPerChannel(); ++i) {
       val.push_back(prop.read_spectrum(i));
     }
     return {val};
@@ -406,8 +403,8 @@ struct RegSomeSpectrum : ArrayDefaults<RegSomeSpectrum> {
 /**********************************************************************************************************************/
 
 struct RegSomeIiii : ArrayDefaults<RegSomeIiii> {
-  const std::string path{"MYDUMMY/SOME_IIII"};
-  size_t nElementsPerChannel{4};
+  std::string path() { return "MYDUMMY/SOME_IIII"; }
+  size_t nElementsPerChannel() { return 4; }
   D_iiii& prop{location->prop_someIIII};
   typedef int32_t minimumUserType;
   int32_t increment{13};
@@ -431,7 +428,7 @@ struct RegSomeIiii : ArrayDefaults<RegSomeIiii> {
 /**********************************************************************************************************************/
 
 struct RegSomeIfff_I : ScalarDefaults<RegSomeIfff_I> {
-  const std::string path{"MYDUMMY/SOME_IFFF/I"};
+  std::string path() { return "MYDUMMY/SOME_IFFF/I"; }
   D_ifff& prop{location->prop_someIFFF};
   typedef int32_t minimumUserType;
   int32_t increment{23};
@@ -454,7 +451,7 @@ struct RegSomeIfff_I : ScalarDefaults<RegSomeIfff_I> {
 /**********************************************************************************************************************/
 
 struct RegSomeIfff_F1 : ScalarDefaults<RegSomeIfff_F1> {
-  const std::string path{"MYDUMMY/SOME_IFFF/F1"};
+  std::string path() { return "MYDUMMY/SOME_IFFF/F1"; }
   D_ifff& prop{location->prop_someIFFF};
   typedef float minimumUserType;
   float increment{std::exp(3.14F)};
@@ -477,7 +474,7 @@ struct RegSomeIfff_F1 : ScalarDefaults<RegSomeIfff_F1> {
 /**********************************************************************************************************************/
 
 struct RegSomeIfff_F2 : ScalarDefaults<RegSomeIfff_F2> {
-  const std::string path{"MYDUMMY/SOME_IFFF/F2"};
+  std::string path() { return "MYDUMMY/SOME_IFFF/F2"; }
   D_ifff& prop{location->prop_someIFFF};
   typedef float minimumUserType;
   float increment{std::exp(1.23F)};
@@ -500,7 +497,7 @@ struct RegSomeIfff_F2 : ScalarDefaults<RegSomeIfff_F2> {
 /**********************************************************************************************************************/
 
 struct RegSomeIfff_F3 : ScalarDefaults<RegSomeIfff_F3> {
-  const std::string path{"MYDUMMY/SOME_IFFF/F3"};
+  std::string path() { return "MYDUMMY/SOME_IFFF/F3"; }
   D_ifff& prop{location->prop_someIFFF};
   typedef float minimumUserType;
   float increment{std::exp(2.34F)};
