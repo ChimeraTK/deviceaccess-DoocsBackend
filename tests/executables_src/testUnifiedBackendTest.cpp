@@ -98,8 +98,13 @@ struct AllRegisterDefaults {
   size_t nChannels() { return 1; }
   size_t writeQueueLength() { return std::numeric_limits<size_t>::max(); }
   size_t nRuntimeErrorCases() { return 1; }
-  bool testAsyncReadInconsistency() { return false; }
   typedef std::nullptr_t rawUserType;
+
+  static constexpr auto capabilities = TestCapabilities<>()
+                                           .disableForceDataLossWrite()
+                                           .disableAsyncReadInconsistency()
+                                           .disableSwitchReadOnly()
+                                           .disableSwitchWriteOnly();
 
   void setForceRuntimeError(bool enable, size_t) {
     if(enable) {
@@ -109,10 +114,6 @@ struct AllRegisterDefaults {
       location->unlock();
     }
   }
-
-  [[noreturn]] void setForceDataLossWrite(bool) { assert(false); }
-
-  [[noreturn]] void forceAsyncReadInconsistency() { assert(false); }
 
   void updateStamp() {
     ++mpn;
@@ -199,6 +200,17 @@ struct RegSomeInt : ScalarDefaults<RegSomeInt> {
   D_int& prop{location->prop_someInt};
   typedef int32_t minimumUserType;
   int32_t increment{3};
+
+  static constexpr auto capabilities = ScalarDefaults<RegSomeInt>::capabilities.enableSwitchReadOnly();
+
+  void switchReadOnly(bool enable) {
+    if(enable) {
+      prop.set_ro_access();
+    }
+    else {
+      prop.set_rw_access();
+    }
+  }
 };
 
 /**********************************************************************************************************************/
@@ -219,6 +231,8 @@ struct RegSomeZmqInt : ScalarDefaults<RegSomeZmqInt> {
   D_int& prop{location->prop_someZMQInt};
   typedef int32_t minimumUserType;
   int32_t increment{51};
+
+  static constexpr auto capabilities = ScalarDefaults<RegSomeZmqInt>::capabilities.enableAsyncReadInconsistency();
 
   void setRemoteValue() {
     ScalarDefaults<RegSomeZmqInt>::setRemoteValue();
