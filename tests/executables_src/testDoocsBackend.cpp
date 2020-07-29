@@ -930,7 +930,7 @@ BOOST_AUTO_TEST_CASE(testExceptions) {
       ChimeraTK::logic_error);
 
   // non-existing DOOCS property
-  BOOST_CHECK_THROW(device.getTwoDRegisterAccessor<int>("MYDUMMY/NOT_EXISTING"), ChimeraTK::runtime_error);
+  BOOST_CHECK_THROW(device.getTwoDRegisterAccessor<int>("MYDUMMY/NOT_EXISTING"), ChimeraTK::logic_error);
 
   // read string with non-string user type
   BOOST_CHECK_THROW(device.getTwoDRegisterAccessor<int>("MYDUMMY/SOME_STRING"), ChimeraTK::logic_error);
