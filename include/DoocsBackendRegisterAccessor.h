@@ -253,7 +253,12 @@ namespace ChimeraTK {
       ea.adr(path);
 
       // use zero mq subscriptiopn?
+      auto reg = backend->getRegisterCatalogue().getRegister(registerPathName);
+
       if(flags.has(AccessMode::wait_for_new_data)) {
+        if(!reg->getSupportedAccessModes().has(AccessMode::wait_for_new_data)) {
+          throw ChimeraTK::logic_error("invalid access mode for this register");
+        }
         useZMQ = true;
 
         // Create notification queue.
@@ -263,7 +268,6 @@ namespace ChimeraTK {
 
       // if the backend has not yet been openend, obtain size of the register from catalogue
       if(allocateBuffers && !backend->isOpen()) {
-        auto reg = backend->getRegisterCatalogue().getRegister(registerPathName);
         NDRegisterAccessor<UserType>::buffer_2D.resize(1);
         NDRegisterAccessor<UserType>::buffer_2D[0].resize(reg->getNumberOfElements());
         allocateBuffers = false;
