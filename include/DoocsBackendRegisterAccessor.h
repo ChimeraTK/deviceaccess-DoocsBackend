@@ -269,11 +269,22 @@ namespace ChimeraTK {
         _readQueue = notifications.then<void>([this](EqData& data) { this->dst = data; }, std::launch::deferred);
       }
 
-      // if the backend has not yet been openend, obtain size of the register from catalogue
-      if(allocateBuffers && !backend->isOpen()) {
-        NDRegisterAccessor<UserType>::buffer_2D.resize(1);
-        NDRegisterAccessor<UserType>::buffer_2D[0].resize(reg->getNumberOfElements());
-        allocateBuffers = false;
+      if(not backend->isOpen()) {
+        // we have to check the size agains the catalogue.
+        size_t actualLength = reg->getNumberOfElements();
+        if(nElements == 0) nElements = actualLength;
+
+        if(nElements + elementOffset > actualLength) {
+          throw ChimeraTK::logic_error("Requested number of words exceeds the length of the DOOCS property!");
+        }
+
+        // if the backend has not yet been openend, obtain size of the register from catalogue
+        if(allocateBuffers) {
+          NDRegisterAccessor<UserType>::buffer_2D.resize(1);
+          NDRegisterAccessor<UserType>::buffer_2D[0].resize(actualLength);
+
+          allocateBuffers = false;
+        }
       }
     }
     catch(...) {
