@@ -108,11 +108,11 @@ namespace ChimeraTK {
       TransferElement::_versionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
     }
 
-    bool isReadOnly() const override { return false; }
+    bool isReadOnly() const override { return isReadable() && not isWriteable(); }
 
-    bool isReadable() const override { return true; }
+    bool isReadable() const override { return _isReadable; }
 
-    bool isWriteable() const override { return true; }
+    bool isWriteable() const override { return _isWriteable; }
 
     using TransferElement::_readQueue;
 
@@ -163,6 +163,8 @@ namespace ChimeraTK {
     virtual void initialiseImplementation() = 0;
 
     bool _allocateBuffers;
+    bool _isReadable;
+    bool _isWriteable;
   };
 
   /********************************************************************************************************************/
@@ -238,7 +240,8 @@ namespace ChimeraTK {
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(boost::shared_ptr<DoocsBackend> backend,
       const std::string& path, const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister,
       AccessModeFlags flags, bool allocateBuffers)
-  : NDRegisterAccessor<UserType>(path, flags), _allocateBuffers(allocateBuffers) {
+  : NDRegisterAccessor<UserType>(path, flags), _allocateBuffers(allocateBuffers), _isReadable(true),
+    _isWriteable(true) {
     try {
       _backend = backend;
       _path = path;
@@ -332,6 +335,9 @@ namespace ChimeraTK {
     // check error
     if(rc || dst.error() != 0) {
       _backend->informRuntimeError(_path);
+      if(dst.error() == eq_errors::read_only) {
+        this->_isWriteable = false;
+      }
       throw ChimeraTK::runtime_error(std::string("Cannot write to DOOCS property: ") + dst.get_string());
     }
   }
