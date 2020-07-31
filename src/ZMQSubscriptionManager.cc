@@ -14,13 +14,17 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
   /******************************************************************************************************************/
 
   ZMQSubscriptionManager::~ZMQSubscriptionManager() {
+    std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
+
     for(auto subscription = subscriptionMap.begin(); subscription != subscriptionMap.end();) {
-      auto subscriptionToWork = subscription++;
-      for(auto accessor = subscriptionToWork->second.listeners.rbegin();
-          accessor != subscriptionToWork->second.listeners.rend();) {
-        auto accessorToWork = accessor++;
-        unsubscribe(subscriptionToWork->first, *accessorToWork);
+      {
+        std::unique_lock<std::mutex> listeners_lock(subscription->second.listeners_mutex);
+        subscription->second.listeners.clear();
       }
+      lock.unlock();
+      deactivate(subscription->first);
+      lock.lock();
+      subscription = subscriptionMap.erase(subscription);
     }
   }
 
