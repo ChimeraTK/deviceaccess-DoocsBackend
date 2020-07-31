@@ -61,7 +61,7 @@ namespace ChimeraTK {
       void deactivate(const std::string& path);
 
       /** static flag if dmsg_start() has been called already, with mutex for thread safety */
-      bool dmsgStartCalled;
+      bool dmsgStartCalled{false};
       std::mutex dmsgStartCalled_mutex;
 
       /// Flag whether new subscriptions should be active or not, with mutex for thread safety.
