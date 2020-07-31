@@ -36,19 +36,19 @@ namespace ChimeraTK {
     EqData src, dst;
 
     /// flag if the DOOCS data type is an array or not
-    bool isArray;
+    bool isArray{false};
 
     /// number of elements
-    size_t nElements;
+    size_t nElements{0};
 
     /// element offset specified by the user
-    size_t elementOffset;
+    size_t elementOffset{0};
 
     /// flag if the accessor should affect only a part of the property (in case of an array)
-    bool isPartial;
+    bool isPartial{false};
 
     /// flag if a ZeroMQ subscribtion is used for reading data (c.f. AccessMode::wait_for_new_data)
-    bool useZMQ;
+    bool useZMQ{false};
 
     /// future_queue used to notify the TransferFuture about completed transfers
     cppext::future_queue<EqData> notifications;
