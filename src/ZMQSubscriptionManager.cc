@@ -150,6 +150,10 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       std::unique_lock<std::mutex> listeners_lock(subscriptionMap[path].listeners_mutex);
       if(!subscriptionMap[path].active) return;
 
+      // Wait until we have seen any reaction from ZMQ. This is to work around a race condition in DOOCS's ZMQ
+      // subcription mechanism
+      while(not subscriptionMap[path].started) subscriptionMap[path].startedCv.wait(listeners_lock);
+
       // clear active flag
       subscriptionMap[path].active = false;
     }
@@ -224,8 +228,15 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
     data->time(info->sec, info->usec);
     data->mpnum(info->ident);
 
-    // store thread id of the thread calling this function, if not yet done
     std::unique_lock<std::mutex> lock(subscription->listeners_mutex);
+
+    // As long as we get a callback from ZMQ, we consider it started
+    if(not subscription->started) {
+      subscription->started = true;
+      subscription->startedCv.notify_all();
+    }
+
+    // store thread id of the thread calling this function, if not yet done
     if(pthread_equal(subscription->zqmThreadId, pthread_t_invalid)) {
       subscription->zqmThreadId = pthread_self();
     }
