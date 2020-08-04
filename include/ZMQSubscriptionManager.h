@@ -84,6 +84,9 @@ namespace ChimeraTK {
         /// variable.
         bool active{false};
 
+        bool started{false};
+        std::condition_variable startedCv{};
+
         /// Flag whether an exception has been reported to the listeners since the last activation. Used to prevent
         /// duplicate exceptions in setException(). Will be cleared during activation. Access requires listeners_mutex.
         bool hasException{false};
