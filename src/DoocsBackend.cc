@@ -160,7 +160,6 @@ namespace ChimeraTK {
 
     _opened = true;
     _isFunctional = true;
-    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().activateNew();
   }
 
   /********************************************************************************************************************/

@@ -25,8 +25,8 @@ using namespace ChimeraTK;
 
 class DoocsLauncher : public ThreadedDoocsServer {
  public:
-  DoocsLauncher() :
-    ThreadedDoocsServer("testZeroMQ.conf", boost::unit_test::framework::master_test_suite().argc,
+  DoocsLauncher()
+  : ThreadedDoocsServer("testZeroMQ.conf", boost::unit_test::framework::master_test_suite().argc,
         boost::unit_test::framework::master_test_suite().argv) {
     // set CDDs for the two doocs addresses used in the test
     DoocsServer1 = "(doocs:doocs://localhost:" + rpcNo() + "/F/D)";
@@ -46,7 +46,6 @@ class DoocsLauncher : public ThreadedDoocsServer {
 std::string DoocsLauncher::DoocsServer1;
 std::string DoocsLauncher::DoocsServer2;
 
-
 BOOST_GLOBAL_FIXTURE(DoocsLauncher);
 
 /**********************************************************************************************************************/
@@ -54,6 +53,7 @@ BOOST_GLOBAL_FIXTURE(DoocsLauncher);
 BOOST_AUTO_TEST_CASE(testZeroMQ) {
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
+  device.activateAsyncRead();
 
   ScalarRegisterAccessor<int32_t> acc(
       device.getScalarRegisterAccessor<int32_t>("MYDUMMY/SOME_ZMQINT", 0, {AccessMode::wait_for_new_data}));

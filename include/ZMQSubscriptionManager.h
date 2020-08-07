@@ -36,12 +36,6 @@ namespace ChimeraTK {
       /// Activate all subscriptions. Should be called from DoocsBackend::activateAsyncRead().
       void activateAll();
 
-      /// Set flag so future subscriptions will be activated
-      void activateNew() {
-        std::unique_lock<std::mutex> lk_subact(subscriptionsActive_mutex);
-        subscriptionsActive = true;
-      };
-
       /// Deactivate all subscriptions. Should be called from DoocsBackend::close().
       void deactivateAll();
 
