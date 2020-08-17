@@ -14,6 +14,8 @@
 #include <ChimeraTK/Device.h>
 #include <ChimeraTK/TransferGroup.h>
 #include <doocs-server-test-helper/doocsServerTestHelper.h>
+// For CHECK_TIMEOUT
+#include <ChimeraTK/UnifiedBackendTest.h>
 #include <doocs-server-test-helper/ThreadedDoocsServer.h>
 
 #include <eq_client.h>
@@ -76,18 +78,14 @@ BOOST_AUTO_TEST_CASE(testZeroMQ) {
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_ZMQINT", 1);
   DoocsServerTestHelper::runUpdate();
 
-  usleep(100000);
-  BOOST_CHECK(acc.readNonBlocking() == true);
+  CHECK_TIMEOUT(acc.readNonBlocking() == true, 300000);
   BOOST_CHECK_EQUAL(acc, 2);
   BOOST_CHECK(acc.readNonBlocking() == false);
-
-  usleep(100000);
 
   // test having 3 updates in the queue
   DoocsServerTestHelper::runUpdate();
   DoocsServerTestHelper::runUpdate();
   DoocsServerTestHelper::runUpdate();
-  usleep(100000);
 
   acc.read();
   BOOST_CHECK_EQUAL(acc, 3);
