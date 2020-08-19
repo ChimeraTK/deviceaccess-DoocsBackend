@@ -58,6 +58,12 @@ namespace ChimeraTK {
 
     /// Pointer to the backend
     boost::shared_ptr<DoocsBackend> _backend;
+
+   protected:
+    /// first valid eventId
+    //doocs::EventId _startEventId;
+    doocs::EventId _lastEventId;
+    VersionNumber _lastVersionNumber;
   };
 
   /********************************************************************************************************************/
@@ -99,13 +105,29 @@ namespace ChimeraTK {
     }
 
     void doPostRead(TransferType, bool hasNewData) override {
+      TransferElement::setDataValidity(DataValidity::ok);
       if(!hasNewData) return;
       // Note: the original idea was to extract the time stamp from the received data. This idea has been dropped since
       // the time stamp attached to the data seems to be unreliably, at least for the x2timer macro pulse number. If the
       // unreliable time stamp is attached to the trigger, all data will get this time stamp. This leads to error
       // messages of the DOOCS history archiver, which rejects data due to wrong time stamps. Hence we better generate
       // our own time stamp here.
-      TransferElement::_versionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
+      //if the eventid is already there create new version number but dont add it to the map. Add datfault flag.
+      //TODO!! Ignore if eventId is the first entry, server startup.
+      //if the eventid is not the first entry in the map print warning.
+      if (dst.get_event_id() <= _lastEventId)  {
+        TransferElement::_versionNumber = VersionNumber();
+        TransferElement::setDataValidity(DataValidity::faulty);
+        std::cout<<"warning, eventId smaller than the last vaild eventId"<<std::endl;
+      }
+      else {
+        TransferElement::_versionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
+        if (TransferElement::_versionNumber < _lastVersionNumber) {
+          TransferElement::_versionNumber = VersionNumber();
+        }
+        _lastEventId = dst.get_event_id();
+      }
+      _lastVersionNumber = TransferElement::_versionNumber;
     }
 
     bool isReadOnly() const override { return isReadable() && not isWriteable(); }
