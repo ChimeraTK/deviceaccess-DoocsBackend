@@ -63,7 +63,6 @@ namespace ChimeraTK {
     /// first valid eventId
     //doocs::EventId _startEventId;
     doocs::EventId _lastEventId;
-    VersionNumber _lastVersionNumber;
   };
 
   /********************************************************************************************************************/
@@ -105,8 +104,9 @@ namespace ChimeraTK {
     }
 
     void doPostRead(TransferType, bool hasNewData) override {
-      TransferElement::setDataValidity(DataValidity::ok);
       if(!hasNewData) return;
+
+      TransferElement::setDataValidity(DataValidity::ok);
       // Note: the original idea was to extract the time stamp from the received data. This idea has been dropped since
       // the time stamp attached to the data seems to be unreliably, at least for the x2timer macro pulse number. If the
       // unreliable time stamp is attached to the trigger, all data will get this time stamp. This leads to error
@@ -115,19 +115,21 @@ namespace ChimeraTK {
       //if the eventid is already there create new version number but dont add it to the map. Add datfault flag.
       //TODO!! Ignore if eventId is the first entry, server startup.
       //if the eventid is not the first entry in the map print warning.
-      if (dst.get_event_id() <= _lastEventId)  {
-        TransferElement::_versionNumber = VersionNumber();
+      if(dst.get_event_id() <= _lastEventId) {
+        //TransferElement::_versionNumber = VersionNumber();
         TransferElement::setDataValidity(DataValidity::faulty);
-        std::cout<<"warning, eventId smaller than the last vaild eventId"<<std::endl;
+        std::cout << "warning, eventId smaller than the last vaild eventId" << std::endl;
+        return;
       }
-      else {
-        TransferElement::_versionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
-        if (TransferElement::_versionNumber < _lastVersionNumber) {
-          TransferElement::_versionNumber = VersionNumber();
-        }
-        _lastEventId = dst.get_event_id();
+
+      auto newVersionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
+      if(newVersionNumber < TransferElement::_versionNumber) {
+        TransferElement::setDataValidity(DataValidity::faulty);
+        std::cout << "warning, eventId smaller than the last vaild eventId" << std::endl;
+        return;
       }
-      _lastVersionNumber = TransferElement::_versionNumber;
+      TransferElement::_versionNumber = newVersionNumber;
+      _lastEventId = dst.get_event_id();
     }
 
     bool isReadOnly() const override { return isReadable() && not isWriteable(); }
