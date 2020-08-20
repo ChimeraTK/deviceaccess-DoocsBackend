@@ -115,17 +115,25 @@ namespace ChimeraTK {
       //if the eventid is already there create new version number but dont add it to the map. Add datfault flag.
       //TODO!! Ignore if eventId is the first entry, server startup.
       //if the eventid is not the first entry in the map print warning.
-      if(dst.get_event_id() <= _lastEventId) {
+
+      // after a re-connection to a slow variable the version number might be the same
+      if(dst.get_event_id() < _lastEventId) {
         //TransferElement::_versionNumber = VersionNumber();
         TransferElement::setDataValidity(DataValidity::faulty);
-        std::cout << "warning, "<< _path <<" current eventId "<<dst.get_event_id()<<" is not bigger than the last vaild eventId " <<_lastEventId<< std::endl;
+        std::cout << "warning, " << _path << " current eventId " << dst.get_event_id()
+                  << " is not bigger than the last vaild eventId " << _lastEventId << std::endl;
         return;
       }
 
+      // even for the same version number we have to get the event ID from the map. The id might be older than the
+      // <FIXME> at the time of writing not existing </FIXME>
+      // exception version number. <FIXME> does it even make sense? WIP </FIXME>
       auto newVersionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
       if(newVersionNumber < TransferElement::_versionNumber) {
         TransferElement::setDataValidity(DataValidity::faulty);
-        std::cout << "warning, "<< _path <<" newVersionNumber "<<std::string(newVersionNumber)<<" smaller than the last vaild versionNumber " <<std::string(TransferElement::_versionNumber)<< std::endl;
+        std::cout << "warning, " << _path << " newVersionNumber " << std::string(newVersionNumber)
+                  << " smaller than the last vaild versionNumber " << std::string(TransferElement::_versionNumber)
+                  << std::endl;
         return;
       }
       TransferElement::_versionNumber = newVersionNumber;
