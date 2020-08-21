@@ -1,0 +1,65 @@
+// put the namespace around the doxygen block so we don't have to give it all the time in the code to get links
+namespace ChimeraTK {
+/**
+\page spec_DoocsBackend Technical specification: DeviceAccess DoocsBackend V0.0WIP
+
+> **This is just a stub to get started.**
+
+## A. Introduction ##
+
+
+This documnent is currently still **INCOMPLETE**!
+
+## B. Behavioural specification ##
+
+- 1. Doocs EventID <=> ChimeraTK::VersionNumber mapping
+
+  In Doocs, the EventID (aka macro pulse number) allows to correlate data. In ChimeraTK this is done through the VersionNumber. The Doocs EventID is not known in a ChimeraTK application as meta data for a TransferElement. To allow correlating data with the data consistency group, all data with the same Doocs EventID get the same ChimeraTK::VersionNumber. At the same time the specification for the TransferElement must be fulfilled.
+  - Requirements from other specifications:
+    - No VersionNumber(nullptr) is given out after the first successful transfer. (FIXME Reference)
+    - All version numbers must not be older than the global version number at the time DoocsBackend::open() was called. (FIXME Reference)
+    - VersionNumbers are always increasing. (FIXME Reference)
+
+  - 1.1 An EventIdMapper is used across all Doocs backends to allow consistent VersionNumbers across backends
+   - 1.1.1 The VersionNumber for \c EventID=0 is always \c VersionNumber(nullptr). It is not added to the map.
+   - 1.1.2 If an EventID is in the map, the according VersionNumber is returned by the mapper.
+   - 1.1.3 If an EventID is newer than the newest entry in the map, a new VersionNumber is generated and it is added to the map.
+     - \anchor DoocsBackend_b_1_1_3_1 1.1.3.1 Whenever a new EventID is added to the map, all EventIDs between the newest EventID in the map and the incoming EventID are added to the map as well.  This guarantees that a larger EventID always has a larger VersionNumber, even if EventIDs are not created in increasing order. \ref DoocsBackend_comment_b_1_1_3_1 "(*)"
+   - 1.1.4 The size of the map is limited to avoid infitely increasing memory for long-running servers
+     - 1.1.4.1 If the map has reached the maximum size, the oldest entries are removed
+     - 1.1.4.2 If an EventID is older that the oldest entry in the map,  VersionNumber(nullptr) is returned
+     - 1.1.4.3 Optional extension: The size can be configured via the CDD.
+   - \anchor DoocsBackend_b_1_1_5 1.1.5 A VersionNumber(nullptr) returned as described in \ref DoocsBackend_b_1_1_1 "1.1.1" and \ref DoocsBackend_b_1_1_4_2 "1.1.4.2" is handled in \ref DoocsBackend_b_1_3_3_1 "1.3.3.1". \ref DoocsBackend_comment_b_1_1_5 "(*)" For these data no matching via the ChimeraTK::DataConsistencyGroup is possible.
+
+  -  \anchor DoocsBackend_b_1_2 1.2 When DoocsBackend::open() is called, a startVersionNumber is created.
+    - \anchor DoocsBackend_b_1_2_1 1.2.1 No version number smaller than the startVersionNumber is handed out from this point in time.
+
+  - 1.3 RegisterAccessors get the VersionNumber from the EventIdMapper, according to the incoming EventID
+    - 1.3.1 Each register accessors has a _eventId which stores the last used EventId.
+    - 1.3.2 If the incoming EventID is smaller than _eventId, the incoming EventID is not used.
+      - _eventID is not changed
+      - _versionNumber is not changed
+      - _dataValidity is set to *faulty*
+    - 1.3.3 If the incoming EventID is larger or equal to _eventId, the RegisterAccessor gets the corresponding version number from the EventIdMapper
+      - \anchor DoocsBackend_b_1_3_3_1 1.3.3.1 If that mappedVersionNumber is smaller than DoocsBackend::_startVersionNumber (see \ref DoocsBackend_b_1_2 "1.2"), the _startVersionNumber is used instead (c.f. \ref DoocsBackend_b_1_2_1 "1.2.1"). This does not make the _dataValidity *faulty*. \ref DoocsBackend_comment_b_1_3_3_1 "(*)"
+      - 1.3.3.2 If the max(mappedVersionNumber,startVersionNumber) is smaller than _versionNumber
+        - _eventID is not changed
+        - _versionNumber is not changed
+        - _dataValidity is set to *faulty*
+    - 1.3.4 If both the new EventID and the new VersionNumer are >= the previous one
+      - 1.3.4.1 _eventID and _versionNumber are updated
+      - 1.3.4.2 the _dataValidity is set to the incoming data validity from the EqData
+      
+      
+
+
+### Comments ###
+
+- \anchor DoocsBackend_comment_b_1_1_3_1 \ref DoocsBackend_b_1_1_3_1 "1.1.3.1"  This can happen because different backends connected to different servers are sharing the mapper.
+- \anchor DoocsBackend_comment_b_1_1_5 \ref DoocsBackend_b_1_1_5 "1.1.5" Giving out a VersionNumber(nullptr) would violate the DeviceAccess TransferElement specification.
+- \anchor DoocsBackend_comment_b_1_3_3_1 \ref DoocsBackend_b_1_3_3_1 "1.3.3.1" This is the case for VersionNumber(nullptr) and valid VersionNumbers which have been created before calling open() of the backend.
+
+
+*/
+
+} // end of namespace ChimeraTK
