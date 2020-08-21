@@ -53,8 +53,7 @@ class DoocsLauncher : public ThreadedDoocsServer {
     dmsg_start();
     dmsg_t tag;
     std::cout << "ZeroMQ Subscribe" << std::endl;
-    int err = dmsg_attach(
-        &ea, &dst, nullptr,
+    int err = dmsg_attach(&ea, &dst, nullptr,
         [](void*, EqData* data, dmsg_info_t*) {
           if(!data->error()) zmqStartup_gotData = true;
         },
@@ -119,7 +118,7 @@ struct AllRegisterDefaults {
     ++mpn;
     microseconds += 100000;
     if(microseconds > 1000000) {
-      microseconds -= 100000;
+      microseconds -= 1000000;
       ++seconds;
     }
     derived->prop.set_tmstmp(seconds, microseconds);
