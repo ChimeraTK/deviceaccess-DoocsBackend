@@ -13,7 +13,6 @@ Note: This doucmentation is still incomplete.
 - Applications are DOOCS property aware at startup (by using the optional \ref cacheFile "cache file mechanism").
 - Access to DOOCS property meta-information such as the attached event id (macropulse number) or data timestamps
 
-
 \subsection meta_information Data meta information
 Accces to meta meta can be done using "virtual" variables. To access the meta-data, the property name is extended
 with the requested meta infomation. Supported extensions are:
@@ -23,6 +22,10 @@ with the requested meta infomation. Supported extensions are:
 
 For example to access the macropulse number of the RAW BAM arrival data, could be done with:
 `XFEL.SDIAG/BAM/47.I1/LOW_CHARGE_ARRIVAL_TIME/eventId`
+
+\section Technical Specifications
+
+- \ref spec_DoocsBackend
 
 \page supported_types Supported Data Types
 
