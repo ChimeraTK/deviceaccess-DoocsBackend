@@ -197,8 +197,10 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   void DoocsBackend::setException() {
-    std::lock_guard<std::mutex> lk(_mxRecovery);
-    _isFunctional = false;
+    {
+      std::lock_guard<std::mutex> lk(_mxRecovery);
+      _isFunctional = false;
+    }
     DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAllAndPushException();
   }
 
