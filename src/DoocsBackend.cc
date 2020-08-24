@@ -175,9 +175,13 @@ namespace ChimeraTK {
 
   void DoocsBackend::close() {
     DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAll();
-    lastFailedAddress = "";
     _opened = false;
-    _isFunctional = false;
+    {
+      std::unique_lock<std::mutex> lk(_mxRecovery);
+
+      lastFailedAddress = "";
+      _isFunctional = false;
+    }
   }
 
   /********************************************************************************************************************/
@@ -197,8 +201,10 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   void DoocsBackend::setException() {
-    std::lock_guard<std::mutex> lk(_mxRecovery);
-    _isFunctional = false;
+    {
+      std::lock_guard<std::mutex> lk(_mxRecovery);
+      _isFunctional = false;
+    }
     DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAllAndPushException();
   }
 

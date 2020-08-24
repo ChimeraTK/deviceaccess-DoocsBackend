@@ -12,7 +12,8 @@ eq_dummy::eq_dummy()
   prop_someFloatArray("SOME_FLOAT_ARRAY", 5, this), prop_someDoubleArray("SOME_DOUBLE_ARRAY", 5, this),
   prop_someSpectrum("SOME_SPECTRUM", 100, this), prop_someIIII("SOME_IIII", this), prop_someIFFF("SOME_IFFF", this),
   prop_unsupportedDataType("UNSUPPORTED_DATA_TYPE", 640 * 460, this), prop_someZMQInt("SOME_ZMQINT", this),
-  counter(123456789), startTime(1584020594) {
+  // counter well below the 10000 used by testUnifiesBackendTest
+  counter(1234), startTime(1584020594) {
   prop_someReadonlyInt.set_ro_access();
 }
 
