@@ -89,7 +89,7 @@ BOOST_AUTO_TEST_CASE(testZeroMQ) {
 
   acc.read();
   BOOST_CHECK_EQUAL(acc, 3);
-  BOOST_CHECK(acc.readNonBlocking() == true);
+  CHECK_TIMEOUT(acc.readNonBlocking() == true, 30000);
   BOOST_CHECK_EQUAL(acc, 4);
   acc.read();
   BOOST_CHECK_EQUAL(acc, 5);
