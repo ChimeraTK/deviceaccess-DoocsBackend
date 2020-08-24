@@ -7,6 +7,8 @@
 
 #include <ChimeraTK/VersionNumber.h>
 
+constexpr uint32_t MaxSizeEventIdMap = 2000;
+
 class EventIdMapper {
  public:
   static EventIdMapper& getInstance() {
