@@ -17,6 +17,7 @@
 namespace ChimeraTK {
 
   class DoocsBackendRegisterAccessorBase;
+  class DoocsBackend;
 
   namespace DoocsBackendNamespace {
 
@@ -33,34 +34,33 @@ namespace ChimeraTK {
       /// Unregister accessor subscription
       void unsubscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor);
 
-      /// Activate all subscriptions. Should be called from DoocsBackend::activateAsyncRead().
-      void activateAll();
+      /// Activate all subscriptions for the given backend. Should be called from DoocsBackend::activateAsyncRead().
+      void activateAll(DoocsBackend* backend);
 
-      /// Deactivate all subscriptions. Should be called from DoocsBackend::close().
-      void deactivateAll();
+      /// Deactivate all subscriptions for the given backend. Should be called from DoocsBackend::close().
+      void deactivateAll(DoocsBackend* backend);
 
-      /// Deactivate all subscriptions and push exceptions into the queues. Should be called from
+      /// Deactivate all subscriptions for the given backend and push exceptions into the queues. Should be called from
       /// DoocsBackend::setException().
-      void deactivateAllAndPushException();
+      void deactivateAllAndPushException(DoocsBackend* backend);
 
      private:
       ZMQSubscriptionManager();
       ~ZMQSubscriptionManager();
 
       // Activate ZeroMQ subscription.
-      // Caller need to own subscriptionMap_mutex and corresponding listeners_mutex already.
+      // Caller need to own subscriptionMap_mutex already.
       void activate(const std::string& path);
 
-      // Deactivate ZeroMQ subscription. Caller must not own subscriptionMap_mutex or the listeners_mutex.
+      // Deactivate ZeroMQ subscription. Caller must not own subscriptionMap_mutex or any listeners_mutex.
       void deactivate(const std::string& path);
+
+      // Poll initial value via RPC call and push it into the queue
+      void pollInitialValue(const std::string& path, DoocsBackendRegisterAccessorBase* accessor);
 
       /** static flag if dmsg_start() has been called already, with mutex for thread safety */
       bool dmsgStartCalled{false};
       std::mutex dmsgStartCalled_mutex;
-
-      /// Flag whether new subscriptions should be active or not, with mutex for thread safety.
-      bool subscriptionsActive{false};
-      std::mutex subscriptionsActive_mutex;
 
       /// Structure describing a single subscription
       struct Subscription {
@@ -84,6 +84,8 @@ namespace ChimeraTK {
         /// variable.
         bool active{false};
 
+        /// Flag whether the callback function has already been called for this subscription, with a condition variable
+        /// for the notification when the callback is called for the first time.
         bool started{false};
         std::condition_variable startedCv{};
 
