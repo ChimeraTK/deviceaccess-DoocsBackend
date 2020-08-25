@@ -31,7 +31,6 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
   /******************************************************************************************************************/
 
   void ZMQSubscriptionManager::subscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor) {
-    std::cout << "ZMQSubscriptionManager::subscribe " << path << " " << accessor << std::endl;
     bool newSubscription = false;
 
     std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
