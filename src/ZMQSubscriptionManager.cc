@@ -31,28 +31,30 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
   /******************************************************************************************************************/
 
   void ZMQSubscriptionManager::subscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor) {
+    std::cout << "ZMQSubscriptionManager::subscribe " << path << " " << accessor << std::endl;
     bool newSubscription = false;
+
+    std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
+
+    // check if subscription is already in the map
+    newSubscription = subscriptionMap.find(path) == subscriptionMap.end();
 
     // gain lock for listener, to exclude concurrent access with the zmq_callback()
     std::unique_lock<std::mutex> listeners_lock(subscriptionMap[path].listeners_mutex);
 
-    {
-      std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
+    // add accessor to list of listeners
+    subscriptionMap[path].listeners.push_back(accessor);
 
-      // check if subscription is already in the map
-      newSubscription = subscriptionMap.find(path) == subscriptionMap.end();
+    // subscriptionMap is no longer used below this point
+    lock.unlock();
 
-      // add accessor to list of listeners
-      subscriptionMap[path].listeners.push_back(accessor);
+    // Set flag whether ZMQ is activated for this accessor
+    accessor->isActiveZMQ = accessor->_backend->_asyncReadActivated;
 
-      // Set flag whether ZMQ is activated for this accessor
-      accessor->isActiveZMQ = accessor->_backend->_asyncReadActivated;
-
-      // create subscription if not yet existing. must be done after the previous steps to make sure the initial value
-      // is not lost
-      if(newSubscription) {
-        activate(path); // just establish the ZeroMQ subscription - listeners are still deactivated
-      }
+    // create subscription if not yet existing. must be done after the previous steps to make sure the initial value
+    // is not lost
+    if(newSubscription) {
+      activate(path); // just establish the ZeroMQ subscription - listeners are still deactivated
     }
 
     // If required, poll the initial value and push it into the queue. This must be done after the subcription has been
