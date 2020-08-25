@@ -40,7 +40,7 @@ class DoocsLauncher : public ThreadedDoocsServer {
         boost::unit_test::framework::master_test_suite().argv) {
     // set CDDs for the two doocs addresses used in the test
     rpc_no = rpcNo();
-    DoocsServer = "(doocs:doocs://localhost:" + rpcNo() + "/F/D)";
+    DoocsServer = "doocs:doocs://localhost:" + rpcNo() + "/F/D";
 
     // wait until server has started (both the update thread and the rpc thread)
     EqCall eq;
@@ -563,7 +563,7 @@ BOOST_AUTO_TEST_CASE(unifiedBackendTest) {
                  .addRegister<RegSomeIfff_F2>()
                  .addRegister<RegSomeIfff_F3>();
 
-  ubt.runTests(DoocsLauncher::DoocsServer);
+  ubt.runTests("(" + DoocsLauncher::DoocsServer + ")", "(" + DoocsLauncher::DoocsServer + "?unused=parameter)");
 }
 
 /**********************************************************************************************************************/

@@ -90,6 +90,8 @@ namespace ChimeraTK {
 
     void activateAsyncRead() noexcept override;
 
+    std::atomic<bool> _asyncReadActivated{false};
+
    private:
     std::string _cacheFile;
     mutable std::future<std::unique_ptr<RegisterCatalogue>> _catalogueFuture;

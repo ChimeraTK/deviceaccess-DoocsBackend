@@ -174,8 +174,9 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   void DoocsBackend::close() {
-    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAll();
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAll(this);
     _opened = false;
+    _asyncReadActivated = false;
     {
       std::unique_lock<std::mutex> lk(_mxRecovery);
 
@@ -205,13 +206,15 @@ namespace ChimeraTK {
       std::lock_guard<std::mutex> lk(_mxRecovery);
       _isFunctional = false;
     }
-    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAllAndPushException();
+    _asyncReadActivated = false;
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAllAndPushException(this);
   }
 
   /********************************************************************************************************************/
 
   void DoocsBackend::activateAsyncRead() noexcept {
-    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().activateAll();
+    _asyncReadActivated = true;
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().activateAll(this);
   }
 
   /********************************************************************************************************************/

@@ -50,6 +50,10 @@ namespace ChimeraTK {
     /// flag if a ZeroMQ subscribtion is used for reading data (c.f. AccessMode::wait_for_new_data)
     bool useZMQ{false};
 
+    /// flag whether it should receive updates from the ZeroMQ subscription. Is used by the ZMQSubscriptionManager and
+    /// access requires a lock on the corresponding listeners_mutex.
+    bool isActiveZMQ{false};
+
     /// future_queue used to notify the TransferFuture about completed transfers
     cppext::future_queue<EqData> notifications;
 
