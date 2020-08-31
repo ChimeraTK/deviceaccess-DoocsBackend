@@ -65,7 +65,7 @@ namespace ChimeraTK {
 
    protected:
     /// first valid eventId
-    //doocs::EventId _startEventId;
+    doocs::EventId _startEventId{0};
     doocs::EventId _lastEventId;
   };
 
@@ -110,22 +110,21 @@ namespace ChimeraTK {
     void doPostRead(TransferType, bool hasNewData) override {
       if(!hasNewData) return;
 
-      TransferElement::setDataValidity(DataValidity::ok);
       // Note: the original idea was to extract the time stamp from the received data. This idea has been dropped since
       // the time stamp attached to the data seems to be unreliably, at least for the x2timer macro pulse number. If the
       // unreliable time stamp is attached to the trigger, all data will get this time stamp. This leads to error
       // messages of the DOOCS history archiver, which rejects data due to wrong time stamps. Hence we better generate
       // our own time stamp here.
-      //if the eventid is already there create new version number but dont add it to the map. Add datfault flag.
-      //TODO!! Ignore if eventId is the first entry, server startup.
-      //if the eventid is not the first entry in the map print warning.
+
+      // If the eventid is older than the last one, keep VersionNumber unchanged and set data fault flag
 
       // after a re-connection to a slow variable the version number might be the same
       if(dst.get_event_id() < _lastEventId) {
-        //TransferElement::_versionNumber = VersionNumber();
         TransferElement::setDataValidity(DataValidity::faulty);
-        std::cout << "warning, " << _path << " current eventId " << dst.get_event_id()
-                  << " is not bigger than the last vaild eventId " << _lastEventId << std::endl;
+        if(_startEventId > doocs::EventId(0) && dst.get_event_id() > _startEventId + 10) {
+          std::cout << "warning, " << _path << " current eventId " << dst.get_event_id()
+                    << " is not bigger than the last vaild eventId " << _lastEventId << std::endl;
+        }
         return;
       }
 
@@ -135,13 +134,19 @@ namespace ChimeraTK {
       auto newVersionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
       if(newVersionNumber < TransferElement::_versionNumber) {
         TransferElement::setDataValidity(DataValidity::faulty);
-        std::cout << "warning, " << _path << " newVersionNumber " << std::string(newVersionNumber)
-                  << " smaller than the last vaild versionNumber " << std::string(TransferElement::_versionNumber)
-                  << std::endl;
+        if(_startEventId > doocs::EventId(0) && dst.get_event_id() > _startEventId + 10) {
+          std::cout << "warning, " << _path << " newVersionNumber " << std::string(newVersionNumber)
+                    << " smaller than the last vaild versionNumber " << std::string(TransferElement::_versionNumber)
+                    << std::endl;
+        }
         return;
       }
+
+      TransferElement::setDataValidity(DataValidity::ok);
       TransferElement::_versionNumber = newVersionNumber;
       _lastEventId = dst.get_event_id();
+
+      if(_startEventId == doocs::EventId(0)) _startEventId = _lastEventId;
     }
 
     bool isReadOnly() const override { return isReadable() && not isWriteable(); }
