@@ -116,9 +116,9 @@ namespace ChimeraTK {
       // messages of the DOOCS history archiver, which rejects data due to wrong time stamps. Hence we better generate
       // our own time stamp here.
 
-      // If the eventid is older than the last one, keep VersionNumber unchanged and set data fault flag
-
-      // after a re-connection to a slow variable the version number might be the same
+      // If the eventid is older than the last one, keep VersionNumber unchanged and set data fault flag.
+      // See spec B.1.3.2.
+      // (Note: after a re-connection to a slow variable the version number might be the same)
       if(dst.get_event_id() < _lastEventId) {
         TransferElement::setDataValidity(DataValidity::faulty);
         if(_startEventId > doocs::EventId(0) && dst.get_event_id() > _startEventId + 10) {
@@ -128,10 +128,15 @@ namespace ChimeraTK {
         return;
       }
 
-      // even for the same version number we have to get the event ID from the map. The id might be older than the
-      // <FIXME> at the time of writing not existing </FIXME>
-      // exception version number. <FIXME> does it even make sense? WIP </FIXME>
+      // Get VersionNumber from the EventIdMapper. See spec B.1.3.3.
       auto newVersionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
+
+      // Minimum version is _backend->_startVersion. See spec. B.1.3.3.1.
+      if(newVersionNumber < _backend->_startVersion) {
+        newVersionNumber = _backend->_startVersion;
+      }
+
+      // Version still must not go backwards. See spec B.1.3.3.2.
       if(newVersionNumber < TransferElement::_versionNumber) {
         TransferElement::setDataValidity(DataValidity::faulty);
         if(_startEventId > doocs::EventId(0) && dst.get_event_id() > _startEventId + 10) {
@@ -142,11 +147,20 @@ namespace ChimeraTK {
         return;
       }
 
-      TransferElement::setDataValidity(DataValidity::ok);
+      assert(newVersionNumber >= TransferElement::_versionNumber);
+      assert(newVersionNumber >= _backend->_startVersion);
+
+      // See spec. B.1.3.4.1
       TransferElement::_versionNumber = newVersionNumber;
       _lastEventId = dst.get_event_id();
 
-      if(_startEventId == doocs::EventId(0)) _startEventId = _lastEventId;
+      // See spec. B.1.3.4.2
+      TransferElement::setDataValidity(dst.error() == 0 ? DataValidity::ok : DataValidity::faulty);
+
+      // Just used for the suppression of the warning messages...
+      if(_startEventId == doocs::EventId(0)) {
+        _startEventId = _lastEventId;
+      }
     }
 
     bool isReadOnly() const override { return isReadable() && not isWriteable(); }

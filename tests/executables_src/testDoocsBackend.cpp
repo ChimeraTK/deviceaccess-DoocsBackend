@@ -1496,23 +1496,63 @@ BOOST_AUTO_TEST_CASE(testEventIdMapping) {
       static_cast<std::string>(acc1.getVersionNumber()) + " should be equal to " +
           static_cast<std::string>(acc2.getVersionNumber()));
 
-  // Check consistency accros two different DOOCS backend instances
+  // Check consistency accros two different DOOCS backend instances. Right after opening, the spec B.1.2.1 kicks in and
+  // prevents that the version numbers are consistent.
+  VersionNumber someVersionBeforeOpeningSecondDevice;
   ChimeraTK::Device device2;
   device2.open(DoocsLauncher::DoocsServer2);
   auto acc3 = device2.getScalarRegisterAccessor<int>("SOME_INT");
   acc3.read();
-  BOOST_CHECK_MESSAGE(acc3.getVersionNumber() == acc2.getVersionNumber(),
-      static_cast<std::string>(acc3.getVersionNumber()) + " should be equal to " +
-          static_cast<std::string>(acc2.getVersionNumber()));
+  BOOST_CHECK_MESSAGE(acc3.getVersionNumber() > someVersionBeforeOpeningSecondDevice,
+      static_cast<std::string>(acc3.getVersionNumber()) + " should be greater than " +
+          static_cast<std::string>(someVersionBeforeOpeningSecondDevice));
 
-  // update() will set a new eventId, hence a new version number
+  // update() will set a new eventId, hence a new version number. Now that both backends are already open, numbers must
+  // be consistent.
+  VersionNumber lastVersion = acc3.getVersionNumber();
+  for(size_t i = 0; i < 3; ++i) {
+    DoocsServerTestHelper::runUpdate();
+    acc2.read();
+    acc3.read();
+    BOOST_CHECK_MESSAGE(acc3.getVersionNumber() > lastVersion,
+        static_cast<std::string>(acc3.getVersionNumber()) + " should be greater than " +
+            static_cast<std::string>(lastVersion));
+    BOOST_CHECK_MESSAGE(acc3.getVersionNumber() == acc2.getVersionNumber(),
+        static_cast<std::string>(acc3.getVersionNumber()) + " should be equal to " +
+            static_cast<std::string>(acc2.getVersionNumber()));
+    lastVersion = acc3.getVersionNumber();
+  }
+
+  // Putting one device into an exception state and recovering it will break consistency for exactly one read again.
+  device2.setException();
+
+  // device being in exception state should not affect the first device
+  DoocsServerTestHelper::runUpdate();
+  acc2.read();
+  BOOST_CHECK_MESSAGE(acc2.getVersionNumber() > lastVersion,
+      static_cast<std::string>(acc2.getVersionNumber()) + " should be greater than " +
+          static_cast<std::string>(lastVersion));
+  lastVersion = acc2.getVersionNumber();
+
+  // recover second device
+  someVersionBeforeOpeningSecondDevice = {};
+  device2.open();
+  acc3.read();
+  BOOST_CHECK_MESSAGE(acc3.getVersionNumber() > someVersionBeforeOpeningSecondDevice,
+      static_cast<std::string>(acc3.getVersionNumber()) + " should be greater than " +
+          static_cast<std::string>(someVersionBeforeOpeningSecondDevice));
+
+  // next update: numbers must be consistent again
   DoocsServerTestHelper::runUpdate();
   acc2.read();
   acc3.read();
+  BOOST_CHECK_MESSAGE(acc3.getVersionNumber() > lastVersion,
+      static_cast<std::string>(acc3.getVersionNumber()) + " should be greater than " +
+          static_cast<std::string>(lastVersion));
   BOOST_CHECK_MESSAGE(acc3.getVersionNumber() == acc2.getVersionNumber(),
       static_cast<std::string>(acc3.getVersionNumber()) + " should be equal to " +
           static_cast<std::string>(acc2.getVersionNumber()));
-
+  lastVersion = acc3.getVersionNumber();
 }
 
 /**********************************************************************************************************************/

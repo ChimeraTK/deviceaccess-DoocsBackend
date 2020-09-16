@@ -12,6 +12,7 @@
 #include <future>
 
 #include <ChimeraTK/DeviceBackendImpl.h>
+#include <ChimeraTK/VersionNumber.h>
 
 namespace ChimeraTK {
 
@@ -67,8 +68,7 @@ namespace ChimeraTK {
     /** DOOCS address component for the server (FACILITY/DEVICE) */
     std::string _serverAddress;
 
-    /** We need to make the catalogue mutable, since we fill it within
-     * getRegisterCatalogue() */
+    /** We need to make the catalogue mutable, since we fill it within getRegisterCatalogue() */
     mutable std::unique_ptr<RegisterCatalogue> _catalogue_mutable{};
 
     /** Class to register the backend type with the factory. */
@@ -89,6 +89,9 @@ namespace ChimeraTK {
     void informRuntimeError(const std::string& address);
 
     void activateAsyncRead() noexcept override;
+
+    /// VersionNumber generated in open() to make sure we do not violate TransferElement spec B.9.3.3.1/B.9.4.1
+    VersionNumber _startVersion{nullptr};
 
     std::atomic<bool> _asyncReadActivated{false};
 
