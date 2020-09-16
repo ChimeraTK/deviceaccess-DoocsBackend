@@ -7,7 +7,6 @@
 
 #include <ChimeraTK/VersionNumber.h>
 
-constexpr uint32_t MaxSizeEventIdMap = 2000;
 
 class EventIdMapper {
  public:
@@ -26,4 +25,6 @@ class EventIdMapper {
 
   std::mutex _mapMutex;
   std::map<doocs::EventId, ChimeraTK::VersionNumber> _eventIdToVersionMap{};
+
+  constexpr static size_t maxSizeEventIdMap = 2000;
 };

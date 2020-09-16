@@ -1467,6 +1467,7 @@ BOOST_AUTO_TEST_CASE(testEventIdMapping) {
   ChimeraTK::Device device;
   device.open(DoocsLauncher::DoocsServer1);
   auto catalogue = device.getRegisterCatalogue();
+  auto eqfct = reinterpret_cast<eq_dummy*>(find_device("MYDUMMY"));
 
   // Run update once to have the ZMQ variable's mp number updated
   DoocsServerTestHelper::runUpdate();
@@ -1553,6 +1554,37 @@ BOOST_AUTO_TEST_CASE(testEventIdMapping) {
       static_cast<std::string>(acc3.getVersionNumber()) + " should be equal to " +
           static_cast<std::string>(acc2.getVersionNumber()));
   lastVersion = acc3.getVersionNumber();
+
+  // Check out-of-order updates
+  // We use acc3 from device2 to fill two events in normal order, then read the two events in inverse order on acc1
+  // and acc2 of device1.
+  auto id1 = eqfct->counter; // eqfct->counter gets incremented at the end of update()...
+  DoocsServerTestHelper::runUpdate();
+  acc3.read();
+  auto ver1 = acc3.getVersionNumber(); // this is the version number matching id1
+  auto id2 = eqfct->counter;
+  DoocsServerTestHelper::runUpdate();
+  acc3.read();
+  auto ver2 = acc3.getVersionNumber(); // this is the version number matching id2
+
+  acc1.read();
+  BOOST_CHECK_MESSAGE(acc1.getVersionNumber() == ver2,
+      static_cast<std::string>(acc1.getVersionNumber()) + " should be equal to " + static_cast<std::string>(ver2));
+  BOOST_CHECK(acc1.dataValidity() == DataValidity::ok);
+
+  eqfct->counter = id1;
+  DoocsServerTestHelper::runUpdate();
+
+  acc2.read();
+  BOOST_CHECK_MESSAGE(acc2.getVersionNumber() == ver1,
+      static_cast<std::string>(acc2.getVersionNumber()) + " should be equal to " + static_cast<std::string>(ver1));
+  BOOST_CHECK(acc2.dataValidity() == DataValidity::ok);
+
+  // backwards going eventId on same accessor does not change VersionNumber and sets DataValidity::faulty
+  acc1.read();
+  BOOST_CHECK_MESSAGE(acc1.getVersionNumber() == ver2,
+      static_cast<std::string>(acc1.getVersionNumber()) + " should be equal to " + static_cast<std::string>(ver2));
+  BOOST_CHECK(acc1.dataValidity() == DataValidity::faulty);
 }
 
 /**********************************************************************************************************************/
