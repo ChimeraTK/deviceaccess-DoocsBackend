@@ -3,6 +3,7 @@
 #include "StringUtility.h"
 
 #include <boost/algorithm/string.hpp>
+#include <fstream>
 #include <libxml++/libxml++.h>
 #include <eq_types.h>
 #include <eq_data.h>
@@ -45,6 +46,16 @@ namespace Cache {
     return catalogue;
   }
 
+
+  /********************************************************************************************************************/
+  bool is_empty(std::ifstream& f){
+    return f.peek() == std::ifstream::traits_type::eof();
+  }
+
+  bool is_empty(std::ifstream&& f){
+     return is_empty(f);
+  }
+
   /********************************************************************************************************************/
 
   void saveCatalogue(ChimeraTK::RegisterCatalogue& c, const std::string& xmlfile) {
@@ -62,6 +73,14 @@ namespace Cache {
     }
     std::string temporary_name = xmlfile + ".new";
     doc.write_to_file_formatted(temporary_name);
+
+    // check for empty tmp file:
+    // xmlpp::Document::write_to_file_formatted sometimes misbehaves on exceptions, creating
+    // empty files.
+    if(is_empty(std::ifstream(temporary_name))){
+      throw ChimeraTK::runtime_error(std::string{"Failed to save cache File"});
+    }
+
     if(std::rename(temporary_name.c_str(), xmlfile.c_str()) < 0) {
       int savedErrno = errno;
       char reason[255] = {0};
@@ -221,4 +240,3 @@ namespace Cache {
   }
 
 } // namespace Cache
-
