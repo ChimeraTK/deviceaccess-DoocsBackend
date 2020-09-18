@@ -275,14 +275,14 @@ namespace ChimeraTK {
     }
 
     // allocate buffers
-      NDRegisterAccessor<UserType>::buffer_2D.resize(1);
-      NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
+    NDRegisterAccessor<UserType>::buffer_2D.resize(1);
+    NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
 
-      // set proper type information in the source EqData
-      src.set_type(typeId);
-      if(typeId != DATA_IIII) {
-        src.length(actualLength);
-      }
+    // set proper type information in the source EqData
+    src.set_type(typeId);
+    if(typeId != DATA_IIII) {
+      src.length(actualLength);
+    }
 
     // use ZeroMQ with AccessMode::wait_for_new_data
     if(useZMQ) {
