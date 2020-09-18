@@ -31,8 +31,6 @@ namespace ChimeraTK {
 
     void doPreWrite(TransferType type, VersionNumber version) override;
 
-    void initialiseImplementation() override;
-
     friend class DoocsBackend;
   };
 
@@ -44,27 +42,12 @@ namespace ChimeraTK {
       AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(
         backend, path, registerPathName, numberOfWords, wordOffsetInRegister, flags) {
-    try {
-      // initialise fully only if backend is open
-      if(backend->isOpen()) {
-        this->initialise();
-      }
-    }
-    catch(...) {
-      this->shutdown();
-      throw;
-    }
-  }
-
-  /**********************************************************************************************************************/
-
-  template<typename UserType>
-  void DoocsBackendLongRegisterAccessor<UserType>::initialiseImplementation() {
     // check data type
-    if(DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_LONG) {
-      throw ChimeraTK::logic_error("DOOCS data type not supported by "
-                                   "DoocsBackendIntRegisterAccessor."); // LCOV_EXCL_LINE (already
-                                                                        // prevented in the Backend)
+    if(DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_A_LONG) {
+      this->shutdown();
+      throw ChimeraTK::logic_error(std::string("DOOCS data type ") +
+          std::to_string(DoocsBackendRegisterAccessor<UserType>::src.type()) +
+          " not supported by DoocsBackendIntRegisterAccessor."); // LCOV_EXCL_LINE (already prevented in the Backend)
     }
   }
 

@@ -27,8 +27,6 @@ namespace ChimeraTK {
 
     bool isWriteable() const override { return false; }
 
-    void initialiseImplementation() override {}
-
     bool doWriteTransfer(VersionNumber /*versionNumber = {}*/) override {
       // do not throw again here, already done in doPreWrite...
       return false;
@@ -44,16 +42,6 @@ namespace ChimeraTK {
       boost::shared_ptr<DoocsBackend> backend, const std::string& path, const std::string& registerPathName,
       AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(backend, path, registerPathName, 1, 0, flags) {
-    try {
-      // initialise fully only if backend is open
-      if(backend->isOpen()) {
-        this->initialise();
-      }
-    }
-    catch(...) {
-      this->shutdown();
-      throw;
-    }
   }
 
   /**********************************************************************************************************************/

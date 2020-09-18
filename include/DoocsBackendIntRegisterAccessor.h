@@ -31,8 +31,6 @@ namespace ChimeraTK {
 
     void doPreWrite(TransferType type, VersionNumber version) override;
 
-    void initialiseImplementation() override;
-
     friend class DoocsBackend;
   };
 
@@ -44,32 +42,17 @@ namespace ChimeraTK {
       AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(
         backend, path, registerPathName, numberOfWords, wordOffsetInRegister, flags) {
-    try {
-      // initialise fully only if backend is open
-      if(backend->isOpen()) {
-        this->initialise();
-      }
-    }
-    catch(...) {
-      this->shutdown();
-      throw;
-    }
-  }
-
-  /**********************************************************************************************************************/
-
-  template<typename UserType>
-  void DoocsBackendIntRegisterAccessor<UserType>::initialiseImplementation() {
     // check data type
-    if(DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_INT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_BOOL &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_INT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_IIII &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_BOOL &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_SHORT) {
-      throw ChimeraTK::logic_error("DOOCS data type not supported by "
-                                   "DoocsBackendIntRegisterAccessor."); // LCOV_EXCL_LINE (already
-                                                                        // prevented in the Backend)
+    if(DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_INT &&
+        DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_BOOL &&
+        DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_A_INT &&
+        DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_IIII &&
+        DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_A_BOOL &&
+        DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_A_SHORT) {
+      this->shutdown();
+      throw ChimeraTK::logic_error(std::string("DOOCS data type ") +
+          std::to_string(DoocsBackendRegisterAccessor<UserType>::dst.type()) +
+          " not supported by DoocsBackendIntRegisterAccessor."); // LCOV_EXCL_LINE (already prevented in the Backend)
     }
   }
 

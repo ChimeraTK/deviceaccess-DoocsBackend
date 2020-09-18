@@ -29,8 +29,6 @@ namespace ChimeraTK {
 
     void doPreWrite(TransferType type, VersionNumber) override;
 
-    void initialiseImplementation() override;
-
     friend class DoocsBackend;
   };
 
@@ -42,31 +40,16 @@ namespace ChimeraTK {
       size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags)
   : DoocsBackendRegisterAccessor<UserType>(
         backend, path, registerPathName, numberOfWords, wordOffsetInRegister, flags) {
-    try {
-      // initialise fully only if backend is open
-      if(backend->isOpen()) {
-        this->initialise();
-      }
-    }
-    catch(...) {
-      this->shutdown();
-      throw;
-    }
-  }
-
-  /**********************************************************************************************************************/
-
-  template<typename UserType>
-  void DoocsBackendFloatRegisterAccessor<UserType>::initialiseImplementation() {
     // check data type
-    if(DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_FLOAT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_FLOAT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_DOUBLE &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_A_DOUBLE &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_SPECTRUM) {
-      throw ChimeraTK::logic_error("DOOCS data type not supported by "
-                                   "DoocsBackendFloatRegisterAccessor."); // LCOV_EXCL_LINE (already
-                                                                          // prevented in the Backend)
+    if(DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_FLOAT &&
+        DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_A_FLOAT &&
+        DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_DOUBLE &&
+        DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_A_DOUBLE &&
+        DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_SPECTRUM) {
+      this->shutdown();
+      throw ChimeraTK::logic_error("DOOCS data type " +
+          std::to_string(DoocsBackendRegisterAccessor<UserType>::src.type()) +
+          " not supported by DoocsBackendFloatRegisterAccessor."); // LCOV_EXCL_LINE (already prevented in the Backend)
     }
   }
 

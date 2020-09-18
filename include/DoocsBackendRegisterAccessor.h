@@ -17,6 +17,7 @@
 #include "DoocsBackend.h"
 #include "EventIdMapper.h"
 #include "ZMQSubscriptionManager.h"
+#include "RegisterInfo.h"
 
 namespace ChimeraTK {
 
@@ -97,13 +98,11 @@ namespace ChimeraTK {
 
     void doPreRead(TransferType) override {
       if(!_backend->isOpen()) throw ChimeraTK::logic_error("Read operation not allowed while device is closed.");
-      initialise();
       if(!isReadable()) throw ChimeraTK::logic_error("Try to read from write-only register \"" + _path + "\".");
     }
 
     void doPreWrite(TransferType, VersionNumber) override {
       if(!_backend->isOpen()) throw ChimeraTK::logic_error("Write operation not allowed while device is closed.");
-      initialise();
       if(!isWriteable()) throw ChimeraTK::logic_error("Try to write read-only register \"" + _path + "\".");
     }
 
@@ -192,14 +191,10 @@ namespace ChimeraTK {
 
    protected:
     DoocsBackendRegisterAccessor(boost::shared_ptr<DoocsBackend> backend, const std::string& path,
-        const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags,
-        bool allocateBuffers = true);
+        const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister, AccessModeFlags flags);
 
     /// internal write from EqData src
     void write_internal();
-
-    /** Flag whether the initialisation has been performed already */
-    bool isInitialised{false};
 
     /**
      *  Perform initialisation (i.e. connect to server etc.). 
@@ -207,17 +202,8 @@ namespace ChimeraTK {
      *  Note: must *only* throw ChimeraTK::logic_error. Just do not proceed with the initialisation if a runtime_error
      *  is to be thrown - this will then be done in the transfer.
      */
-    void initialise();
+    void initialise(const boost::shared_ptr<DoocsBackendRegisterInfo>& info);
 
-    /**
-     *  Perform accessor-type specific part of the initialisation. Called at the end of initialise().
-     * 
-     *  Note: must *only* throw ChimeraTK::logic_error. Just do not proceed with the initialisation if a runtime_error
-     *  is to be thrown - this will then be done in the transfer.
-     */
-    virtual void initialiseImplementation() = 0;
-
-    bool _allocateBuffers;
     bool _isReadable;
     bool _isWriteable;
   };
@@ -229,31 +215,45 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   template<typename UserType>
-  void DoocsBackendRegisterAccessor<UserType>::initialise() {
-    if(isInitialised) return;
+  void DoocsBackendRegisterAccessor<UserType>::initialise(const boost::shared_ptr<DoocsBackendRegisterInfo>& info) {
+    size_t actualLength = 0;
+    int typeId = 0;
 
-    // try to read data, to check connectivity and to obtain size of the register
-    EqData tmp;
-    int rc = eq.get(&ea, &tmp, &dst);
+    // Try to read data (if the device is opened), to obtain type and size of the register. Otherwise take information
+    // from catalogue (-> cache)
+    int rc = 1;
+    if(_backend->isOpen()) {
+      EqData tmp;
+      rc = eq.get(&ea, &tmp, &dst);
+    }
     if(rc) {
-      if(rc == eq_errors::ill_property || rc == eq_errors::ill_location ||
-          rc == eq_errors::ill_address) { // no property by that name
+      if(rc == eq_errors::ill_property || rc == eq_errors::ill_location || rc == eq_errors::ill_address) {
+        // no property by that name
         throw ChimeraTK::logic_error("Property does not exist: " + _path);
       }
-      // runtime error will later be thrown by the transfer...
-      return;
-    }
 
-    // obtain number of elements
-    size_t actualLength = dst.array_length();
-    if(actualLength == 0 && dst.length() == 1) {
-      actualLength = 1;
-      isArray = false;
+      // we cannot reach the server, so try to obtain information from the catalogue
+      actualLength = info->getNumberOfElements();
+      typeId = info->doocsTypeId;
     }
     else {
-      if(actualLength == 0) actualLength = dst.length();
-      isArray = true;
+      // obtain number of elements from server reply
+      actualLength = dst.array_length();
+      if(actualLength == 0 && dst.length() == 1) {
+        actualLength = 1;
+        isArray = false;
+      }
+      else {
+        if(actualLength == 0) actualLength = dst.length();
+        isArray = true;
+      }
+      typeId = dst.type();
     }
+
+    if(typeId == DATA_TEXT || typeId == DATA_STRING || typeId == DATA_STRING16) {
+      actualLength = 1;
+    }
+
     if(nElements == 0) {
       nElements = actualLength;
     }
@@ -268,25 +268,20 @@ namespace ChimeraTK {
     }
 
     // allocate buffers
-    if(_allocateBuffers) {
       NDRegisterAccessor<UserType>::buffer_2D.resize(1);
       NDRegisterAccessor<UserType>::buffer_2D[0].resize(nElements);
-    }
 
-    // set proper type information in the source EqData
-    src.set_type(dst.type());
-    if(_allocateBuffers && dst.type() != DATA_IIII) {
-      src.length(actualLength);
-    }
+      // set proper type information in the source EqData
+      src.set_type(typeId);
+      if(typeId != DATA_IIII) {
+        src.length(actualLength);
+      }
 
     // use ZeroMQ with AccessMode::wait_for_new_data
     if(useZMQ) {
       // subscribe via subscription manager
       DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().subscribe(_path, this);
     }
-
-    initialiseImplementation();
-    isInitialised = true;
   }
 
   /********************************************************************************************************************/
@@ -294,9 +289,8 @@ namespace ChimeraTK {
   template<typename UserType>
   DoocsBackendRegisterAccessor<UserType>::DoocsBackendRegisterAccessor(boost::shared_ptr<DoocsBackend> backend,
       const std::string& path, const std::string& registerPathName, size_t numberOfWords, size_t wordOffsetInRegister,
-      AccessModeFlags flags, bool allocateBuffers)
-  : NDRegisterAccessor<UserType>(path, flags), _allocateBuffers(allocateBuffers), _isReadable(true),
-    _isWriteable(true) {
+      AccessModeFlags flags)
+  : NDRegisterAccessor<UserType>(path, flags), _isReadable(true), _isWriteable(true) {
     try {
       _backend = backend;
       _path = path;
@@ -310,11 +304,14 @@ namespace ChimeraTK {
       // set address
       ea.adr(path);
 
-      // use zero mq subscriptiopn?
-      auto reg = backend->getRegisterCatalogue().getRegister(registerPathName);
+      // obtain catalogue entry
+      auto info = backend->getRegisterCatalogue().getRegister(registerPathName);
+      auto info_casted = boost::dynamic_pointer_cast<DoocsBackendRegisterInfo>(info);
+      assert(info_casted.get() != nullptr);
 
+      // use zero mq subscriptiopn?
       if(flags.has(AccessMode::wait_for_new_data)) {
-        if(!reg->getSupportedAccessModes().has(AccessMode::wait_for_new_data)) {
+        if(!info_casted->getSupportedAccessModes().has(AccessMode::wait_for_new_data)) {
           throw ChimeraTK::logic_error("invalid access mode for this register");
         }
         useZMQ = true;
@@ -324,23 +321,7 @@ namespace ChimeraTK {
         _readQueue = notifications.then<void>([this](EqData& data) { this->dst = data; }, std::launch::deferred);
       }
 
-      if(not backend->isOpen()) {
-        // we have to check the size agains the catalogue.
-        size_t actualLength = reg->getNumberOfElements();
-        if(nElements == 0) nElements = actualLength;
-
-        if(nElements + elementOffset > actualLength) {
-          throw ChimeraTK::logic_error("Requested number of words exceeds the length of the DOOCS property!");
-        }
-
-        // if the backend has not yet been openend, obtain size of the register from catalogue
-        if(allocateBuffers) {
-          NDRegisterAccessor<UserType>::buffer_2D.resize(1);
-          NDRegisterAccessor<UserType>::buffer_2D[0].resize(actualLength);
-
-          allocateBuffers = false;
-        }
-      }
+      initialise(info_casted);
     }
     catch(...) {
       this->shutdown();
@@ -359,11 +340,6 @@ namespace ChimeraTK {
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::doReadTransferSynchronously() {
-    if(!isInitialised) {
-      // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
-      _backend->informRuntimeError(_path);
-      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
-    }
     if(!_backend->isFunctional()) {
       throw ChimeraTK::runtime_error(std::string("Exception reported by another accessor."));
     }
@@ -387,11 +363,6 @@ namespace ChimeraTK {
 
   template<typename UserType>
   void DoocsBackendRegisterAccessor<UserType>::write_internal() {
-    if(!isInitialised) {
-      // if initialise() fails to contact the server, it cannot yet throw a runtime_error, so we have to do this here.
-      _backend->informRuntimeError(_path);
-      throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
-    }
     if(!_backend->isFunctional()) {
       throw ChimeraTK::runtime_error(std::string("Exception reported by another accessor."));
     }

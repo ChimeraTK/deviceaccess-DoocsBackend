@@ -38,8 +38,6 @@ namespace ChimeraTK {
       return true;
     }
 
-    void initialiseImplementation() override;
-
     enum class Field { I, F1, F2, F3 };
     Field field;
 
@@ -60,11 +58,6 @@ namespace ChimeraTK {
   : DoocsBackendRegisterAccessor<UserType>(
         backend, path, registerPathName, numberOfWords, wordOffsetInRegister, flags) {
     try {
-      // initialise fully only if backend is open
-      if(backend->isOpen()) {
-        this->initialise();
-      }
-
       // number of words and offset must be at fixed values
       if(numberOfWords > 1 || wordOffsetInRegister != 0) {
         throw ChimeraTK::logic_error("Register '" + this->getName() + "' is scalar.");
@@ -87,21 +80,16 @@ namespace ChimeraTK {
       else {
         throw ChimeraTK::logic_error("Unknown field name '" + fieldName + "' for DOOCS IFFF data type.");
       }
+
+      // check data type
+      if(src.type() != DATA_IFFF) {
+        throw ChimeraTK::logic_error("DOOCS data type " + std::to_string(src.type()) +
+            " not supported by DoocsBackendIFFFRegisterAccessor."); // LCOV_EXCL_LINE (already prevented in the Backend)
+      }
     }
     catch(...) {
       this->shutdown();
       throw;
-    }
-  }
-
-  /**********************************************************************************************************************/
-
-  template<typename UserType>
-  void DoocsBackendIFFFRegisterAccessor<UserType>::initialiseImplementation() {
-    // check data type
-    if(dst.type() != DATA_IFFF) {
-      throw ChimeraTK::logic_error(
-          "DOOCS data type not supported by DoocsBackendIFFFRegisterAccessor."); // LCOV_EXCL_LINE (already prevented in the Backend)
     }
   }
 
