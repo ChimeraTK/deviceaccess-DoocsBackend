@@ -90,10 +90,12 @@ namespace ChimeraTK {
 
     void activateAsyncRead() noexcept override;
 
-    /// VersionNumber generated in open() to make sure we do not violate TransferElement spec B.9.3.3.1/B.9.4.1
-    VersionNumber _startVersion{nullptr};
-
     std::atomic<bool> _asyncReadActivated{false};
+
+    VersionNumber getStartVersion() {
+      std::lock_guard<std::mutex> lk(_mxRecovery);
+      return _startVersion;
+    }
 
    private:
     std::string _cacheFile;
@@ -103,10 +105,13 @@ namespace ChimeraTK {
     bool cacheFileExists();
     bool isCachingEnabled() const;
 
-    /// Mutex for accessing _isFunctional and lastFailedAddress;
+    /// Mutex for accessing _isFunctional, lastFailedAddress and _startVersion;
     mutable std::mutex _mxRecovery;
 
     bool _isFunctional{false};
+
+    /// VersionNumber generated in open() to make sure we do not violate TransferElement spec B.9.3.3.1/B.9.4.1
+    VersionNumber _startVersion{nullptr};
 
     /// contains DOOCS address which triggered runtime_error, when _isFunctional == false and _opend == true
     std::string lastFailedAddress;

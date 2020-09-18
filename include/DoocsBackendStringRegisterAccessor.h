@@ -46,9 +46,9 @@ namespace ChimeraTK {
       throw ChimeraTK::logic_error("Trying to access a string DOOCS property with a non-string user data type.");
     }
     // check data type
-    if(DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_TEXT &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING &&
-        DoocsBackendRegisterAccessor<UserType>::dst.type() != DATA_STRING16) {
+    if(DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_TEXT &&
+        DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_STRING &&
+        DoocsBackendRegisterAccessor<UserType>::src.type() != DATA_STRING16) {
       this->shutdown();
       throw ChimeraTK::logic_error(std::string("DOOCS data type ") +
           std::to_string(DoocsBackendRegisterAccessor<UserType>::dst.type()) +

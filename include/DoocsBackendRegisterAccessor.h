@@ -131,8 +131,9 @@ namespace ChimeraTK {
       auto newVersionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
 
       // Minimum version is _backend->_startVersion. See spec. B.1.3.3.1.
-      if(newVersionNumber < _backend->_startVersion) {
-        newVersionNumber = _backend->_startVersion;
+      auto startVersion = _backend->getStartVersion();
+      if(newVersionNumber < startVersion) {
+        newVersionNumber = startVersion;
       }
 
       // Version still must not go backwards. See spec B.1.3.3.2.
@@ -147,7 +148,7 @@ namespace ChimeraTK {
       }
 
       assert(newVersionNumber >= TransferElement::_versionNumber);
-      assert(newVersionNumber >= _backend->_startVersion);
+      assert(newVersionNumber >= startVersion);
 
       // See spec. B.1.3.4.1
       TransferElement::_versionNumber = newVersionNumber;
@@ -241,17 +242,23 @@ namespace ChimeraTK {
       actualLength = dst.array_length();
       if(actualLength == 0 && dst.length() == 1) {
         actualLength = 1;
-        isArray = false;
       }
       else {
         if(actualLength == 0) actualLength = dst.length();
-        isArray = true;
       }
       typeId = dst.type();
     }
 
+    // strings report number of characters, not number of strings..
     if(typeId == DATA_TEXT || typeId == DATA_STRING || typeId == DATA_STRING16) {
       actualLength = 1;
+    }
+
+    if(actualLength > 1) {
+      isArray = true;
+    }
+    else {
+      isArray = false;
     }
 
     if(nElements == 0) {
