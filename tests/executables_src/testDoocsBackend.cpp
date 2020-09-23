@@ -39,9 +39,13 @@ class DoocsLauncher : public ThreadedDoocsServer {
   DoocsLauncher() :
     ThreadedDoocsServer("testDoocsBackend.conf", boost::unit_test::framework::master_test_suite().argc,
         boost::unit_test::framework::master_test_suite().argv) {
+    rpc_no = rpcNo();
+
+    // use different cache files for each run to avoid conflicts (RPC numbers are protected by lock)
+    cacheFile1 = "cache1_" + rpc_no + ".xml";
+    cacheFile2 = "cache2_" + rpc_no + ".xml";
 
     // set CDDs for the two doocs addresses used in the test
-    rpc_no = rpcNo();
     DoocsServer1 = "(doocs:doocs://localhost:" + rpcNo() + "/F/D)";
     DoocsServer1_cached = "(doocs:doocs://localhost:" + rpcNo() + "/F/D?cacheFile=" + cacheFile1 + ")";
     DoocsServer2 = "(doocs:doocs://localhost:" + rpcNo() + "/F/D/MYDUMMY)";
@@ -53,6 +57,11 @@ class DoocsLauncher : public ThreadedDoocsServer {
     EqData src, dst;
     ea.adr("doocs://localhost:" + rpcNo() + "/F/D/MYDUMMY/SOME_ZMQINT");
     while(eq.get(&ea, &src, &dst)) usleep(100000);
+  }
+
+  ~DoocsLauncher() {
+    boost::filesystem::remove(cacheFile1);
+    boost::filesystem::remove(cacheFile2);
   }
 
   static std::string rpc_no;
@@ -70,8 +79,8 @@ std::string DoocsLauncher::DoocsServer1;
 std::string DoocsLauncher::DoocsServer1_cached;
 std::string DoocsLauncher::DoocsServer2;
 std::string DoocsLauncher::DoocsServer2_cached;
-std::string DoocsLauncher::cacheFile1{"cache1.xml"};
-std::string DoocsLauncher::cacheFile2{"cache2.xml"};
+std::string DoocsLauncher::cacheFile1;
+std::string DoocsLauncher::cacheFile2;
 
 BOOST_GLOBAL_FIXTURE(DoocsLauncher);
 
@@ -1562,7 +1571,6 @@ BOOST_AUTO_TEST_CASE(testEventIdMapping) {
   DoocsServerTestHelper::runUpdate();
   acc3.read();
   auto ver1 = acc3.getVersionNumber(); // this is the version number matching id1
-  auto id2 = eqfct->counter;
   DoocsServerTestHelper::runUpdate();
   acc3.read();
   auto ver2 = acc3.getVersionNumber(); // this is the version number matching id2

@@ -1,12 +1,13 @@
 #define BOOST_TEST_MODULE testDoocsBackend
 #include <boost/test/included/unit_test.hpp>
+#include <boost/filesystem.hpp>
 
 #include <fstream>
 #include <ChimeraTK/Device.h>
 
 /**********************************************************************************************************************/
 
-static std::string cacheFile = "cache.xml";
+static std::string cacheFile = "cache-" + boost::filesystem::unique_path().string() + ".xml";
 
 static void deleteFile(const std::string& filename) {
   std::string command = "rm " + filename;
@@ -18,6 +19,7 @@ static void deleteFile(const std::string& filename) {
 /**********************************************************************************************************************/
 
 void generateCacheFile() {
+  std::cout << "generateCacheFile: " << cacheFile << std::endl;
   // create xml cache file
   std::string xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                     "<catalogue version=\"1.0\">"
