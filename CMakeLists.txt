@@ -15,7 +15,7 @@ include(cmake/set_default_flags.cmake)
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--export-dynamic")
 
 include(cmake/add_dependency.cmake)
-add_dependency(ChimeraTK-DeviceAccess 01.09 REQUIRED)
+add_dependency(ChimeraTK-DeviceAccess 02.00 REQUIRED)
 add_dependency(DOOCS 20.8.0 COMPONENTS server REQUIRED)
 add_dependency(doocs-server-test-helper 01.03 REQUIRED)
 
