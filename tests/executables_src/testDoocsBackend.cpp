@@ -1371,8 +1371,8 @@ BOOST_AUTO_TEST_CASE(testEventId) {
     BOOST_CHECK_EQUAL(acc2.isReadable(), true);
     BOOST_CHECK_THROW(acc2.write(), ChimeraTK::logic_error);
 
-    auto acc3 = device.getScalarRegisterAccessor<uint8_t>(path);
-    BOOST_CHECK_THROW(acc3.read(), boost::numeric::positive_overflow);
+    //auto acc3 = device.getScalarRegisterAccessor<uint8_t>(path);
+    //BOOST_CHECK_THROW(acc3.read(), boost::numeric::positive_overflow);
   }
 
   // Check that we get the accessor for some unsupported type as well
@@ -1445,8 +1445,8 @@ BOOST_AUTO_TEST_CASE(testTimeStamp) {
     BOOST_CHECK_EQUAL(acc2.isReadable(), true);
     BOOST_CHECK_THROW(acc2.write(), ChimeraTK::logic_error);
 
-    auto acc3 = device.getScalarRegisterAccessor<uint8_t>(path);
-    BOOST_CHECK_THROW(acc3.read(), boost::numeric::positive_overflow);
+    //auto acc3 = device.getScalarRegisterAccessor<uint8_t>(path);
+    //BOOST_CHECK_THROW(acc3.read(), boost::numeric::positive_overflow);
   }
 
   // Check that we get the accessor for some unsupported type as well
