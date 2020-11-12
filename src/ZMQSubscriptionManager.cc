@@ -219,6 +219,16 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       {
         std::unique_lock<std::mutex> listeners_lock(subscription.second.listeners_mutex);
         if(subscription.second.hasException) continue;
+        // Determine if the subscription has a listener on the affected backend. If so, we deactivate the whole subscription (to be reviewed),
+        // otherwise we leave it intact.
+        bool subscriptionIsForThisBackend = false;
+        for(auto& listener : subscription.second.listeners) {
+          if(listener->_backend.get() == backend) {
+            subscriptionIsForThisBackend = true;
+          }
+        }
+        if(not subscriptionIsForThisBackend) continue;
+
         subscription.second.hasException = true;
         for(auto& listener : subscription.second.listeners) {
           try {
