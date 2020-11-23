@@ -1,6 +1,7 @@
 #include "CatalogueFetcher.h"
 #include "StringUtility.h"
 #include "RegisterInfo.h"
+#include "DoocsBackend.h"
 
 #include <eq_client.h>
 
@@ -68,9 +69,18 @@ void CatalogueFetcher::fillCatalogue(std::string fixedComponents, long level) {
       EqData dst;
       ea.adr(fqn); // strip leading slash
       rc = eq.get(&ea, &src, &dst);
-      if(rc) {
+      if(rc && ChimeraTK::DoocsBackend::isCommunicationError(dst.error())) {
         // if the property is not accessible, ignore it. This happens
         // frequently e.g. for archiver-related properties
+        continue;
+      }
+      else if(dst.error()) {
+        // If error has been set, the shape information is not correct (because DOOCS seems to store a string instead).
+        // Until a better solution has been found, the entire catalogue fetching is marked as errornous to prevent
+        // saving it to the cache file.
+        std::cout << "DoocsBackend::CatalogueFetcher: Failed to query shape information for " + fqn
+                  << ": \"" + dst.get_string() + "\"" << std::endl;
+        locationLookupError_ = true;
         continue;
       }
 

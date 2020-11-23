@@ -360,7 +360,7 @@ namespace ChimeraTK {
     int rc = eq.get(&ea, &tmp, &dst);
 
     // check error
-    if(rc) {
+    if(rc && DoocsBackend::isCommunicationError(dst.error())) {
       _backend->informRuntimeError(_path);
       throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
     }
@@ -377,7 +377,7 @@ namespace ChimeraTK {
     // write data
     int rc = eq.set(&ea, &src, &dst);
     // check error
-    if(rc || dst.error() != 0) {
+    if(rc || DoocsBackend::isCommunicationError(dst.error())) {
       _backend->informRuntimeError(_path);
       if(dst.error() == eq_errors::read_only) {
         this->_isWriteable = false;

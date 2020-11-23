@@ -150,7 +150,7 @@ namespace ChimeraTK {
       EqData src, dst;
       int rc = eq.get(&ea, &src, &dst);
       // if again error received, throw exception
-      if(rc) {
+      if(rc && isCommunicationError(dst.error())) {
         lk.unlock();
         setException();
         throw ChimeraTK::runtime_error(std::string("Cannot read from DOOCS property: ") + dst.get_string());
@@ -334,5 +334,30 @@ namespace ChimeraTK {
 
     return p;
   }
+  /********************************************************************************************************************/
+
+  bool DoocsBackend::isCommunicationError(int doocs_error) {
+    // logic_error-like errors are caught at a different place. If such error appears later, a runtime_error need to be
+    // generated (device does not behave as expected, as it is not expected to change)
+    switch(doocs_error) {
+      case eq_errors::unsup_domain:
+      case eq_errors::no_ens_entry:
+      case eq_errors::ill_monitor:
+      case eq_errors::faulty_chans:
+      case eq_errors::unavail_serv:
+      case eq_errors::ill_serv:
+      case eq_errors::rpc_prot_error:
+      case eq_errors::ens_fault:
+      case eq_errors::ill_protocol:
+      case eq_errors::ill_location:
+      case eq_errors::ill_property:
+      case eq_errors::conn_timeout:
+      case eq_errors::alias_error:
+      case eq_errors::no_permission:
+        return true;
+      default:
+        return false;
+    }
+  };
 
 } /* namespace ChimeraTK */

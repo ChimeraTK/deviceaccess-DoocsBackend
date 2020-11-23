@@ -97,6 +97,8 @@ namespace ChimeraTK {
       return _startVersion;
     }
 
+    static bool isCommunicationError(int doocs_error);
+
    private:
     std::string _cacheFile;
     mutable std::future<std::unique_ptr<RegisterCatalogue>> _catalogueFuture;
