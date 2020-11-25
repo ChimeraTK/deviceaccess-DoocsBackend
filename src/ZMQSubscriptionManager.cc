@@ -83,6 +83,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       accessor->_backend->informRuntimeError(path);
     }
     else {
+      // no error: push data
       accessor->notifications.push_overwrite(dst);
     }
   }
@@ -281,7 +282,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       }
     }
     else {
-      // no error: push the data
+      // error: push an exception
       try {
         throw ChimeraTK::runtime_error("ZeroMQ connection interrupted: " + data->get_string());
       }
