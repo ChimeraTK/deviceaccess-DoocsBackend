@@ -358,6 +358,6 @@ namespace ChimeraTK {
       default:
         return false;
     }
-  };
+  }
 
 } /* namespace ChimeraTK */
