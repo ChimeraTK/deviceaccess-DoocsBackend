@@ -72,12 +72,18 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
     EqCall eq;
     adr.adr(path);
     auto rc = eq.get(&adr, &src, &dst);
-    if(rc) {
-      // This will push exceptions to all receivers, incuding the accessor. It will have the wrong message, though.
-      // This should be corrected, but we need a hasException per accessor then...
+    if(rc && DoocsBackend::isCommunicationError(dst.error())) {
+      // communication error: push exception
+      try {
+        throw ChimeraTK::runtime_error("ZeroMQ connection interrupted: " + dst.get_string());
+      }
+      catch(...) {
+        accessor->notifications.push_overwrite_exception(std::current_exception());
+      }
       accessor->_backend->informRuntimeError(path);
     }
     else {
+      // no error: push data
       accessor->notifications.push_overwrite(dst);
     }
   }
@@ -276,7 +282,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       }
     }
     else {
-      // no error: push the data
+      // error: push an exception
       try {
         throw ChimeraTK::runtime_error("ZeroMQ connection interrupted: " + data->get_string());
       }
