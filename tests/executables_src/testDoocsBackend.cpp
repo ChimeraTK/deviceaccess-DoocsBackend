@@ -36,8 +36,8 @@ static void deleteFile(const std::string& filename);
 
 class DoocsLauncher : public ThreadedDoocsServer {
  public:
-  DoocsLauncher() :
-    ThreadedDoocsServer("testDoocsBackend.conf", boost::unit_test::framework::master_test_suite().argc,
+  DoocsLauncher()
+  : ThreadedDoocsServer("testDoocsBackend.conf", boost::unit_test::framework::master_test_suite().argc,
         boost::unit_test::framework::master_test_suite().argv) {
     rpc_no = rpcNo();
 
@@ -964,8 +964,7 @@ void createCacheFileFromCdd(const std::string& cdd) {
 
 void deleteFile(const std::string& filename) {
   errno = 0;
-  if (unlink(filename.c_str()) < 0)
-    throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)));
+  if(unlink(filename.c_str()) < 0) throw std::system_error(std::make_error_code(static_cast<std::errc>(errno)));
 }
 
 /**********************************************************************************************************************/
@@ -1210,7 +1209,7 @@ BOOST_AUTO_TEST_CASE(testCacheFileCreation) {
 
 /**********************************************************************************************************************/
 
-std::time_t createDummyXml(const std::string& filename){
+std::time_t createDummyXml(const std::string& filename) {
   std::string xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                     "<catalogue version=\"1.0\">"
                     "  <register>\n"
@@ -1242,20 +1241,18 @@ BOOST_AUTO_TEST_CASE(testCacheXmlReplacement) {
     auto d = ChimeraTK::Device(DoocsLauncher::DoocsServer2_cached);
     std::atomic<bool> cancelTimeOutTask{false};
 
-    std::future<void> timeoutTask = std::async(std::launch::async, [&] () {
-          unsigned int count = 60;
-          while (count > 0 && not cancelTimeOutTask) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-            count --;
-          }
-        }) ;
+    std::future<void> timeoutTask = std::async(std::launch::async, [&]() {
+      unsigned int count = 60;
+      while(count > 0 && not cancelTimeOutTask) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        count--;
+      }
+    });
 
-    auto hasTimedOut = [&](){
-       return timeoutTask.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
-    };
+    auto hasTimedOut = [&]() { return timeoutTask.wait_for(std::chrono::seconds(0)) == std::future_status::ready; };
 
     auto modification_time = creation_time;
-    while ((modification_time <= creation_time) && not hasTimedOut()) {
+    while((modification_time <= creation_time) && not hasTimedOut()) {
       modification_time = boost::filesystem::last_write_time(DoocsLauncher::cacheFile2);
       std::this_thread::sleep_for(std::chrono::seconds(2));
     }
@@ -1266,7 +1263,6 @@ BOOST_AUTO_TEST_CASE(testCacheXmlReplacement) {
                                                     // times out.
     deleteFile(DoocsLauncher::cacheFile2);
   }
-
 }
 
 /**********************************************************************************************************************/
@@ -1276,22 +1272,19 @@ BOOST_AUTO_TEST_CASE(testCacheXmlReplacementBehaviorOnFailure) {
   auto creation_time = createDummyXml(DoocsLauncher::cacheFile2);
   auto server = find_device("MYDUMMY");
   server->lock();
-  {
-    auto d = ChimeraTK::Device(DoocsLauncher::DoocsServer2_cached);
-  }
+  { auto d = ChimeraTK::Device(DoocsLauncher::DoocsServer2_cached); }
   server->unlock();
   auto modification_time = boost::filesystem::last_write_time(DoocsLauncher::cacheFile2);
   BOOST_CHECK(creation_time == modification_time);
   deleteFile(DoocsLauncher::cacheFile2);
-
 }
 
 /**********************************************************************************************************************/
 
-BOOST_AUTO_TEST_CASE(testAccessorForCachedMode){
+BOOST_AUTO_TEST_CASE(testAccessorForCachedMode) {
   createCacheFileFromCdd(DoocsLauncher::DoocsServer1_cached);
   auto d = ChimeraTK::Device(DoocsLauncher::DoocsServer1_cached);
-  
+
   DoocsServerTestHelper::doocsSet("//MYDUMMY/SOME_INT", 120);
   TwoDRegisterAccessor<int32_t> acc_someInt_as_int(d.getTwoDRegisterAccessor<int32_t>("MYDUMMY/SOME_INT"));
   BOOST_CHECK(acc_someInt_as_int.getNChannels() == 1);
@@ -1310,8 +1303,7 @@ BOOST_AUTO_TEST_CASE(testAccessorForCachedMode){
 
 /**********************************************************************************************************************/
 
-BOOST_AUTO_TEST_CASE(testBlankXMLThrow){
-
+BOOST_AUTO_TEST_CASE(testBlankXMLThrow) {
   std::string xml = "";
   std::ofstream o(DoocsLauncher::cacheFile2);
   o << xml;
@@ -1319,7 +1311,6 @@ BOOST_AUTO_TEST_CASE(testBlankXMLThrow){
 
   BOOST_CHECK_THROW(ChimeraTK::Device x(DoocsLauncher::DoocsServer2_cached), ChimeraTK::logic_error);
   deleteFile(DoocsLauncher::cacheFile2);
-
 }
 
 /**********************************************************************************************************************/
