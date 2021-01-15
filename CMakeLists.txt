@@ -19,7 +19,7 @@ add_dependency(ChimeraTK-DeviceAccess 02.00 REQUIRED)
 add_dependency(DOOCS 20.8.0 COMPONENTS server REQUIRED)
 add_dependency(doocs-server-test-helper 01.03 REQUIRED)
 
-FIND_PACKAGE(Boost COMPONENTS thread system unit_test_framework REQUIRED)
+FIND_PACKAGE(Boost COMPONENTS thread system filesystem unit_test_framework REQUIRED)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 FIND_PACKAGE(PkgConfig REQUIRED)
 
