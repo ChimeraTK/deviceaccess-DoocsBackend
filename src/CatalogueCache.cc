@@ -3,6 +3,7 @@
 #include "StringUtility.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <fstream>
 #include <libxml++/libxml++.h>
 #include <eq_types.h>
@@ -71,21 +72,33 @@ namespace Cache {
         addRegInfoXmlNode(*doocsRegInfo, rootNode);
       }
     }
-    std::string temporary_name = xmlfile + ".new";
-    doc.write_to_file_formatted(temporary_name);
+
+    const std::string pathTemplate = "%%%%%%-doocs-backend-cache-%%%%%%.tmp";
+    boost::filesystem::path temporaryName;
+
+    try {
+      temporaryName = boost::filesystem::unique_path(boost::filesystem::path(pathTemplate));
+    }
+    catch(boost::filesystem::filesystem_error& e) {
+      throw ChimeraTK::runtime_error(std::string{"Failed to generate temporary path: "} + e.what());
+    }
+
+    {
+      auto stream = std::ofstream(temporaryName);
+      doc.write_to_stream_formatted(stream);
+    }
 
     // check for empty tmp file:
     // xmlpp::Document::write_to_file_formatted sometimes misbehaves on exceptions, creating
     // empty files.
-    if(is_empty(std::ifstream(temporary_name))){
+    if(is_empty(std::ifstream(temporaryName))){
       throw ChimeraTK::runtime_error(std::string{"Failed to save cache File"});
     }
 
-    if(std::rename(temporary_name.c_str(), xmlfile.c_str()) < 0) {
-      int savedErrno = errno;
-      char reason[255] = {0};
-      strerror_r(savedErrno, reason, sizeof(reason) - 1);
-      throw ChimeraTK::runtime_error(std::string{"Failed to replace cache file: "} + reason);
+    try {
+      boost::filesystem::rename(temporaryName, xmlfile);
+    }  catch (boost::filesystem::filesystem_error& e) {
+      throw ChimeraTK::runtime_error(std::string{"Failed to replace cache file: "} + e.what());
     }
   }
 
