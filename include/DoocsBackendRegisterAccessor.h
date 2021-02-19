@@ -127,32 +127,38 @@ namespace ChimeraTK {
         return;
       }
 
-      // Get VersionNumber from the EventIdMapper. See spec B.1.3.3.
-      auto newVersionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
+      // Only check for a new version number if the event ids no not match up.
+      // Otherwise it might be possible that the EventIDMapper allready removed the old event id from
+      // its cache and will generate a new versionnumber for the same event id.
+      // This prevents not updating slow- if ever changing variables that are polled periodically
+      if(_lastEventId != dst.get_event_id()) {
+        // Get VersionNumber from the EventIdMapper. See spec B.1.3.3.
+        auto newVersionNumber = EventIdMapper::getInstance().getVersionForEventId(dst.get_event_id());
 
-      // Minimum version is _backend->_startVersion. See spec. B.1.3.3.1.
-      auto startVersion = _backend->getStartVersion();
-      if(newVersionNumber < startVersion) {
-        newVersionNumber = startVersion;
-      }
-
-      // Version still must not go backwards. See spec B.1.3.3.2.
-      if(newVersionNumber < TransferElement::_versionNumber) {
-        TransferElement::setDataValidity(DataValidity::faulty);
-        if(_startEventId > doocs::EventId(0) && dst.get_event_id() > _startEventId + 10) {
-          std::cout << "warning, " << _path << " newVersionNumber " << std::string(newVersionNumber)
-                    << " smaller than the last vaild versionNumber " << std::string(TransferElement::_versionNumber)
-                    << std::endl;
+        // Minimum version is _backend->_startVersion. See spec. B.1.3.3.1.
+        auto startVersion = _backend->getStartVersion();
+        if(newVersionNumber < startVersion) {
+          newVersionNumber = startVersion;
         }
-        return;
+
+        // Version still must not go backwards. See spec B.1.3.3.2.
+        if(newVersionNumber < TransferElement::_versionNumber) {
+          TransferElement::setDataValidity(DataValidity::faulty);
+          if(_startEventId > doocs::EventId(0) && dst.get_event_id() > _startEventId + 10) {
+            std::cout << "warning, " << _path << " newVersionNumber " << std::string(newVersionNumber)
+                      << " smaller than the last vaild versionNumber " << std::string(TransferElement::_versionNumber)
+                      << std::endl;
+          }
+          return;
+        }
+
+        assert(newVersionNumber >= TransferElement::_versionNumber);
+        assert(newVersionNumber >= startVersion);
+
+        // See spec. B.1.3.4.1
+        TransferElement::_versionNumber = newVersionNumber;
+        _lastEventId = dst.get_event_id();
       }
-
-      assert(newVersionNumber >= TransferElement::_versionNumber);
-      assert(newVersionNumber >= startVersion);
-
-      // See spec. B.1.3.4.1
-      TransferElement::_versionNumber = newVersionNumber;
-      _lastEventId = dst.get_event_id();
 
       // See spec. B.1.3.4.2
       TransferElement::setDataValidity(dst.error() == 0 ? DataValidity::ok : DataValidity::faulty);
