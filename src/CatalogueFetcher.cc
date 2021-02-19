@@ -6,7 +6,7 @@
 #include <eq_client.h>
 
 const std::vector<std::string> IGNORE_PATTERNS = {".HIST", ".FILT", "._FILT", ".EGU", ".DESC", ".HSTAT", "._HSTAT", "._HIST",
-    ".LIST", ".SAVE", ".COMMENT", ".XEGU", ".POLYPARA"};
+    ".LIST", ".SAVE", ".COMMENT", ".XEGU", ".POLYPARA", "MESSAGE.TICKER"};
 
 /********************************************************************************************************************/
 
