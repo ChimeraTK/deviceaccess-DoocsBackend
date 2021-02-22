@@ -332,6 +332,7 @@ namespace ChimeraTK {
           std::string(EqData().type_string(doocsTypeId)) + ": " + _serverAddress + registerPathName);
     }
 
+    p->setExceptionBackend(shared_from_this());
     return p;
   }
   /********************************************************************************************************************/
