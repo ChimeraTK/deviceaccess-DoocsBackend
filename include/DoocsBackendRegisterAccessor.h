@@ -383,7 +383,7 @@ namespace ChimeraTK {
     // write data
     int rc = eq.set(&ea, &src, &dst);
     // check error
-    if(rc && DoocsBackend::isCommunicationError(dst.error())) {
+    if(rc && (DoocsBackend::isCommunicationError(dst.error()) || (dst.error() == eq_errors::read_only))) {
       _backend->informRuntimeError(_path);
       if(dst.error() == eq_errors::read_only) {
         this->_isWriteable = false;
