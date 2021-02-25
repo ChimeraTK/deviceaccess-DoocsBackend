@@ -208,7 +208,7 @@ namespace ChimeraTK {
       _isFunctional = false;
     }
     _asyncReadActivated = false;
-    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAllAndPushException(this);
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAllListenersAndPushException(this);
   }
 
   /********************************************************************************************************************/

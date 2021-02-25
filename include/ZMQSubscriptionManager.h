@@ -37,12 +37,12 @@ namespace ChimeraTK {
       /// Activate all listeners in all subscriptions for the given backend. Should be called from DoocsBackend::activateAsyncRead().
       void activateAllListeners(DoocsBackend* backend);
 
-      /// Deactivate all listeners in all subscriptions for the given backend. Should be called from DoocsBackend::close().
+      /// Deactivate all listeners the given backend. Should be called from DoocsBackend::close().
       void deactivateAllListeners(DoocsBackend* backend);
 
-      /// Deactivate all subscriptions for the given backend and push exceptions into the queues. Should be called from
+      /// Deactivate all listeners for the given backend and push exceptions into the queues. Should be called from
       /// DoocsBackend::setException().
-      void deactivateAllAndPushException(DoocsBackend* backend);
+      void deactivateAllListenersAndPushException(DoocsBackend* backend);
 
      private:
       ZMQSubscriptionManager();

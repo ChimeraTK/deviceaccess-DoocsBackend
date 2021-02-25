@@ -215,7 +215,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
   /******************************************************************************************************************/
 
-  void ZMQSubscriptionManager::deactivateAllAndPushException(DoocsBackend* backend) {
+  void ZMQSubscriptionManager::deactivateAllListenersAndPushException(DoocsBackend* backend) {
     deactivateAllListeners(backend);
 
     std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
