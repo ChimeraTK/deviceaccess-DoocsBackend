@@ -22,7 +22,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
         subscription->second.listeners.clear();
       }
       lock.unlock();
-      deactivate(subscription->first);
+      deactivateSubscription(subscription->first);
       lock.lock();
       subscription = subscriptionMap.erase(subscription);
     }
@@ -53,7 +53,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
     // create subscription if not yet existing. must be done after the previous steps to make sure the initial value
     // is not lost
     if(newSubscription) {
-      activate(path); // just establish the ZeroMQ subscription - listeners are still deactivated
+      activateSubscription(path); // just establish the ZeroMQ subscription - listeners are still deactivated
     }
 
     // If required, poll the initial value and push it into the queue. This must be done after the subcription has been
@@ -115,7 +115,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
       lock.unlock();
 
       // remove ZMQ subscription. This will also join the ZMQ subscription thread
-      deactivate(path);
+      deactivateSubscription(path);
 
       // obtain locks again
       lock.lock();
@@ -127,7 +127,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
   /******************************************************************************************************************/
 
-  void ZMQSubscriptionManager::activate(const std::string& path) {
+  void ZMQSubscriptionManager::activateSubscription(const std::string& path) {
     // precondition: subscriptionMap_mutex must be locked
 
     // do nothing if already active
@@ -159,7 +159,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
   /******************************************************************************************************************/
 
-  void ZMQSubscriptionManager::deactivate(const std::string& path) {
+  void ZMQSubscriptionManager::deactivateSubscription(const std::string& path) {
     // do nothing if already inactive
     {
       std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
@@ -183,7 +183,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
   /******************************************************************************************************************/
 
-  void ZMQSubscriptionManager::activateAll(DoocsBackend* backend) {
+  void ZMQSubscriptionManager::activateAllListeners(DoocsBackend* backend) {
     std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
 
     for(auto& subscription : subscriptionMap) {
@@ -201,7 +201,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
   /******************************************************************************************************************/
 
-  void ZMQSubscriptionManager::deactivateAll(DoocsBackend* backend) {
+  void ZMQSubscriptionManager::deactivateAllListeners(DoocsBackend* backend) {
     std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
 
     for(auto& subscription : subscriptionMap) {
@@ -216,7 +216,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
   /******************************************************************************************************************/
 
   void ZMQSubscriptionManager::deactivateAllAndPushException(DoocsBackend* backend) {
-    deactivateAll(backend);
+    deactivateAllListeners(backend);
 
     std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
 

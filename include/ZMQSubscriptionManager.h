@@ -34,11 +34,11 @@ namespace ChimeraTK {
       /// Unregister accessor subscription
       void unsubscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor);
 
-      /// Activate all subscriptions for the given backend. Should be called from DoocsBackend::activateAsyncRead().
-      void activateAll(DoocsBackend* backend);
+      /// Activate all listeners in all subscriptions for the given backend. Should be called from DoocsBackend::activateAsyncRead().
+      void activateAllListeners(DoocsBackend* backend);
 
-      /// Deactivate all subscriptions for the given backend. Should be called from DoocsBackend::close().
-      void deactivateAll(DoocsBackend* backend);
+      /// Deactivate all listeners in all subscriptions for the given backend. Should be called from DoocsBackend::close().
+      void deactivateAllListeners(DoocsBackend* backend);
 
       /// Deactivate all subscriptions for the given backend and push exceptions into the queues. Should be called from
       /// DoocsBackend::setException().
@@ -50,10 +50,10 @@ namespace ChimeraTK {
 
       // Activate ZeroMQ subscription.
       // Caller need to own subscriptionMap_mutex already.
-      void activate(const std::string& path);
+      void activateSubscription(const std::string& path);
 
       // Deactivate ZeroMQ subscription. Caller must not own subscriptionMap_mutex or any listeners_mutex.
-      void deactivate(const std::string& path);
+      void deactivateSubscription(const std::string& path);
 
       // Poll initial value via RPC call and push it into the queue
       void pollInitialValue(const std::string& path, DoocsBackendRegisterAccessorBase* accessor);

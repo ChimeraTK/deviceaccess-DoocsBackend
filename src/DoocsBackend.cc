@@ -175,7 +175,7 @@ namespace ChimeraTK {
   /********************************************************************************************************************/
 
   void DoocsBackend::close() {
-    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAll(this);
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().deactivateAllListeners(this);
     _opened = false;
     _asyncReadActivated = false;
     {
@@ -215,7 +215,7 @@ namespace ChimeraTK {
 
   void DoocsBackend::activateAsyncRead() noexcept {
     _asyncReadActivated = true;
-    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().activateAll(this);
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().activateAllListeners(this);
   }
 
   /********************************************************************************************************************/
