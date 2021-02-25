@@ -260,6 +260,11 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
     std::unique_lock<std::mutex> lock(subscription->listeners_mutex);
 
+    // We must not push anything to the subscribers as long as the subscription has an exception.
+    if(subscription->hasException) {
+      return;
+    }
+
     // As long as we get a callback from ZMQ, we consider it started
     if(not subscription->started) {
       subscription->started = true;
@@ -274,7 +279,6 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
     // check for error
     if(data->error() != no_connection) {
       // no error: push the data
-      subscription->hasException = false;
       for(auto& listener : subscription->listeners) {
         if(listener->isActiveZMQ) {
           listener->notifications.push_overwrite(*data);
