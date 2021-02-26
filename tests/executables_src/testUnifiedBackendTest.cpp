@@ -53,14 +53,14 @@ class DoocsLauncher : public ThreadedDoocsServer {
     dmsg_start();
     dmsg_t tag;
     std::cout << "ZeroMQ Subscribe" << std::endl;
-    int err = dmsg_attach(&ea, &dst, nullptr,
+    [[maybe_unused]] int err = dmsg_attach(&ea, &dst, nullptr,
         [](void*, EqData* data, dmsg_info_t*) {
           if(!data->error()) zmqStartup_gotData = true;
         },
         &tag);
     assert(!err);
     std::cout << "ZeroMQ wait" << std::endl;
-    auto location = dynamic_cast<eq_dummy*>(find_device("MYDUMMY"));
+    [[maybe_unused]] auto location = dynamic_cast<eq_dummy*>(find_device("MYDUMMY"));
     assert(location != nullptr);
     while(!zmqStartup_gotData) {
       usleep(100000);
