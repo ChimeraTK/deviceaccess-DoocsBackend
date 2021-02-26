@@ -216,8 +216,6 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
   /******************************************************************************************************************/
 
   void ZMQSubscriptionManager::deactivateAllListenersAndPushException(DoocsBackend* backend) {
-    deactivateAllListeners(backend);
-
     std::unique_lock<std::mutex> lock(subscriptionMap_mutex);
 
     for(auto& subscription : subscriptionMap) {
@@ -237,6 +235,16 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
         subscription.second.hasException = true;
         for(auto& listener : subscription.second.listeners) {
+          // Don't push exceptions into deactivated listeners.
+          // The check in subscription.second.hasException is not sufficient because it is reset in open(),
+          // but activateAsyncRead() might not have been called when the next setException comes in.
+          if(!listener->isActiveZMQ) continue;
+
+          // First deactivate the listener to avoid race conditions with pushing the exception. Nothing must be pushed
+          // after the exception until a succefful open() and activateAsyncRead(). (see. Spec B.9.3.1 and B.9.3.2)
+          listener->isActiveZMQ = false;
+
+          // Now finally put the exception to the queue
           try {
             throw ChimeraTK::runtime_error("Exception reported by another accessor.");
           }
