@@ -158,6 +158,8 @@ namespace ChimeraTK {
       lastFailedAddress = "";
     }
 
+    DoocsBackendNamespace::ZMQSubscriptionManager::getInstance().reActicateAllSubscriptions(this);
+
     _opened = true;
     _isFunctional = true;
     _startVersion = {};

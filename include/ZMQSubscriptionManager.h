@@ -34,7 +34,7 @@ namespace ChimeraTK {
       /// Unregister accessor subscription
       void unsubscribe(const std::string& path, DoocsBackendRegisterAccessorBase* accessor);
 
-      /// Activate all listeners in all subscriptions for the given backend. Should be called from DoocsBackend::activateAsyncRead().
+      /// Activate all listeners for the given backend. Should be called from DoocsBackend::activateAsyncRead().
       void activateAllListeners(DoocsBackend* backend);
 
       /// Deactivate all listeners the given backend. Should be called from DoocsBackend::close().
@@ -43,6 +43,10 @@ namespace ChimeraTK {
       /// Deactivate all listeners for the given backend and push exceptions into the queues. Should be called from
       /// DoocsBackend::setException().
       void deactivateAllListenersAndPushException(DoocsBackend* backend);
+
+      /// Deactivate and re-activate all subscriptions for a given backend. Should be called in DoocsBackend::open() as
+      /// part of the recovery.
+      void reActicateAllSubscriptions(DoocsBackend* backend);
 
      private:
       ZMQSubscriptionManager();

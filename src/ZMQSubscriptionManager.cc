@@ -128,7 +128,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
   /******************************************************************************************************************/
 
   void ZMQSubscriptionManager::activateSubscription(const std::string& path) {
-    // precondition: subscriptionMap_mutex must be locked
+    // precondition: subscriptionMap_mutex an the subscription's listeners_mutex must be locked
 
     // do nothing if already active
     if(subscriptionMap[path].active) return;
@@ -260,15 +260,16 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
     std::unique_lock<std::mutex> lock(subscription->listeners_mutex);
 
-    // We must not push anything to the subscribers as long as the subscription has an exception.
-    if(subscription->hasException) {
-      return;
-    }
-
     // As long as we get a callback from ZMQ, we consider it started
     if(not subscription->started) {
       subscription->started = true;
       subscription->startedCv.notify_all();
+    }
+
+    // We must not push anything to the subscribers as long as the subscription has an exception.
+    if(subscription->hasException) {
+      std::cout << "zmq_callback: subscription has an exception. Doing nothing." << std::endl;
+      return;
     }
 
     // store thread id of the thread calling this function, if not yet done
@@ -277,8 +278,8 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
     }
 
     // check for error
-    if(data->error() != no_connection) {
-      // no error: push the data
+    if((data->error() == no_error) || (data->error() == stale_data)) {
+      // data has been received: push the data
       for(auto& listener : subscription->listeners) {
         if(listener->isActiveZMQ) {
           listener->notifications.push_overwrite(*data);
@@ -302,6 +303,34 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
         }
       }
     }
+  }
+
+  /******************************************************************************************************************/
+
+  void ZMQSubscriptionManager::reActicateAllSubscriptions(DoocsBackend* backend) {
+    std::unique_lock<std::mutex> subscriptionLock(subscriptionMap_mutex);
+
+    //FIXME: This is not really clean. If there are listeners from multiple backends
+    // on the same subscription the subscription is activated for all of them. As this
+    // is an unlikely scenario (why would you have two devices subscribed to the same property=
+    // the implementation is good enough for now. Subscriptions from other backends are not activated if
+    // they don't have shared listeners.
+    for(auto& subscription : subscriptionMap) {
+      std::unique_lock<std::mutex> listeners_lock(subscription.second.listeners_mutex);
+      for(auto& listener : subscription.second.listeners) {
+        if(listener->_backend.get() == backend) {
+          // Due to the way the functions are used in different context deactivate locks the mutexes internally
+          // while the activate requires the locks to be held already when it is called.
+          auto path = subscription.first;
+          listeners_lock.unlock();
+          subscriptionLock.unlock();
+          deactivateSubscription(path);
+          subscriptionLock.lock();
+          listeners_lock.lock();
+          activateSubscription(path);
+        } // if backend
+      }   // for listener
+    }     // for scubscription
   }
 
 }} // namespace ChimeraTK::DoocsBackendNamespace
