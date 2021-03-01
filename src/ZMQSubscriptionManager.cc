@@ -286,7 +286,7 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
     }
 
     // check for error
-    if((data->error() == no_error) || (data->error() == stale_data)) {
+    if(!DoocsBackend::isCommunicationError(data->error())) {
       // data has been received: push the data
       for(auto& listener : subscription->listeners) {
         if(listener->isActiveZMQ) {

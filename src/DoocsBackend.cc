@@ -354,6 +354,7 @@ namespace ChimeraTK {
       case eq_errors::ill_protocol:
       case eq_errors::ill_location:
       case eq_errors::ill_property:
+      case eq_errors::no_connection:
       case eq_errors::conn_timeout:
       case eq_errors::alias_error:
       case eq_errors::no_permission:
