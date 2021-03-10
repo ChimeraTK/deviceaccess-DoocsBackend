@@ -276,7 +276,6 @@ namespace ChimeraTK { namespace DoocsBackendNamespace {
 
     // We must not push anything to the subscribers as long as the subscription has an exception.
     if(subscription->hasException) {
-      std::cout << "zmq_callback: subscription has an exception. Doing nothing." << std::endl;
       return;
     }
 
